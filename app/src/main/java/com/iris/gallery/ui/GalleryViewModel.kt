@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.iris.gallery.data.MediaImage
+import com.iris.gallery.data.sortDate
 import com.iris.gallery.data.MediaRepository
 import com.iris.gallery.data.LibraryPreferences
 import com.iris.gallery.data.LibraryPreferencesState
@@ -144,7 +145,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
             val currentImages = _uiState.value.images
             val remainingImages = currentImages.filterNot { it.id in movedOldIds || it.path in movedOldPaths }
             val updatedImages = (remainingImages + result.movedMedia).sortedWith(
-                compareByDescending<MediaImage> { it.dateTaken }
+                compareByDescending<MediaImage> { it.sortDate }
                     .thenByDescending { it.dateModified }
                     .thenByDescending { it.dateAdded }
                     .thenByDescending { it.id }
@@ -160,7 +161,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
         if (result.successCount > 0) {
             val currentImages = _uiState.value.images
             val updatedImages = (currentImages + result.movedMedia).distinctBy { it.path }.sortedWith(
-                compareByDescending<MediaImage> { it.dateTaken }
+                compareByDescending<MediaImage> { it.sortDate }
                     .thenByDescending { it.dateModified }
                     .thenByDescending { it.dateAdded }
                     .thenByDescending { it.id }
@@ -342,7 +343,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                         }
                         val combined = if (currentPending.isNotEmpty()) {
                             (loaded + currentPending).distinctBy { it.id }.sortedWith(
-                                compareByDescending<MediaImage> { it.dateTaken }
+                                compareByDescending<MediaImage> { it.sortDate }
                                     .thenByDescending { it.dateModified }
                                     .thenByDescending { it.dateAdded }
                                     .thenByDescending { it.id }

@@ -92,6 +92,7 @@ import com.iris.gallery.data.CornerStyle
 import com.iris.gallery.data.GridSpacing
 import com.iris.gallery.data.MediaImage
 import com.iris.gallery.data.NaturalOrderComparator
+import com.iris.gallery.data.sortDate
 
 data class MediaAlbum(
     val id: Long,
@@ -217,8 +218,8 @@ fun AlbumsGrid(
         val orderIndex = customOrder.withIndex().associate { it.value to it.index }
         base.sortedWith(compareByDescending<MediaAlbum> { it.id in pinned }.thenComparator { a, b ->
             when (sort) {
-                AlbumSort.NEWEST -> b.cover.dateTaken.compareTo(a.cover.dateTaken)
-                AlbumSort.OLDEST -> a.cover.dateTaken.compareTo(b.cover.dateTaken)
+                AlbumSort.NEWEST -> b.cover.sortDate.compareTo(a.cover.sortDate)
+                AlbumSort.OLDEST -> a.cover.sortDate.compareTo(b.cover.sortDate)
                 AlbumSort.NAME -> NaturalOrderComparator.compare(a.name, b.name)
                 AlbumSort.ITEM_COUNT -> b.images.size.compareTo(a.images.size)
                 AlbumSort.CUSTOM -> (orderIndex[a.id] ?: Int.MAX_VALUE).compareTo(orderIndex[b.id] ?: Int.MAX_VALUE)
