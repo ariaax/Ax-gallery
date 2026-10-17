@@ -8,7 +8,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.iris.gallery"
+        applicationId = "com.ax.gallery"
         minSdk = 26
         targetSdk = 35
         versionCode = 17
