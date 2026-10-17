@@ -119,6 +119,7 @@ import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.filled.PushPin
 import com.iris.gallery.data.MediaSort
+import com.iris.gallery.data.sortDate
 import com.iris.gallery.data.NaturalOrderComparator
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.MoreVert
@@ -2104,8 +2105,8 @@ private fun GalleryScaffold(
         selectedAlbum?.let { album ->
             val filtered = filterMediaList(album.images, fileSearchQuery)
             when (effectiveAlbumMediaSort) {
-                MediaSort.DATE_DESC -> filtered.sortedWith(compareByDescending<MediaImage> { it.dateTaken }.thenByDescending { it.dateModified }.thenByDescending { it.dateAdded }.thenByDescending { it.id })
-                MediaSort.DATE_ASC -> filtered.sortedWith(compareBy<MediaImage> { it.dateTaken }.thenBy { it.dateModified }.thenBy { it.dateAdded }.thenBy { it.id })
+                MediaSort.DATE_DESC -> filtered.sortedWith(compareByDescending<MediaImage> { it.sortDate }.thenByDescending { it.dateModified }.thenByDescending { it.dateAdded }.thenByDescending { it.id })
+                MediaSort.DATE_ASC -> filtered.sortedWith(compareBy<MediaImage> { it.sortDate }.thenBy { it.dateModified }.thenBy { it.dateAdded }.thenBy { it.id })
                 MediaSort.NAME_ASC -> filtered.sortedWith { a, b -> NaturalOrderComparator.compare(a.name, b.name) }
                 MediaSort.NAME_DESC -> filtered.sortedWith { a, b -> NaturalOrderComparator.compare(b.name, a.name) }
                 MediaSort.SIZE_DESC -> filtered.sortedWith(compareByDescending<MediaImage> { it.sizeBytes }.thenByDescending { it.id })
@@ -3108,7 +3109,7 @@ private fun GalleryScaffold(
                             val allPanos = remember(images) { images.filter { it.isPanorama } }
                             val allMotion = remember(images) { images.filter { it.isMotionPhoto } }
                             val allSpecial = remember(allVideos, allRaw, allGifs, allPanos, allMotion) {
-                                (allVideos + allRaw + allGifs + allPanos + allMotion).distinctBy { it.id }.sortedByDescending { it.dateTaken }
+                                (allVideos + allRaw + allGifs + allPanos + allMotion).distinctBy { it.id }.sortedByDescending { it.sortDate }
                             }
                             val currentFiltered = when (formatFilter) {
                                 MediaFormatFilter.ALL -> allSpecial
@@ -4141,7 +4142,7 @@ private fun PhotoGrid(
             val today = LocalDate.now()
             val dayCache = HashMap<LocalDate, String>()
             images.groupBy { image ->
-                val date = Instant.ofEpochMilli(image.dateTaken).atZone(zone).toLocalDate()
+                val date = Instant.ofEpochMilli(image.sortDate).atZone(zone).toLocalDate()
                 dayCache.getOrPut(date) {
                     formatTimelineDate(
                         date = date,
@@ -4695,7 +4696,7 @@ private fun PhotoGrid(
                     color = MaterialTheme.colorScheme.primaryContainer
                 ) {
                     Text(
-                        text = visibleDate?.let { formatTimelineLabel(it.dateTaken) } ?: "",
+                        text = visibleDate?.let { formatTimelineLabel(it.sortDate) } ?: "",
                         modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
