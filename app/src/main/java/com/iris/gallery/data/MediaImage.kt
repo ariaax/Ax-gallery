@@ -29,6 +29,15 @@ data class MediaImage(
     val dateAdded: Long = 0L,
 )
 
+/** true = newest-saved first (date added to phone); false = original creation date. */
+object TimelineSort {
+    @Volatile var useDateAdded: Boolean = true
+}
+
+/** The date used for ordering and for the timeline day headers. */
+val MediaImage.sortDate: Long
+    get() = if (TimelineSort.useDateAdded && dateAdded > 0L) dateAdded else dateTaken
+
 val MediaImage.isScreenshot: Boolean
     get() = bucketName.contains("screenshot", ignoreCase = true) ||
             path.contains("screenshot", ignoreCase = true) ||
