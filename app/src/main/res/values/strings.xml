@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App & General -->
-    <string name="app_name">Iris Gallery</string>
+    <string name="app_name">Ax Gallery</string>
     <string name="app_description">Pure offline, botanical-inspired Android media gallery</string>
     <string name="version_format">Version %1$s (Build %2$d)</string>
 
