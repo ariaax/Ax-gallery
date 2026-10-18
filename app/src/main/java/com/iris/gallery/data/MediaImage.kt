@@ -648,6 +648,9 @@ fun extractExifDateTaken(context: Context, uri: Uri, filePath: String): Long? {
             }.getOrNull()
             if (res != null && res > 0L) return res
         }
+        // Ax Gallery: a readable path exists but has no EXIF date -> do NOT fall back to
+        // ContentResolver (one slow binder call per file made loading take minutes).
+        return null
     }
     return runCatching {
         context.contentResolver.openInputStream(uri)?.use { stream ->
