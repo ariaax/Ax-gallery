@@ -59,15 +59,6 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
                         showReport(activity, "CRASH LAST TIME", crash)
                     }
                 }
-                if (!hangScheduled) {
-                    hangScheduled = true
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        val act = topActivity
-                        if (act != null && !act.isFinishing) {
-                            showReport(act, "THREAD DUMP (25s after launch)", buildThreadDump())
-                        }
-                    }, 25_000L)
-                }
             }
 
             override fun onActivityPaused(activity: Activity) {

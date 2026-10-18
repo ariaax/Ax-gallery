@@ -15,6 +15,8 @@ import java.io.File
 
 // Ax Gallery: reading EXIF for every photo while listing is very slow on FUSE storage.
 private const val ENABLE_EXIF_ON_LOAD = false
+// Ax Gallery: per-file exists()/lastModified()/length() on every load is very slow; trust MediaStore.
+private const val ENABLE_DISK_VERIFY = false
 
 class MediaRepository(private val context: Context) {
     private val snapshot = AtomicFile(File(context.filesDir, "media_snapshot.bin"))
@@ -477,7 +479,7 @@ class MediaRepository(private val context: Context) {
 
                         var diskModifiedMs = 0L
                         var diskSizeBytes = -1L
-                        if (!trashed && filePath.isNotBlank()) {
+                        if (ENABLE_DISK_VERIFY && !trashed && filePath.isNotBlank()) {
                             val file = File(filePath)
                             var exists = file.exists()
                             if (exists) {
