@@ -43,7 +43,7 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
             try {
                 val text = "Thread: ${thread.name}\n" + Log.getStackTraceString(error)
                 prefs.edit().putString("crash", text.take(12000)).commit()
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
             }
             previous?.uncaughtException(thread, error)
         }
@@ -119,7 +119,7 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
                 }
                 .setNegativeButton("Close", null)
                 .show()
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
         }
     }
     // -----------------------------------------------------------------------
