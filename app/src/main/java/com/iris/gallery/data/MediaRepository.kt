@@ -13,6 +13,9 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
 
+// Ax Gallery: reading EXIF for every photo while listing is very slow on FUSE storage.
+private const val ENABLE_EXIF_ON_LOAD = false
+
 class MediaRepository(private val context: Context) {
     private val snapshot = AtomicFile(File(context.filesDir, "media_snapshot.bin"))
     private val libraryPreferences = LibraryPreferences(context)
@@ -530,7 +533,7 @@ class MediaRepository(private val context: Context) {
                         val isSyntheticDateTaken = (takenSec == addedSec && addedSec > 0L) ||
                                 (takenSec == modSec && modSec > 0L)
 
-                        if (!isVid && (cursorDateTaken <= 0L || isSyntheticDateTaken)) {
+                        if (ENABLE_EXIF_ON_LOAD && !isVid && (cursorDateTaken <= 0L || isSyntheticDateTaken)) {
                             val exifTaken = extractExifDateTaken(context, mediaUri, filePath)
                             if (exifTaken != null && exifTaken > 0L) {
                                 takenTime = exifTaken
