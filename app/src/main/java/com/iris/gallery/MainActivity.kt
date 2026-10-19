@@ -180,7 +180,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.NavigationBar
+import com.iris.gallery.ui.AxFavoriteButton
 import com.iris.gallery.ui.AxGlass
+import com.iris.gallery.ui.axGlassPanel
 import com.iris.gallery.ui.AxGlassNavBar
 import com.iris.gallery.ui.axGlassSource
 import com.iris.gallery.ui.rememberAxGlassState
@@ -4803,6 +4805,7 @@ private fun PhotoViewer(
     var confirmDelete by remember { mutableStateOf(false) }
     var directPermanentDelete by remember { mutableStateOf(false) }
     var showEditChoiceSheet by remember { mutableStateOf(false) }
+    val viewerGlass = rememberAxGlassState()
     var controlsVisible by remember { mutableStateOf(true) }
     var previewPopupImage by remember { mutableStateOf<MediaImage?>(null) }
     var showRotateTipBanner by remember { mutableStateOf(false) }
@@ -5147,6 +5150,7 @@ private fun PhotoViewer(
             beyondViewportPageCount = 1,
             userScrollEnabled = zoomedImageId != current.id && !isDismissing,
             pageSpacing = 16.dp,
+            modifier = Modifier.axGlassSource(viewerGlass),
           ) { page ->
             val media = images[page]
             if (media.isVideo) {
@@ -5263,7 +5267,7 @@ private fun PhotoViewer(
             modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
           ) {
-            IconButton(onClick = { triggerAnimatedDismiss() }) { Icon(Icons.Outlined.ArrowBack, stringResource(R.string.action_back), tint = Color.White) }
+            IconButton(onClick = { triggerAnimatedDismiss() }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(Icons.Outlined.ArrowBack, stringResource(R.string.action_back), tint = Color.White) }
             val currentLocale = rememberAppLocale()
             val headerDate = remember(current.dateTaken, currentLocale, timelineDateFormat, smartYearHiding, customTimelineDateFormat, showViewerTime) {
                 val localDate = Instant.ofEpochMilli(current.dateTaken).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -5318,10 +5322,10 @@ private fun PhotoViewer(
                         style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            IconButton(onClick = { showInfo = true }) { Icon(Icons.Outlined.Info, stringResource(R.string.details_title), tint = Color.White) }
+            IconButton(onClick = { showInfo = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(Icons.Outlined.Info, stringResource(R.string.details_title), tint = Color.White) }
             if (!isLocked && !isInTrash && current.id > 0) {
                 Box {
-                    IconButton(onClick = { viewerMenuExpanded = true }) {
+                    IconButton(onClick = { viewerMenuExpanded = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) {
                         Icon(Icons.Outlined.MoreVert, stringResource(R.string.action_more), tint = Color.White)
                     }
                     DropdownMenu(
@@ -5422,10 +5426,11 @@ private fun PhotoViewer(
                 ),
             ) {
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+                    color = Color.Transparent,
+                    contentColor = Color.White,
                     shape = RoundedCornerShape(24.dp),
-                    tonalElevation = 8.dp,
-                    modifier = Modifier.widthIn(max = 540.dp).fillMaxWidth(),
+                    tonalElevation = 0.dp,
+                    modifier = Modifier.widthIn(max = 540.dp).fillMaxWidth().axGlassPanel(viewerGlass, 24.dp),
                 ) {
                     Column(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -5660,10 +5665,9 @@ private fun PhotoViewer(
                     )
                 }
                 Surface(
-                    color = Color.Black.copy(alpha = 0.65f),
+                    color = Color.Transparent,
                     shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
-                    modifier = Modifier.height(48.dp),
+                    modifier = Modifier.height(48.dp).axGlassPanel(viewerGlass, 16.dp),
                 ) {
                     LazyRow(
                         state = filmstripListState,
@@ -5787,10 +5791,11 @@ private fun PhotoViewer(
             }
 
             Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+                modifier = Modifier.fillMaxWidth().axGlassPanel(viewerGlass, 32.dp),
+                color = Color.Transparent,
+                contentColor = Color.White,
                 shape = RoundedCornerShape(32.dp),
-                tonalElevation = 8.dp,
+                tonalElevation = 0.dp,
             ) {
               val isFav = current.id in favorites
               val favScale by animateFloatAsState(
@@ -5834,11 +5839,9 @@ private fun PhotoViewer(
                         }
                     }
                     if (current.id > 0) {
-                        ViewerIconButton(
-                            icon = if (isFav) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        AxFavoriteButton(
+                            isFav = isFav,
                             label = if (isFav) stringResource(R.string.action_favorited) else stringResource(R.string.action_favorite),
-                            tint = if (isFav) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                            scaleEffect = favScale,
                             modifier = Modifier.weight(1f),
                         ) { onToggleFavorite(current.id) }
                     }
@@ -6936,7 +6939,7 @@ private fun ViewerIconButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     modifier: Modifier = Modifier,
-    tint: Color = MaterialTheme.colorScheme.onSurface,
+    tint: Color = Color.White,
     scaleEffect: Float = 1f,
     showBadge: Boolean = false,
     badgeColor: Color = MaterialTheme.colorScheme.primary,
