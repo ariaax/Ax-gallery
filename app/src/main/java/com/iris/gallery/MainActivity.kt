@@ -4806,6 +4806,8 @@ private fun PhotoViewer(
     var directPermanentDelete by remember { mutableStateOf(false) }
     var showEditChoiceSheet by remember { mutableStateOf(false) }
     val viewerGlass = rememberAxGlassState()
+    val isLandscapeViewer = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
     var controlsVisible by remember { mutableStateOf(true) }
     var previewPopupImage by remember { mutableStateOf<MediaImage?>(null) }
     var showRotateTipBanner by remember { mutableStateOf(false) }
@@ -5409,7 +5411,7 @@ private fun PhotoViewer(
         if (depthPhoto != null && !current.isVideo) {
             // Offset above the bottom control bar so it doesn't overlap the filmstrip.
             val showFilmstripHere = showFilmstrip && images.size > 1
-            val bottomOffset = if (showFilmstripHere) 168.dp else 96.dp
+            val bottomOffset = if (isLandscapeViewer) 24.dp else if (showFilmstripHere) 168.dp else 96.dp
             AnimatedVisibility(
                 visible = controlsVisible,
                 modifier = Modifier
@@ -5493,6 +5495,132 @@ private fun PhotoViewer(
                     }
                 }
             }
+        }
+        val filmThumb: @Composable (Int, MediaImage, androidx.compose.ui.unit.Dp) -> Unit = { index, item, thumbSize ->
+                            val isSelected = index == pagerState.currentPage
+                            Box(
+                                modifier = Modifier
+                                    .size(thumbSize)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .then(
+                                        if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                                        else Modifier.border(0.5.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                                    )
+                                    .pointerInput(item.id) {
+                                        awaitEachGesture {
+                                            val down = awaitFirstDown(requireUnconsumed = false)
+                                            var popupShown = false
+                                            val holdJob = coroutineScope.launch {
+                                                delay(160)
+                                                popupShown = true
+                                                previewPopupImage = item
+                                            }
+                                            val up = waitForUpOrCancellation()
+                                            holdJob.cancel()
+                                            if (popupShown) {
+                                                previewPopupImage = null
+                                                up?.consume()
+                                            } else if (up != null) {
+                                                coroutineScope.launch {
+                                                    pagerState.scrollToPage(index)
+                                                }
+                                            }
+                                        }
+                                    },
+                            ) {
+                                MediaThumbnail(
+                                    image = item,
+                                    targetSizePx = 180,
+                                    showVideoDuration = false,
+                                    showFormatBadge = false,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                                if (item.isVideo) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Black.copy(alpha = 0.28f)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Outlined.PlayArrow,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(14.dp),
+                                        )
+                                    }
+                                }
+                            }
+        }
+        val isFav = current.id in favorites
+        val actionButtons: @Composable () -> Unit = {
+                if (isInTrash) {
+                    ViewerIconButton(
+                        icon = Icons.Outlined.RestoreFromTrash,
+                        label = stringResource(R.string.action_restore),
+                    ) {
+                        onRestore(current)
+                        handleClose()
+                    }
+                    ViewerIconButton(
+                        icon = Icons.Outlined.DeleteForever,
+                        label = stringResource(R.string.action_delete_permanently),
+                        tint = MaterialTheme.colorScheme.error,
+                    ) {
+                        confirmDelete = true
+                    }
+                } else {
+                    ViewerIconButton(
+                        icon = Icons.Outlined.Share,
+                        label = stringResource(R.string.action_share),
+                        showBadge = secureSharingMode != SecureSharingMode.OFF,
+                    ) {
+                        if (!dismissedSecureSharingTip) {
+                            showSecureSharingHintDialog = true
+                        } else {
+                            doShare(current)
+                        }
+                    }
+                    if (current.id > 0) {
+                        AxFavoriteButton(
+                            isFav = isFav,
+                            label = if (isFav) stringResource(R.string.action_favorited) else stringResource(R.string.action_favorite),
+                        ) { onToggleFavorite(current.id) }
+                    }
+                    ViewerIconButton(
+                        icon = Icons.Outlined.Edit,
+                        label = stringResource(R.string.action_edit),
+                    ) {
+                        if (current.isVideo) {
+                            launchExternalEditor(context, current)
+                        } else {
+                            handleEditClick(current)
+                        }
+                    }
+                    if (isLocked) {
+                        ViewerIconButton(
+                            icon = Icons.Outlined.LockOpen,
+                            label = stringResource(R.string.action_unlock),
+                        ) { onUnlock(current) }
+                    } else if (current.id > 0) {
+                        ViewerIconButton(
+                            icon = Icons.Outlined.Lock,
+                            label = stringResource(R.string.action_lock),
+                        ) { onLock(current) }
+                    }
+                    ViewerIconButton(
+                        icon = Icons.Outlined.DeleteOutline,
+                        label = stringResource(R.string.action_delete),
+                    ) {
+                        if (isLocked || isInTrash || deleteMode == DeleteMode.ALWAYS_ASK || confirmDeleteSetting) {
+                            confirmDelete = true
+                        } else if (deleteMode == DeleteMode.PERMANENT) {
+                            onDelete(current, true)
+                        } else {
+                            onDelete(current, false)
+                        }
+                    }
+                }
         }
         AnimatedVisibility(
           visible = controlsVisible,
@@ -5676,60 +5804,7 @@ private fun PhotoViewer(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         itemsIndexed(images, key = { _, it -> it.id }) { index, item ->
-                            val isSelected = index == pagerState.currentPage
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .then(
-                                        if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                                        else Modifier.border(0.5.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
-                                    )
-                                    .pointerInput(item.id) {
-                                        awaitEachGesture {
-                                            val down = awaitFirstDown(requireUnconsumed = false)
-                                            var popupShown = false
-                                            val holdJob = coroutineScope.launch {
-                                                delay(160)
-                                                popupShown = true
-                                                previewPopupImage = item
-                                            }
-                                            val up = waitForUpOrCancellation()
-                                            holdJob.cancel()
-                                            if (popupShown) {
-                                                previewPopupImage = null
-                                                up?.consume()
-                                            } else if (up != null) {
-                                                coroutineScope.launch {
-                                                    pagerState.scrollToPage(index)
-                                                }
-                                            }
-                                        }
-                                    },
-                            ) {
-                                MediaThumbnail(
-                                    image = item,
-                                    targetSizePx = 180,
-                                    showVideoDuration = false,
-                                    showFormatBadge = false,
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                                if (item.isVideo) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(Color.Black.copy(alpha = 0.28f)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            Icons.Outlined.PlayArrow,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(14.dp),
-                                        )
-                                    }
-                                }
-                            }
+                            filmThumb(index, item, 38.dp)
                         }
                     }
                 }
@@ -5790,102 +5865,79 @@ private fun PhotoViewer(
                 }
             }
 
-            Surface(
+            if (!isLandscapeViewer) Surface(
                 modifier = Modifier.fillMaxWidth().axGlassPanel(viewerGlass, 32.dp),
                 color = Color.Transparent,
                 contentColor = Color.White,
                 shape = RoundedCornerShape(32.dp),
                 tonalElevation = 0.dp,
             ) {
-              val isFav = current.id in favorites
-              val favScale by animateFloatAsState(
-                  targetValue = if (isFav) 1.25f else 1.0f,
-                  animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-                  label = "fav_scale"
-              )
               Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
               ) {
-                if (isInTrash) {
-                    ViewerIconButton(
-                        icon = Icons.Outlined.RestoreFromTrash,
-                        label = stringResource(R.string.action_restore),
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        onRestore(current)
-                        handleClose()
-                    }
-                    ViewerIconButton(
-                        icon = Icons.Outlined.DeleteForever,
-                        label = stringResource(R.string.action_delete_permanently),
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        confirmDelete = true
-                    }
-                } else {
-                    ViewerIconButton(
-                        icon = Icons.Outlined.Share,
-                        label = stringResource(R.string.action_share),
-                        showBadge = secureSharingMode != SecureSharingMode.OFF,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        if (!dismissedSecureSharingTip) {
-                            showSecureSharingHintDialog = true
-                        } else {
-                            doShare(current)
-                        }
-                    }
-                    if (current.id > 0) {
-                        AxFavoriteButton(
-                            isFav = isFav,
-                            label = if (isFav) stringResource(R.string.action_favorited) else stringResource(R.string.action_favorite),
-                            modifier = Modifier.weight(1f),
-                        ) { onToggleFavorite(current.id) }
-                    }
-                    ViewerIconButton(
-                        icon = Icons.Outlined.Edit,
-                        label = stringResource(R.string.action_edit),
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        if (current.isVideo) {
-                            launchExternalEditor(context, current)
-                        } else {
-                            handleEditClick(current)
-                        }
-                    }
-                    if (isLocked) {
-                        ViewerIconButton(
-                            icon = Icons.Outlined.LockOpen,
-                            label = stringResource(R.string.action_unlock),
-                            modifier = Modifier.weight(1f),
-                        ) { onUnlock(current) }
-                    } else if (current.id > 0) {
-                        ViewerIconButton(
-                            icon = Icons.Outlined.Lock,
-                            label = stringResource(R.string.action_lock),
-                            modifier = Modifier.weight(1f),
-                        ) { onLock(current) }
-                    }
-                    ViewerIconButton(
-                        icon = Icons.Outlined.DeleteOutline,
-                        label = stringResource(R.string.action_delete),
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        if (isLocked || isInTrash || deleteMode == DeleteMode.ALWAYS_ASK || confirmDeleteSetting) {
-                            confirmDelete = true
-                        } else if (deleteMode == DeleteMode.PERMANENT) {
-                            onDelete(current, true)
-                        } else {
-                            onDelete(current, false)
-                        }
-                    }
-                }
+                actionButtons()
               }
             }
         }
+        }
+
+        if (isLandscapeViewer) {
+            val sideFilmState = rememberLazyListState()
+            LaunchedEffect(pagerState.currentPage) {
+                sideFilmState.animateScrollToItem((pagerState.currentPage - 2).coerceAtLeast(0))
+            }
+            AnimatedVisibility(
+                visible = controlsVisible && showFilmstrip && images.size > 1,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 16.dp, top = 84.dp, bottom = 12.dp)
+                    .graphicsLayer { alpha = controlsDismissAlpha },
+                enter = fadeIn(tween(200)),
+                exit = fadeOut(tween(140)),
+            ) {
+                Surface(
+                    color = Color.Transparent,
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.width(48.dp).heightIn(max = 260.dp).axGlassPanel(viewerGlass, 20.dp),
+                ) {
+                    LazyColumn(
+                        state = sideFilmState,
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        itemsIndexed(images, key = { _, it -> it.id }) { index, item ->
+                            filmThumb(index, item, 34.dp)
+                        }
+                    }
+                }
+            }
+            AnimatedVisibility(
+                visible = controlsVisible,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 16.dp, top = 84.dp, bottom = 12.dp)
+                    .graphicsLayer { alpha = controlsDismissAlpha },
+                enter = fadeIn(tween(200)),
+                exit = fadeOut(tween(140)),
+            ) {
+                Surface(
+                    color = Color.Transparent,
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(24.dp),
+                    tonalElevation = 0.dp,
+                    modifier = Modifier.axGlassPanel(viewerGlass, 24.dp),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        actionButtons()
+                    }
+                }
+            }
         }
 
         // Floating popup preview card when holding an item in the filmstrip
