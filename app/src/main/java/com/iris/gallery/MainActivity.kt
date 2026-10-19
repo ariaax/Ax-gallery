@@ -180,6 +180,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.NavigationBar
+import com.iris.gallery.ui.AxGlass
+import com.iris.gallery.ui.AxGlassNavBar
+import com.iris.gallery.ui.axGlassSource
+import com.iris.gallery.ui.rememberAxGlassState
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
@@ -2250,8 +2254,9 @@ private fun GalleryScaffold(
         }
     }
 
-    val showFloatingBar = isLandscape && selectedIds.isEmpty() && selectedId == null && editorImage == null && activeOverlayScreen == null && externalMedia == null
+    val showFloatingBar = (isLandscape || AxGlass.enabled) && selectedIds.isEmpty() && selectedId == null && editorImage == null && activeOverlayScreen == null && externalMedia == null
 
+    val axGlass = rememberAxGlassState()
     Box(Modifier.fillMaxSize()) {
         Scaffold(
         topBar = {
@@ -2630,7 +2635,7 @@ private fun GalleryScaffold(
           }
         },
         bottomBar = {
-          if (!isLandscape && selectedIds.isEmpty()) {
+          if (!isLandscape && !AxGlass.enabled && selectedIds.isEmpty()) {
             Surface(
                 color = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.fillMaxWidth()
@@ -2666,7 +2671,7 @@ private fun GalleryScaffold(
       val navBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
       val floatingBarBottomPadding = 74.dp + navBarsBottom
       val layoutDirection = LocalLayoutDirection.current
-      val padding = if (isLandscape && selectedIds.isEmpty()) {
+      val padding = if ((isLandscape || AxGlass.enabled) && selectedIds.isEmpty()) {
           PaddingValues(
               start = scaffoldPadding.calculateStartPadding(layoutDirection),
               top = scaffoldPadding.calculateTopPadding(),
@@ -2683,7 +2688,7 @@ private fun GalleryScaffold(
           state = tabPagerState,
           beyondViewportPageCount = (visibleTabs.size - 1).coerceIn(0, 3),
           userScrollEnabled = selectedIds.isEmpty() && selectedAlbum == null && (destination != 3 || librarySection == null),
-          modifier = Modifier.fillMaxSize(),
+          modifier = Modifier.fillMaxSize().axGlassSource(axGlass),
         ) { page ->
           val activeTab = visibleTabs.getOrElse(page) { GalleryTab.PHOTOS }
           when (activeTab) {
@@ -3325,34 +3330,15 @@ private fun GalleryScaffold(
             targetOffsetY = { it }
         )
     ) {
-        Surface(
-            color = if (isAmoled) Color.Black.copy(alpha = 0.90f) else MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
-            shape = RoundedCornerShape(28.dp),
-            shadowElevation = 8.dp,
-            tonalElevation = 4.dp,
-            border = BorderStroke(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isAmoled) 0.45f else 0.25f)
-            ),
-            modifier = Modifier.widthIn(max = 500.dp)
-        ) {
-            NavigationBar(
-                containerColor = Color.Transparent,
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                modifier = Modifier.height(60.dp)
-            ) {
-                visibleTabs.forEachIndexed { index, tab ->
-                    val isSelected = currentVisibleTab == tab
-                    val label = if (tab == GalleryTab.PHOTOS) photoTabLabel else stringResource(tab.labelRes)
-                    NavigationBarItem(
-                        selected = isSelected,
-                        onClick = { handleTabSelected(index) },
-                        icon = { AnimatedNavigationIcon(tab.icon, isSelected, label) },
-                        label = null,
-                        alwaysShowLabel = false,
-                    )
-                }
-            }
+        AxGlassNavBar(
+            state = axGlass,
+            count = visibleTabs.size,
+            selectedIndex = visibleTabs.indexOf(currentVisibleTab).coerceAtLeast(0),
+            onSelect = { handleTabSelected(it) },
+        ) { index, isSelected ->
+            val tab = visibleTabs[index]
+            val label = if (tab == GalleryTab.PHOTOS) photoTabLabel else stringResource(tab.labelRes)
+            AnimatedNavigationIcon(tab.icon, isSelected, label)
         }
     }
 
