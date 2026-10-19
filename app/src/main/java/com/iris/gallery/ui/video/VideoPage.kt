@@ -824,11 +824,24 @@ fun VideoPage(
                     inactiveTrackColor = Color.White.copy(alpha = 0.28f),
                 ),
                 thumb = {
+                    Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(22.dp).background(Color.White.copy(alpha = 0.22f), CircleShape))
+                        Box(Modifier.size(12.dp).background(Color.White, CircleShape))
+                    }
+                },
+                track = { sliderState ->
+                    val fraction = sliderState.value.coerceIn(0f, 1f)
                     Box(
-                        Modifier.size(14.dp)
-                            .background(Color.White, CircleShape)
-                            .border(1.dp, Color.White.copy(alpha = 0.6f), CircleShape)
-                    )
+                        Modifier.fillMaxWidth().height(5.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.22f))
+                    ) {
+                        Box(
+                            Modifier.fillMaxWidth(fraction).fillMaxHeight()
+                                .clip(CircleShape)
+                                .background(Brush.horizontalGradient(listOf(Color(0xFFB9D4FF), Color.White)))
+                        )
+                    }
                 },
             )
             }
