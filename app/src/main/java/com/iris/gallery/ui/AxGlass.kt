@@ -46,6 +46,31 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.launch
+import kotlin.math.cos
+import kotlin.math.sin
 import androidx.compose.ui.unit.dp
 
 /** Global switch for the Liquid Glass look (a settings toggle can drive this later). */
@@ -64,6 +89,15 @@ class AxGlassState(val layer: GraphicsLayer, val blurLayer: GraphicsLayer) {
     var barOrigin by mutableStateOf(Offset.Zero)
     var barSize by mutableStateOf(Size.Zero)
     var cornerRadiusPx by mutableStateOf(0f)
+    /** Extra glass panels (viewer toolbars, filmstrip, round buttons...). */
+    val regions = mutableStateListOf<AxGlassRegion>()
+}
+
+@Stable
+class AxGlassRegion(val layer: GraphicsLayer) {
+    var origin by mutableStateOf(Offset.Zero)
+    var size by mutableStateOf(Size.Zero)
+    var cornerPx by mutableStateOf(0f)
 }
 
 @Composable
@@ -96,6 +130,23 @@ fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
                 translate(-local.x, -local.y) { drawLayer(src) }
             }
             translate(local.x, local.y) { drawLayer(blur) }
+        }
+
+        if (AxGlass.enabled && blurSupported) {
+            for (r in state.regions) {
+                val rs = r.size
+                if (rs.width > 1f && rs.height > 1f) {
+                    val local = r.origin - state.sourceOrigin
+                    val blur = r.layer
+                    blur.renderEffect = BlurEffect(24f, 24f, TileMode.Clamp)
+                    blur.clip = true
+                    blur.setRoundRectOutline(Offset.Zero, rs, r.cornerPx)
+                    blur.record(this, layoutDirection, IntSize(rs.width.toInt(), rs.height.toInt())) {
+                        translate(-local.x, -local.y) { drawLayer(src) }
+                    }
+                    translate(local.x, local.y) { drawLayer(blur) }
+                }
+            }
         }
     }
 
@@ -181,6 +232,132 @@ fun AxGlassNavBar(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Turns any box (toolbar, filmstrip, round button...) into a dark glass panel that blurs whatever the
+ * [axGlassSource] draws behind it. Use with a transparent Surface / plain container.
+ */
+@Composable
+fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
+    val layer = rememberGraphicsLayer()
+    val region = remember(layer) { AxGlassRegion(layer) }
+    val density = LocalDensity.current
+    DisposableEffect(region) {
+        state.regions.add(region)
+        onDispose { state.regions.remove(region) }
+    }
+    val shape = RoundedCornerShape(corner)
+    val tint = Color.Black.copy(alpha = if (blurSupported) 0.34f else 0.80f)
+    val edge = Brush.linearGradient(
+        listOf(
+            Color.White.copy(alpha = 0.50f),
+            Color.White.copy(alpha = 0.05f),
+            Color.White.copy(alpha = 0.28f),
+        )
+    )
+    return this
+        .onGloballyPositioned {
+            region.origin = it.positionInRoot()
+            region.size = Size(it.size.width.toFloat(), it.size.height.toFloat())
+            region.cornerPx = with(density) { corner.toPx() }
+        }
+        .clip(shape)
+        .background(tint)
+        .drawBehind {
+            drawRect(
+                brush = Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.13f), Color.Transparent),
+                    endY = size.height * 0.55f,
+                )
+            )
+        }
+        .border(1.dp, edge, shape)
+}
+
+private val HeartPink = Color(0xFFFF3B6B)
+private val HeartOrange = Color(0xFFFF9A5A)
+
+/**
+ * Favorite button: bouncy pop, expanding ring, little sparks and a haptic tick when it becomes a favorite.
+ */
+@Composable
+fun AxFavoriteButton(
+    isFav: Boolean,
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val progress = remember { Animatable(1f) }
+    val scale = remember { Animatable(1f) }
+    var first by remember { mutableStateOf(true) }
+    val haptic = LocalHapticFeedback.current
+
+    LaunchedEffect(isFav) {
+        if (first) {
+            first = false
+            return@LaunchedEffect
+        }
+        if (isFav) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            launch {
+                progress.snapTo(0f)
+                progress.animateTo(1f, tween(650, easing = LinearOutSlowInEasing))
+            }
+            scale.snapTo(0.5f)
+            scale.animateTo(1f, spring(dampingRatio = 0.32f, stiffness = Spring.StiffnessLow))
+        } else {
+            scale.snapTo(0.75f)
+            scale.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium))
+        }
+    }
+
+    Box(modifier.height(48.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.requiredSize(72.dp)) {
+            val p = progress.value
+            if (p < 1f) {
+                val c = center
+                val inv = 1f - p
+                // soft glow
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        listOf(HeartPink.copy(alpha = 0.45f * inv), Color.Transparent),
+                        center = c,
+                        radius = 30.dp.toPx(),
+                    ),
+                    radius = 30.dp.toPx(),
+                    center = c,
+                )
+                // expanding ring
+                drawCircle(
+                    color = HeartPink.copy(alpha = 0.85f * inv),
+                    radius = (10.dp.toPx() + 24.dp.toPx() * p),
+                    center = c,
+                    style = Stroke(width = (2.5.dp.toPx() * inv).coerceAtLeast(0.5f)),
+                )
+                // sparks
+                val count = 10
+                for (i in 0 until count) {
+                    val angle = (i * (2.0 * Math.PI / count)) + 0.3
+                    val dist = 12.dp.toPx() + 22.dp.toPx() * p
+                    val pos = Offset(c.x + (cos(angle) * dist).toFloat(), c.y + (sin(angle) * dist).toFloat())
+                    drawCircle(
+                        color = (if (i % 2 == 0) HeartPink else HeartOrange).copy(alpha = inv),
+                        radius = (3.2.dp.toPx() * inv).coerceAtLeast(0.4f),
+                        center = pos,
+                    )
+                }
+            }
+        }
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = if (isFav) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                contentDescription = label,
+                tint = if (isFav) HeartPink else Color.White,
+                modifier = Modifier.size(26.dp).scale(scale.value),
+            )
         }
     }
 }
