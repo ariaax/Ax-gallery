@@ -1,3 +1,5 @@
+@file:kotlin.OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.iris.gallery.ui.video
 
 import android.graphics.Bitmap
