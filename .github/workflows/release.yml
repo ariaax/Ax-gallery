@@ -40,7 +40,14 @@ jobs:
           fi
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease
+        run: |
+          set -o pipefail
+          ./gradlew assembleRelease 2>&1 | tee build.log
+
+      - name: Show compile errors
+        if: failure()
+        run: |
+          grep -E '^e: ' build.log | sed 's#file:///home/runner/work/[^/]*/[^/]*/##' | head -10 | while IFS= read -r line; do echo "::error::$line"; done
 
       - name: Extract Version Name
         run: |
