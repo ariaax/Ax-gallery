@@ -796,16 +796,15 @@ fun VideoPage(
             modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(horizontal = 16.dp)
                 .navigationBarsPadding()
                 .padding(top = if (compactLandscape) 4.dp else 128.dp,
-                    bottom = if (compactLandscape) 76.dp else 128.dp)
-                .shadow(10.dp, RoundedCornerShape(28.dp), clip = false,
-                    ambientColor = Color.Black.copy(alpha = 0.3f), spotColor = Color.Black.copy(alpha = 0.3f))
-                .clip(RoundedCornerShape(28.dp))
+                    bottom = if (compactLandscape) 160.dp else 140.dp)
+                .widthIn(max = 360.dp)
+                .clip(RoundedCornerShape(22.dp))
                 .background(Color.Black.copy(alpha = 0.34f))
                 .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)))
                 .border(1.2.dp, Brush.linearGradient(listOf(
                     Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.06f), Color.White.copy(alpha = 0.30f))),
-                    RoundedCornerShape(28.dp))
-                .padding(horizontal = 18.dp, vertical = 12.dp),
+                    RoundedCornerShape(22.dp))
+                .padding(horizontal = 14.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             AnimatedVisibility(scrubbing && preview != null) {
@@ -813,8 +812,8 @@ fun VideoPage(
                     .background(Color.Black, RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop) }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(formatTime((progress * duration()).toLong()), color = Color.White)
-                Text(formatTime(duration()), color = Color.White)
+                Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Text(formatTime(duration()), color = Color.White, style = MaterialTheme.typography.labelMedium)
             }
             Slider(
                 value = progress.coerceIn(0f, 1f),
@@ -829,14 +828,13 @@ fun VideoPage(
                 ),
                 thumb = {
                     Box(
-                        Modifier.size(20.dp)
-                            .shadow(4.dp, CircleShape)
+                        Modifier.size(14.dp)
                             .background(Color.White, CircleShape)
                             .border(1.dp, Color.White.copy(alpha = 0.6f), CircleShape)
                     )
                 },
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                 AxVideoGlassButton(onClick = {
                     val next = engine.toggleMute()
                     isMuted = next
@@ -875,7 +873,7 @@ fun VideoPage(
                         tint = Color.White
                     )
                 }
-                AxVideoGlassButton(size = 60.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
+                AxVideoGlassButton(size = 44.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
                     AnimatedContent(
                         targetState = playing,
                         transitionSpec = {
@@ -921,7 +919,7 @@ fun VideoPage(
 @Composable
 private fun AxVideoGlassButton(
     onClick: () -> Unit,
-    size: androidx.compose.ui.unit.Dp = 48.dp,
+    size: androidx.compose.ui.unit.Dp = 36.dp,
     active: Boolean = false,
     content: @Composable () -> Unit,
 ) {
