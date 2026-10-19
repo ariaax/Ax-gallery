@@ -288,6 +288,7 @@ fun AxFavoriteButton(
     isFav: Boolean,
     label: String,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
     onClick: () -> Unit,
 ) {
     val progress = remember { Animatable(1f) }
@@ -314,7 +315,7 @@ fun AxFavoriteButton(
         }
     }
 
-    Box(modifier.height(48.dp), contentAlignment = Alignment.Center) {
+    Box(modifier.height(if (compact) 36.dp else 48.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.requiredSize(72.dp)) {
             val p = progress.value
             if (p < 1f) {
@@ -351,12 +352,12 @@ fun AxFavoriteButton(
                 }
             }
         }
-        IconButton(onClick = onClick) {
+        IconButton(onClick = onClick, modifier = if (compact) Modifier.size(36.dp) else Modifier) {
             Icon(
                 imageVector = if (isFav) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                 contentDescription = label,
                 tint = if (isFav) HeartPink else Color.White,
-                modifier = Modifier.size(26.dp).scale(scale.value),
+                modifier = Modifier.size(if (compact) 22.dp else 26.dp).scale(scale.value),
             )
         }
     }
