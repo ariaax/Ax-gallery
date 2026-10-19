@@ -793,11 +793,10 @@ fun VideoPage(
         ) {
         val compactLandscape = maxHeight < 500.dp
         Column(
-            modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(horizontal = 16.dp)
+            modifier = Modifier.widthIn(max = if (compactLandscape) 540.dp else 360.dp).fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(top = if (compactLandscape) 4.dp else 128.dp,
-                    bottom = if (compactLandscape) 160.dp else 140.dp)
-                .widthIn(max = 360.dp)
+                .padding(start = 16.dp, end = 16.dp, top = if (compactLandscape) 4.dp else 128.dp,
+                    bottom = if (compactLandscape) 14.dp else 140.dp)
                 .clip(RoundedCornerShape(22.dp))
                 .background(Color.Black.copy(alpha = 0.34f))
                 .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)))
@@ -811,11 +810,9 @@ fun VideoPage(
                 preview?.let { Image(it.asImageBitmap(), null, Modifier.size(160.dp, 90.dp)
                     .background(Color.Black, RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop) }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelMedium)
-                Text(formatTime(duration()), color = Color.White, style = MaterialTheme.typography.labelMedium)
-            }
+            val seekBar: @Composable (Modifier) -> Unit = { seekModifier ->
             Slider(
+                modifier = seekModifier,
                 value = progress.coerceIn(0f, 1f),
                 onValueChange = { scrubbing = true; progress = it },
                 onValueChangeFinished = {
@@ -834,8 +831,11 @@ fun VideoPage(
                     )
                 },
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                AxVideoGlassButton(onClick = {
+            }
+            val bs = if (compactLandscape) 32.dp else 36.dp
+            val controlButtons: @Composable () -> Unit = {
+            Row(horizontalArrangement = Arrangement.spacedBy(if (compactLandscape) 8.dp else 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                AxVideoGlassButton(size = bs, onClick = {
                     val next = engine.toggleMute()
                     isMuted = next
                     lastMuteFeedback = next
@@ -861,7 +861,7 @@ fun VideoPage(
                         )
                     }
                 }
-                AxVideoGlassButton(active = isLooping, onClick = {
+                AxVideoGlassButton(size = bs, active = isLooping, onClick = {
                     val nextLoop = !isLooping
                     isLooping = nextLoop
                     engine.player.repeatMode = if (nextLoop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
@@ -873,7 +873,7 @@ fun VideoPage(
                         tint = Color.White
                     )
                 }
-                AxVideoGlassButton(size = 44.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
+                AxVideoGlassButton(size = if (compactLandscape) 38.dp else 44.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
                     AnimatedContent(
                         targetState = playing,
                         transitionSpec = {
@@ -893,7 +893,7 @@ fun VideoPage(
                         )
                     }
                 }
-                AxVideoGlassButton(onClick = {
+                AxVideoGlassButton(size = bs, onClick = {
                     val activity = generateSequence(context) { (it as? ContextWrapper)?.baseContext }
                         .filterIsInstance<Activity>().firstOrNull() ?: return@AxVideoGlassButton
                     val currentOrientation = context.resources.configuration.orientation
@@ -909,6 +909,23 @@ fun VideoPage(
                         tint = Color.White
                     )
                 }
+            }
+            }
+            if (compactLandscape) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelSmall)
+                    seekBar(Modifier.weight(1f))
+                    Text(formatTime(duration()), color = Color.White, style = MaterialTheme.typography.labelSmall)
+                    controlButtons()
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelMedium)
+                    Text(formatTime(duration()), color = Color.White, style = MaterialTheme.typography.labelMedium)
+                }
+                seekBar(Modifier)
+                controlButtons()
             }
         }
         }
