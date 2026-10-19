@@ -5553,16 +5553,16 @@ private fun PhotoViewer(
                             }
         }
         val isFav = current.id in favorites
-        val actionButtons: @Composable () -> Unit = {
+        val actionButtons: @Composable (Boolean) -> Unit = { compact ->
                 if (isInTrash) {
-                    ViewerIconButton(
+                    ViewerIconButton(compact = compact,
                         icon = Icons.Outlined.RestoreFromTrash,
                         label = stringResource(R.string.action_restore),
                     ) {
                         onRestore(current)
                         handleClose()
                     }
-                    ViewerIconButton(
+                    ViewerIconButton(compact = compact,
                         icon = Icons.Outlined.DeleteForever,
                         label = stringResource(R.string.action_delete_permanently),
                         tint = MaterialTheme.colorScheme.error,
@@ -5570,7 +5570,7 @@ private fun PhotoViewer(
                         confirmDelete = true
                     }
                 } else {
-                    ViewerIconButton(
+                    ViewerIconButton(compact = compact,
                         icon = Icons.Outlined.Share,
                         label = stringResource(R.string.action_share),
                         showBadge = secureSharingMode != SecureSharingMode.OFF,
@@ -5582,12 +5582,12 @@ private fun PhotoViewer(
                         }
                     }
                     if (current.id > 0) {
-                        AxFavoriteButton(
+                        AxFavoriteButton(compact = compact,
                             isFav = isFav,
                             label = if (isFav) stringResource(R.string.action_favorited) else stringResource(R.string.action_favorite),
                         ) { onToggleFavorite(current.id) }
                     }
-                    ViewerIconButton(
+                    ViewerIconButton(compact = compact,
                         icon = Icons.Outlined.Edit,
                         label = stringResource(R.string.action_edit),
                     ) {
@@ -5598,17 +5598,17 @@ private fun PhotoViewer(
                         }
                     }
                     if (isLocked) {
-                        ViewerIconButton(
+                        ViewerIconButton(compact = compact,
                             icon = Icons.Outlined.LockOpen,
                             label = stringResource(R.string.action_unlock),
                         ) { onUnlock(current) }
                     } else if (current.id > 0) {
-                        ViewerIconButton(
+                        ViewerIconButton(compact = compact,
                             icon = Icons.Outlined.Lock,
                             label = stringResource(R.string.action_lock),
                         ) { onLock(current) }
                     }
-                    ViewerIconButton(
+                    ViewerIconButton(compact = compact,
                         icon = Icons.Outlined.DeleteOutline,
                         label = stringResource(R.string.action_delete),
                     ) {
@@ -5740,7 +5740,7 @@ private fun PhotoViewer(
             }
 
             // Mini Filmstrip Thumbnail Carousel for Fast Visual Scrubbing (#40)
-            if (showFilmstrip && images.size > 1) {
+            if (!isLandscapeViewer && showFilmstrip && images.size > 1) {
                 if (!dismissedFilmstripTip) {
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
@@ -5877,7 +5877,7 @@ private fun PhotoViewer(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
               ) {
-                actionButtons()
+                actionButtons(false)
               }
             }
         }
@@ -5899,8 +5899,8 @@ private fun PhotoViewer(
             ) {
                 Surface(
                     color = Color.Transparent,
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.width(48.dp).heightIn(max = 260.dp).axGlassPanel(viewerGlass, 20.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.width(46.dp).heightIn(max = 220.dp).axGlassPanel(viewerGlass, 18.dp),
                 ) {
                     LazyColumn(
                         state = sideFilmState,
@@ -5909,7 +5909,7 @@ private fun PhotoViewer(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         itemsIndexed(images, key = { _, it -> it.id }) { index, item ->
-                            filmThumb(index, item, 34.dp)
+                            filmThumb(index, item, 32.dp)
                         }
                     }
                 }
@@ -5926,15 +5926,15 @@ private fun PhotoViewer(
                 Surface(
                     color = Color.Transparent,
                     contentColor = Color.White,
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(22.dp),
                     tonalElevation = 0.dp,
-                    modifier = Modifier.axGlassPanel(viewerGlass, 24.dp),
+                    modifier = Modifier.axGlassPanel(viewerGlass, 22.dp),
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        actionButtons()
+                        actionButtons(true)
                     }
                 }
             }
@@ -6995,11 +6995,12 @@ private fun ViewerIconButton(
     scaleEffect: Float = 1f,
     showBadge: Boolean = false,
     badgeColor: Color = MaterialTheme.colorScheme.primary,
+    compact: Boolean = false,
     onClick: () -> Unit
 ) {
     IconButton(
         onClick = onClick,
-        modifier = modifier.height(48.dp)
+        modifier = if (compact) modifier.size(36.dp) else modifier.height(48.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
@@ -7007,7 +7008,7 @@ private fun ViewerIconButton(
                 contentDescription = label,
                 tint = tint,
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(if (compact) 21.dp else 24.dp)
                     .scale(scaleEffect)
             )
             if (showBadge) {
