@@ -27,6 +27,13 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -779,15 +786,24 @@ fun VideoPage(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))),
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.45f)))),
             contentAlignment = Alignment.BottomCenter
         ) {
         val compactLandscape = maxHeight < 500.dp
         Column(
-            modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(horizontal = 24.dp)
+            modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(horizontal = 16.dp)
                 .navigationBarsPadding()
                 .padding(top = if (compactLandscape) 4.dp else 128.dp,
-                    bottom = if (compactLandscape) 76.dp else 128.dp),
+                    bottom = if (compactLandscape) 76.dp else 128.dp)
+                .shadow(10.dp, RoundedCornerShape(28.dp), clip = false,
+                    ambientColor = Color.Black.copy(alpha = 0.3f), spotColor = Color.Black.copy(alpha = 0.3f))
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color.Black.copy(alpha = 0.34f))
+                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)))
+                .border(1.2.dp, Brush.linearGradient(listOf(
+                    Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.06f), Color.White.copy(alpha = 0.30f))),
+                    RoundedCornerShape(28.dp))
+                .padding(horizontal = 18.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             AnimatedVisibility(scrubbing && preview != null) {
@@ -798,11 +814,28 @@ fun VideoPage(
                 Text(formatTime((progress * duration()).toLong()), color = Color.White)
                 Text(formatTime(duration()), color = Color.White)
             }
-            Slider(value = progress.coerceIn(0f, 1f), onValueChange = { scrubbing = true; progress = it }, onValueChangeFinished = {
-                engine.player.seekTo((progress * duration()).toLong()); scrubbing = false; preview = null
-            })
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = {
+            Slider(
+                value = progress.coerceIn(0f, 1f),
+                onValueChange = { scrubbing = true; progress = it },
+                onValueChangeFinished = {
+                    engine.player.seekTo((progress * duration()).toLong()); scrubbing = false; preview = null
+                },
+                colors = SliderDefaults.colors(
+                    thumbColor = Color.White,
+                    activeTrackColor = Color.White,
+                    inactiveTrackColor = Color.White.copy(alpha = 0.28f),
+                ),
+                thumb = {
+                    Box(
+                        Modifier.size(20.dp)
+                            .shadow(4.dp, CircleShape)
+                            .background(Color.White, CircleShape)
+                            .border(1.dp, Color.White.copy(alpha = 0.6f), CircleShape)
+                    )
+                },
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                AxVideoGlassButton(onClick = {
                     val next = engine.toggleMute()
                     isMuted = next
                     lastMuteFeedback = next
@@ -828,7 +861,7 @@ fun VideoPage(
                         )
                     }
                 }
-                IconButton(onClick = {
+                AxVideoGlassButton(active = isLooping, onClick = {
                     val nextLoop = !isLooping
                     isLooping = nextLoop
                     engine.player.repeatMode = if (nextLoop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
@@ -837,10 +870,10 @@ fun VideoPage(
                     Icon(
                         imageVector = if (isLooping) Icons.Filled.RepeatOne else Icons.Outlined.Repeat,
                         contentDescription = stringResource(R.string.action_repeat),
-                        tint = if (isLooping) MaterialTheme.colorScheme.primary else Color.White
+                        tint = Color.White
                     )
                 }
-                IconButton(onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
+                AxVideoGlassButton(size = 60.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
                     AnimatedContent(
                         targetState = playing,
                         transitionSpec = {
@@ -860,9 +893,9 @@ fun VideoPage(
                         )
                     }
                 }
-                IconButton(onClick = {
+                AxVideoGlassButton(onClick = {
                     val activity = generateSequence(context) { (it as? ContextWrapper)?.baseContext }
-                        .filterIsInstance<Activity>().firstOrNull() ?: return@IconButton
+                        .filterIsInstance<Activity>().firstOrNull() ?: return@AxVideoGlassButton
                     val currentOrientation = context.resources.configuration.orientation
                     activity.requestedOrientation = if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
                         ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
@@ -880,6 +913,31 @@ fun VideoPage(
         }
         }
         }
+    }
+}
+
+@Composable
+private fun AxVideoGlassButton(
+    onClick: () -> Unit,
+    size: androidx.compose.ui.unit.Dp = 48.dp,
+    active: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = if (active) 0.24f else 0.12f))
+            .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.Transparent)))
+            .border(
+                1.dp,
+                Brush.linearGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.3f))),
+                CircleShape,
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        CompositionLocalProvider(LocalContentColor provides Color.White) { content() }
     }
 }
 
