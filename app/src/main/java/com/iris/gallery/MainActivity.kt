@@ -4809,6 +4809,7 @@ private fun PhotoViewer(
     val isLandscapeViewer = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
         android.content.res.Configuration.ORIENTATION_LANDSCAPE
     var controlsVisible by remember { mutableStateOf(true) }
+    var gestureHudActive by remember { mutableStateOf(false) }
     var previewPopupImage by remember { mutableStateOf<MediaImage?>(null) }
     var showRotateTipBanner by remember { mutableStateOf(false) }
 
@@ -5161,6 +5162,7 @@ private fun PhotoViewer(
                     engine = videoEngine,
                     active = page == pagerState.currentPage,
                     controlsVisible = controlsVisible,
+                    onHudActive = { gestureHudActive = it },
                     autoPlay = autoPlay,
                     loop = loop,
                     doubleTapToZoom = videoDoubleTapToZoom,
@@ -5889,13 +5891,13 @@ private fun PhotoViewer(
                 sideFilmState.animateScrollToItem((pagerState.currentPage - 2).coerceAtLeast(0))
             }
             AnimatedVisibility(
-                visible = controlsVisible && showFilmstrip && images.size > 1,
+                visible = controlsVisible && !gestureHudActive && showFilmstrip && images.size > 1,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .padding(start = 16.dp, top = 84.dp, bottom = 12.dp)
                     .graphicsLayer { alpha = controlsDismissAlpha },
-                enter = fadeIn(tween(200)),
-                exit = fadeOut(tween(140)),
+                enter = fadeIn(tween(260)) + slideInHorizontally(spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)) { -it },
+                exit = fadeOut(tween(160)) + slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { -it },
             ) {
                 Surface(
                     color = Color.Transparent,
@@ -5915,13 +5917,13 @@ private fun PhotoViewer(
                 }
             }
             AnimatedVisibility(
-                visible = controlsVisible,
+                visible = controlsVisible && !gestureHudActive,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 16.dp, top = 84.dp, bottom = 12.dp)
                     .graphicsLayer { alpha = controlsDismissAlpha },
-                enter = fadeIn(tween(200)),
-                exit = fadeOut(tween(140)),
+                enter = fadeIn(tween(260)) + slideInHorizontally(spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)) { it },
+                exit = fadeOut(tween(160)) + slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { it },
             ) {
                 Surface(
                     color = Color.Transparent,
