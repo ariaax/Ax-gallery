@@ -97,6 +97,8 @@ class AxGlassState(val layer: GraphicsLayer, val blurLayer: GraphicsLayer) {
     var cornerRadiusPx by mutableStateOf(0f)
     /** Extra glass panels (viewer toolbars, filmstrip, round buttons...). */
     val regions = mutableStateListOf<AxGlassRegion>()
+    /** Turn off the (costly) live blur, e.g. while a video plays: video surfaces can't be captured anyway. */
+    var blurEnabled by mutableStateOf(true)
 }
 
 @Stable
@@ -115,6 +117,10 @@ fun rememberAxGlassState(): AxGlassState {
 
 private val blurSupported: Boolean get() = Build.VERSION.SDK_INT >= 31
 
+// Immutable, so one shared instance avoids allocating a new effect on every frame.
+private val NavBlurEffect = BlurEffect(28f, 28f, TileMode.Clamp)
+private val PanelBlurEffect = BlurEffect(24f, 24f, TileMode.Clamp)
+
 /** Put this on the big content area that should show up blurred behind the glass bar. */
 fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
     .onGloballyPositioned { state.sourceOrigin = it.positionInRoot() }
@@ -129,7 +135,7 @@ fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
         if (AxGlass.enabled && blurSupported && barSize.width > 1f && barSize.height > 1f) {
             val local = state.barOrigin - state.sourceOrigin
             val blur = state.blurLayer
-            blur.renderEffect = BlurEffect(28f, 28f, TileMode.Clamp)
+            blur.renderEffect = NavBlurEffect
             blur.clip = true
             blur.setRoundRectOutline(Offset.Zero, barSize, state.cornerRadiusPx)
             blur.record(this, layoutDirection, IntSize(barSize.width.toInt(), barSize.height.toInt())) {
@@ -138,13 +144,13 @@ fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
             translate(local.x, local.y) { drawLayer(blur) }
         }
 
-        if (AxGlass.enabled && blurSupported) {
+        if (AxGlass.enabled && blurSupported && state.blurEnabled) {
             for (r in state.regions) {
                 val rs = r.size
                 if (rs.width > 1f && rs.height > 1f) {
                     val local = r.origin - state.sourceOrigin
                     val blur = r.layer
-                    blur.renderEffect = BlurEffect(24f, 24f, TileMode.Clamp)
+                    blur.renderEffect = PanelBlurEffect
                     blur.clip = true
                     blur.setRoundRectOutline(Offset.Zero, rs, r.cornerPx)
                     blur.record(this, layoutDirection, IntSize(rs.width.toInt(), rs.height.toInt())) {
@@ -256,7 +262,7 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
         onDispose { state.regions.remove(region) }
     }
     val shape = RoundedCornerShape(corner)
-    val tint = Color.Black.copy(alpha = if (blurSupported) 0.34f else 0.80f)
+    val tint = Color.Black.copy(alpha = if (blurSupported && state.blurEnabled) 0.34f else 0.58f)
     val edge = Brush.linearGradient(
         listOf(
             Color.White.copy(alpha = 0.50f),
@@ -436,5 +442,49 @@ fun AxDockTab(
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(21.dp))
+    }
+}
+
+
+/** Soft glass edge for sheets and dialogs (gradient hairline that works on dark and light themes). */
+@Composable
+fun Modifier.axGlassBorder(shape: androidx.compose.ui.graphics.Shape): Modifier {
+    val c = MaterialTheme.colorScheme.onSurface
+    return this.border(
+        1.dp,
+        Brush.linearGradient(listOf(c.copy(alpha = 0.42f), c.copy(alpha = 0.06f), c.copy(alpha = 0.24f))),
+        shape,
+    )
+}
+
+/**
+ * Blurs what is behind a dialog / bottom-sheet window (Android 12+, when the device allows window blur).
+ * Safe no-op everywhere else. Call it once inside the dialog's content.
+ */
+@Composable
+fun AxWindowBlur(radius: Int = 36) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    LaunchedEffect(view, radius) {
+        if (Build.VERSION.SDK_INT < 31) return@LaunchedEffect
+        try {
+            val window = (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
+            if (window != null) {
+                window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                val lp = window.attributes
+                lp.blurBehindRadius = radius
+                window.attributes = lp
+            } else {
+                val root = view.rootView
+                val lp = root.layoutParams as? android.view.WindowManager.LayoutParams
+                if (lp != null) {
+                    lp.flags = lp.flags or android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND
+                    lp.blurBehindRadius = radius
+                    val wm = view.context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+                    wm.updateViewLayout(root, lp)
+                }
+            }
+        } catch (e: Throwable) {
+            // blur is only decoration
+        }
     }
 }
