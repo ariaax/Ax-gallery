@@ -6003,7 +6003,7 @@ private fun PhotoViewer(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Box(
-                                    Modifier.fillMaxWidth().height(28.dp).clickable { docksExpanded = false },
+                                    Modifier.size(width = 36.dp, height = 28.dp).clickable { docksExpanded = false },
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
