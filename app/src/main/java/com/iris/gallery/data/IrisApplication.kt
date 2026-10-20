@@ -34,7 +34,6 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
     //    (helps find where loading hangs). Remove once the bug is fixed.
     private var topActivity: Activity? = null
     private var crashShown = false
-    private var hangScheduled = false
 
     private fun installDiagnostics() {
         val prefs = getSharedPreferences("ax_diag", Context.MODE_PRIVATE)
@@ -71,24 +70,6 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
             override fun onActivityDestroyed(activity: Activity) {}
         })
-    }
-
-    private fun buildThreadDump(): String {
-        val sb = StringBuilder()
-        val all = Thread.getAllStackTraces()
-        for ((thread, frames) in all) {
-            val ours = frames.any { it.className.startsWith("com.iris.gallery") }
-            if (thread.name == "main" || ours) {
-                sb.append("== ").append(thread.name).append(" [").append(thread.state).append("]\n")
-                for (f in frames.take(22)) {
-                    sb.append("  ").append(f.className.substringAfterLast('.'))
-                        .append('.').append(f.methodName)
-                        .append(':').append(f.lineNumber).append('\n')
-                }
-                sb.append('\n')
-            }
-        }
-        return sb.toString().take(12000)
     }
 
     private fun showReport(activity: Activity, title: String, body: String) {
