@@ -184,6 +184,13 @@ import com.iris.gallery.ui.AxFavoriteButton
 import com.iris.gallery.ui.AxGlass
 import com.iris.gallery.ui.axGlassPanel
 import com.iris.gallery.ui.AxGlassNavBar
+import com.iris.gallery.ui.AxEdgeHalo
+import com.iris.gallery.ui.AxDockTab
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.ChevronLeft
+import androidx.compose.material.icons.outlined.ChevronRight
 import com.iris.gallery.ui.axGlassSource
 import com.iris.gallery.ui.rememberAxGlassState
 import androidx.compose.material3.NavigationBarItem
@@ -3317,6 +3324,11 @@ private fun GalleryScaffold(
       }
     }
 
+    if (showFloatingBar) {
+        AxEdgeHalo(top = true, sweepKey = currentVisibleTab, modifier = Modifier.align(Alignment.TopCenter))
+        AxEdgeHalo(top = false, sweepKey = currentVisibleTab, modifier = Modifier.align(Alignment.BottomCenter))
+    }
+
     AnimatedVisibility(
         visible = showFloatingBar,
         modifier = Modifier
@@ -5612,6 +5624,7 @@ private fun PhotoViewer(
                     }
                     ViewerIconButton(compact = compact,
                         icon = Icons.Outlined.DeleteOutline,
+                        tint = Color(0xFFFF9A9A),
                         label = stringResource(R.string.action_delete),
                     ) {
                         if (isLocked || isInTrash || deleteMode == DeleteMode.ALWAYS_ASK || confirmDeleteSetting) {
@@ -5886,57 +5899,120 @@ private fun PhotoViewer(
         }
 
         if (isLandscapeViewer) {
+            var docksExpanded by remember { mutableStateOf(true) }
+            var dockTick by remember { mutableIntStateOf(0) }
+            LaunchedEffect(docksExpanded, dockTick, pagerState.currentPage) {
+                if (docksExpanded) {
+                    delay(5000)
+                    docksExpanded = false
+                }
+            }
+            val dockTouch = Modifier.pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    dockTick++
+                }
+            }
             val sideFilmState = rememberLazyListState()
             LaunchedEffect(pagerState.currentPage) {
                 sideFilmState.animateScrollToItem((pagerState.currentPage - 2).coerceAtLeast(0))
             }
+            val dockVisible = controlsVisible && !gestureHudActive
+            // ---- left dock: media strip ----
             AnimatedVisibility(
-                visible = controlsVisible && !gestureHudActive && showFilmstrip && images.size > 1,
+                visible = dockVisible && showFilmstrip && images.size > 1,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .padding(start = 16.dp, top = 84.dp, bottom = 12.dp)
+                    .padding(start = 14.dp, top = 84.dp, bottom = 12.dp)
                     .graphicsLayer { alpha = controlsDismissAlpha },
                 enter = fadeIn(tween(260)) + slideInHorizontally(spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)) { -it },
                 exit = fadeOut(tween(160)) + slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { -it },
             ) {
-                Surface(
-                    color = Color.Transparent,
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier.width(46.dp).heightIn(max = 220.dp).axGlassPanel(viewerGlass, 18.dp),
-                ) {
-                    LazyColumn(
-                        state = sideFilmState,
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        itemsIndexed(images, key = { _, it -> it.id }) { index, item ->
-                            filmThumb(index, item, 32.dp)
+                AnimatedContent(
+                    targetState = docksExpanded,
+                    transitionSpec = {
+                        (fadeIn(tween(200)) + scaleIn(spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow), initialScale = 0.55f, transformOrigin = TransformOrigin(0f, 0.5f)))
+                            .togetherWith(fadeOut(tween(120)) + scaleOut(tween(140), targetScale = 0.55f, transformOrigin = TransformOrigin(0f, 0.5f)))
+                    },
+                    label = "left_dock",
+                ) { expanded ->
+                    if (expanded) {
+                        Surface(
+                            color = Color.Transparent,
+                            shape = RoundedCornerShape(22.dp),
+                            modifier = Modifier.width(50.dp).heightIn(max = 240.dp).axGlassPanel(viewerGlass, 22.dp).then(dockTouch),
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    Modifier.fillMaxWidth().height(28.dp).clickable { docksExpanded = false },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(Icons.Outlined.ChevronLeft, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
+                                }
+                                LazyColumn(
+                                    state = sideFilmState,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    contentPadding = PaddingValues(start = 4.dp, end = 4.dp, bottom = 6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    itemsIndexed(images, key = { _, it -> it.id }) { index, item ->
+                                        val thumbSz by animateDpAsState(
+                                            targetValue = if (index == pagerState.currentPage) 40.dp else 30.dp,
+                                            animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow),
+                                            label = "dock_thumb",
+                                        )
+                                        filmThumb(index, item, thumbSz)
+                                    }
+                                }
+                            }
                         }
+                    } else {
+                        AxDockTab(viewerGlass, Icons.Outlined.PhotoLibrary, "Media") { docksExpanded = true; dockTick++ }
                     }
                 }
             }
+            // ---- right dock: actions ----
             AnimatedVisibility(
-                visible = controlsVisible && !gestureHudActive,
+                visible = dockVisible,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 16.dp, top = 84.dp, bottom = 12.dp)
+                    .padding(end = 14.dp, top = 84.dp, bottom = 12.dp)
                     .graphicsLayer { alpha = controlsDismissAlpha },
                 enter = fadeIn(tween(260)) + slideInHorizontally(spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)) { it },
                 exit = fadeOut(tween(160)) + slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { it },
             ) {
-                Surface(
-                    color = Color.Transparent,
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(22.dp),
-                    tonalElevation = 0.dp,
-                    modifier = Modifier.axGlassPanel(viewerGlass, 22.dp),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        actionButtons(true)
+                AnimatedContent(
+                    targetState = docksExpanded,
+                    transitionSpec = {
+                        (fadeIn(tween(200)) + scaleIn(spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow), initialScale = 0.55f, transformOrigin = TransformOrigin(1f, 0.5f)))
+                            .togetherWith(fadeOut(tween(120)) + scaleOut(tween(140), targetScale = 0.55f, transformOrigin = TransformOrigin(1f, 0.5f)))
+                    },
+                    label = "right_dock",
+                ) { expanded ->
+                    if (expanded) {
+                        Surface(
+                            color = Color.Transparent,
+                            contentColor = Color.White,
+                            shape = RoundedCornerShape(22.dp),
+                            tonalElevation = 0.dp,
+                            modifier = Modifier.axGlassPanel(viewerGlass, 22.dp).then(dockTouch),
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 5.dp).padding(bottom = 5.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Box(
+                                    Modifier.fillMaxWidth().height(28.dp).clickable { docksExpanded = false },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
+                                }
+                                actionButtons(true)
+                            }
+                        }
+                    } else {
+                        AxDockTab(viewerGlass, Icons.Outlined.Tune, "Actions") { docksExpanded = true; dockTick++ }
                     }
                 }
             }
