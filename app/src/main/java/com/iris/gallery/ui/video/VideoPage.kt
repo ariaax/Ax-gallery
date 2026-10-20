@@ -34,6 +34,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.CompositionLocalProvider
 import coil3.compose.AsyncImage
@@ -141,6 +142,7 @@ fun VideoPage(
     onDismissRelease: (Float) -> Unit = {},
     onZoomChanged: (Boolean) -> Unit,
     onMuteToggled: ((Boolean) -> Unit)? = null,
+    onHudActive: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
     val activity = remember(context) {
@@ -181,6 +183,8 @@ fun VideoPage(
     var offset by remember(media.id) { mutableStateOf(Offset.Zero) }
     var size by remember { mutableStateOf(IntSize.Zero) }
     var gestureFeedback by remember { mutableStateOf<String?>(null) }
+    val hudActive = brightnessHudVisible || volumeHudVisible
+    LaunchedEffect(hudActive, active) { if (active) onHudActive(hudActive) }
     var feedbackOnLeft by remember { mutableStateOf(false) }
     var isFirstFrameRendered by remember(media.id) { mutableStateOf(false) }
     var suppressTapUntil by remember { mutableLongStateOf(0L) }
@@ -793,17 +797,17 @@ fun VideoPage(
         ) {
         val compactLandscape = maxHeight < 500.dp
         Column(
-            modifier = Modifier.widthIn(max = if (compactLandscape) 540.dp else 360.dp).fillMaxWidth()
+            modifier = Modifier.widthIn(max = if (compactLandscape) 500.dp else 340.dp).fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(start = 16.dp, end = 16.dp, top = if (compactLandscape) 4.dp else 128.dp,
-                    bottom = if (compactLandscape) 14.dp else 140.dp)
+                    bottom = if (compactLandscape) 10.dp else 140.dp)
                 .clip(RoundedCornerShape(22.dp))
                 .background(Color.Black.copy(alpha = 0.34f))
                 .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)))
                 .border(1.2.dp, Brush.linearGradient(listOf(
                     Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.06f), Color.White.copy(alpha = 0.30f))),
                     RoundedCornerShape(22.dp))
-                .padding(horizontal = 14.dp, vertical = 6.dp),
+                .padding(horizontal = 14.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             AnimatedVisibility(scrubbing && preview != null) {
@@ -811,6 +815,7 @@ fun VideoPage(
                     .background(Color.Black, RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop) }
             }
             val seekBar: @Composable (Modifier) -> Unit = { seekModifier ->
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
             Slider(
                 modifier = seekModifier,
                 value = progress.coerceIn(0f, 1f),
@@ -845,10 +850,11 @@ fun VideoPage(
                 },
             )
             }
+            }
             val bs = if (compactLandscape) 32.dp else 36.dp
             val controlButtons: @Composable () -> Unit = {
             Row(horizontalArrangement = Arrangement.spacedBy(if (compactLandscape) 8.dp else 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                AxVideoGlassButton(size = bs, onClick = {
+                AxVideoGlassButton(size = bs, plain = true, onClick = {
                     val next = engine.toggleMute()
                     isMuted = next
                     lastMuteFeedback = next
@@ -874,7 +880,7 @@ fun VideoPage(
                         )
                     }
                 }
-                AxVideoGlassButton(size = bs, active = isLooping, onClick = {
+                AxVideoGlassButton(size = bs, plain = true, active = isLooping, onClick = {
                     val nextLoop = !isLooping
                     isLooping = nextLoop
                     engine.player.repeatMode = if (nextLoop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
@@ -883,7 +889,7 @@ fun VideoPage(
                     Icon(
                         imageVector = if (isLooping) Icons.Filled.RepeatOne else Icons.Outlined.Repeat,
                         contentDescription = stringResource(R.string.action_repeat),
-                        tint = Color.White
+                        tint = if (isLooping) Color(0xFFB9D4FF) else Color.White
                     )
                 }
                 AxVideoGlassButton(size = if (compactLandscape) 38.dp else 44.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
@@ -906,7 +912,7 @@ fun VideoPage(
                         )
                     }
                 }
-                AxVideoGlassButton(size = bs, onClick = {
+                AxVideoGlassButton(size = bs, plain = true, onClick = {
                     val activity = generateSequence(context) { (it as? ContextWrapper)?.baseContext }
                         .filterIsInstance<Activity>().firstOrNull() ?: return@AxVideoGlassButton
                     val currentOrientation = context.resources.configuration.orientation
@@ -928,16 +934,17 @@ fun VideoPage(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelSmall)
-                    seekBar(Modifier.weight(1f))
-                    Text(formatTime(duration()), color = Color.White, style = MaterialTheme.typography.labelSmall)
+                    seekBar(Modifier.weight(1f).height(26.dp))
+                    Text(formatTime(duration()), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall)
                     controlButtons()
                 }
             } else {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelMedium)
-                    Text(formatTime(duration()), color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelSmall)
+                    seekBar(Modifier.weight(1f).height(26.dp))
+                    Text(formatTime(duration()), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall)
                 }
-                seekBar(Modifier)
                 controlButtons()
             }
         }
@@ -951,18 +958,22 @@ private fun AxVideoGlassButton(
     onClick: () -> Unit,
     size: androidx.compose.ui.unit.Dp = 36.dp,
     active: Boolean = false,
+    plain: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     Box(
         modifier = Modifier
             .size(size)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (active) 0.24f else 0.12f))
-            .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.Transparent)))
-            .border(
-                1.dp,
-                Brush.linearGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.3f))),
-                CircleShape,
+            .then(
+                if (plain) Modifier else Modifier
+                    .background(Color.White.copy(alpha = if (active) 0.24f else 0.12f))
+                    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.Transparent)))
+                    .border(
+                        1.dp,
+                        Brush.linearGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.3f))),
+                        CircleShape,
+                    )
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
