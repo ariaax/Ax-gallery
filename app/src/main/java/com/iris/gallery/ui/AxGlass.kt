@@ -7,6 +7,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -360,5 +366,75 @@ fun AxFavoriteButton(
                 modifier = Modifier.size(if (compact) 22.dp else 26.dp).scale(scale.value),
             )
         }
+    }
+}
+
+
+/**
+ * Icy-white halo along the top or bottom edge of the screen (iOS-style scroll-edge glow).
+ * Fades in once, and plays a single soft light sweep whenever [sweepKey] changes (e.g. tab switch).
+ */
+@Composable
+fun AxEdgeHalo(top: Boolean, sweepKey: Any, modifier: Modifier = Modifier) {
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val base = if (dark) Color(0xFFE6F1FF) else Color(0xFFB4D2FF)
+    val peak = if (dark) 0.17f else 0.26f
+    val appear = remember { Animatable(0f) }
+    val sweep = remember { Animatable(1f) }
+    LaunchedEffect(Unit) { appear.animateTo(1f, tween(700)) }
+    LaunchedEffect(sweepKey) {
+        sweep.snapTo(0f)
+        sweep.animateTo(1f, tween(1100, easing = FastOutSlowInEasing))
+    }
+    val inset = if (top) WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    else WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val total = inset + (if (top) 92.dp else 128.dp)
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(total)
+            .drawBehind {
+                val a = appear.value
+                val c0 = base.copy(alpha = peak * a)
+                val c1 = base.copy(alpha = peak * 0.38f * a)
+                val brush = if (top) Brush.verticalGradient(
+                    colorStops = arrayOf(0f to c0, 0.45f to c1, 1f to Color.Transparent)
+                ) else Brush.verticalGradient(
+                    colorStops = arrayOf(0f to Color.Transparent, 0.55f to c1, 1f to c0)
+                )
+                drawRect(brush)
+                val sw = sweep.value
+                if (sw > 0.001f && sw < 0.999f) {
+                    val bell = sin(Math.PI * sw).toFloat()
+                    val x = size.width * (-0.2f + 1.4f * sw)
+                    val cy = if (top) 0f else size.height
+                    drawRect(
+                        Brush.radialGradient(
+                            listOf(Color.White.copy(alpha = 0.24f * bell), Color.Transparent),
+                            center = Offset(x, cy),
+                            radius = size.width * 0.38f,
+                        )
+                    )
+                }
+            }
+    )
+}
+
+/** Small round glass tab shown when a side dock is collapsed. */
+@Composable
+fun AxDockTab(
+    state: AxGlassState,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        Modifier
+            .size(42.dp)
+            .axGlassPanel(state, 21.dp)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(21.dp))
     }
 }
