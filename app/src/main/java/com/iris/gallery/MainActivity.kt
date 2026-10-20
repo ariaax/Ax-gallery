@@ -185,6 +185,8 @@ import com.iris.gallery.ui.AxGlass
 import com.iris.gallery.ui.axGlassPanel
 import com.iris.gallery.ui.AxGlassNavBar
 import com.iris.gallery.ui.AxEdgeHalo
+import com.iris.gallery.ui.axGlassBorder
+import com.iris.gallery.ui.AxWindowBlur
 import com.iris.gallery.ui.AxDockTab
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.graphics.TransformOrigin
@@ -1422,6 +1424,9 @@ private fun GalleryApp(
                 if (showAllFilesAccessPromptDialog) {
                     val pending = pendingVaultItems
                     AlertDialog(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
+                        shape = RoundedCornerShape(28.dp),
+                        modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
                         onDismissRequest = { showAllFilesAccessPromptDialog = false; pendingVaultItems = null },
                         icon = { Icon(Icons.Outlined.Lock, null, tint = MaterialTheme.colorScheme.primary) },
                         title = { Text(stringResource(R.string.prompt_free_vault_title)) },
@@ -3358,6 +3363,9 @@ private fun GalleryScaffold(
 
     if (confirmEmptyTrash) {
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
             onDismissRequest = { confirmEmptyTrash = false },
             title = { Text(stringResource(R.string.empty_trash_dialog_title)) },
             text = { Text(stringResource(R.string.empty_trash_dialog_desc, trashed.size, if (trashed.size != 1) "s" else "")) },
@@ -3387,6 +3395,9 @@ private fun GalleryScaffold(
 
     pendingRestoreAlbum?.let { album ->
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
             onDismissRequest = { pendingRestoreAlbum = null },
             title = { Text(stringResource(R.string.dialog_restore_album_title)) },
             text = { Text(stringResource(R.string.dialog_restore_album_desc, album.images.size, album.name)) },
@@ -3413,6 +3424,9 @@ private fun GalleryScaffold(
         val isPermanentMode = isInTrash || isLockedSection || settings.deleteMode == DeleteMode.PERMANENT
         var deletePermanently by remember { mutableStateOf(isPermanentMode) }
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
             onDismissRequest = { pendingDeleteItems = null },
             title = {
                 Text(
@@ -3486,6 +3500,9 @@ private fun GalleryScaffold(
 
     pendingPermanentDeleteItems?.let { items ->
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
             onDismissRequest = { pendingPermanentDeleteItems = null },
             title = {
                 Text(stringResource(R.string.delete_permanent_dialog_title, items.size))
@@ -4845,6 +4862,7 @@ private fun PhotoViewer(
     var showSecureSharingHintDialog by remember { mutableStateOf(false) }
     var showSecureSharingModePicker by remember { mutableStateOf(false) }
     val current = images[pagerState.currentPage]
+    androidx.compose.runtime.SideEffect { viewerGlass.blurEnabled = !current.isVideo }
     val doShare: (MediaImage) -> Unit = { media ->
         coroutineScope.launch {
             val uris = prepareShareUris(context, listOf(media), secureSharingMode)
@@ -6182,6 +6200,9 @@ private fun PhotoViewer(
         val isPermanentlyDeleting = isLocked || isInTrash || deleteMode == DeleteMode.PERMANENT
         var deletePermanently by remember { mutableStateOf(isPermanentlyDeleting) }
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
             onDismissRequest = { confirmDelete = false },
             title = {
                 Text(
@@ -6245,6 +6266,9 @@ private fun PhotoViewer(
 
     if (directPermanentDelete) {
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
             onDismissRequest = { directPermanentDelete = false },
             title = {
                 Text(
@@ -6330,6 +6354,9 @@ private fun PhotoViewer(
 
     if (showSecureSharingHintDialog) {
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
             onDismissRequest = { showSecureSharingHintDialog = false },
             icon = {
                 Icon(
@@ -6407,6 +6434,9 @@ private fun PhotoViewer(
 
     if (showSecureSharingModePicker) {
         AlertDialog(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
             onDismissRequest = { showSecureSharingModePicker = false },
             icon = {
                 Icon(
@@ -7155,10 +7185,16 @@ private fun PhotoDetailsSheet(
     }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val screenHeightDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp
+    val glassSheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        shape = glassSheetShape,
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+        scrimColor = Color.Black.copy(alpha = 0.30f),
+        modifier = Modifier.axGlassBorder(glassSheetShape),
     ) {
+        AxWindowBlur(40)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -7323,7 +7359,8 @@ private fun PhotoDetailsSheet(
             if (hasOrigin) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
                     shape = RoundedCornerShape(16.dp),
                 ) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -7378,7 +7415,8 @@ private fun PhotoDetailsSheet(
                 if (hasCamera) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
                         shape = RoundedCornerShape(16.dp),
                     ) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -7426,7 +7464,8 @@ private fun PhotoDetailsSheet(
             }
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
                 shape = RoundedCornerShape(16.dp),
             ) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -7471,7 +7510,8 @@ private fun PhotoDetailsSheet(
             // 5. File Information Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
                 shape = RoundedCornerShape(16.dp),
             ) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -7645,6 +7685,9 @@ private fun RenameFileDialog(
     val ext = currentName.substringAfterLast('.', "")
     var newName by remember { mutableStateOf(nameWithoutExt) }
     AlertDialog(
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
+        shape = RoundedCornerShape(28.dp),
+        modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.rename_file_title)) },
         text = {
