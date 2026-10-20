@@ -7191,6 +7191,7 @@ private fun PhotoDetailsSheet(
         sheetState = sheetState,
         shape = glassSheetShape,
         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
         scrimColor = Color.Black.copy(alpha = 0.30f),
         modifier = Modifier.axGlassBorder(glassSheetShape),
     ) {
