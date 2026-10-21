@@ -29,25 +29,34 @@ data class MediaImage(
     val dateAdded: Long = 0L,
 )
 
-/**
- * Timeline ordering.
- * - useDateAdded = true: files saved/added recently stay at the top for [recentWindowDays] days
- *   (like Telegram's gallery); after that they move to their real date (date taken), so old files
- *   that were bulk-indexed on one day (restore, rescan, migration) are NOT all grouped under that day.
- * - useDateAdded = false: always the original creation date.
- */
+/** How the timeline is ordered and grouped. */
+enum class DateSortMode {
+    /** New files stay on top for [TimelineSort.recentWindowDays] days, then use their real date taken. */
+    HYBRID,
+    /** Always the day the file was saved to this phone. */
+    DATE_ADDED,
+    /** Always the original creation date. */
+    DATE_TAKEN,
+}
+
 object TimelineSort {
-    @Volatile var useDateAdded: Boolean = true
+    @Volatile var mode: DateSortMode = DateSortMode.HYBRID
     @Volatile var recentWindowDays: Int = 7
 }
 
 /** The date used for ordering and for the timeline day headers. */
 val MediaImage.sortDate: Long
-    get() {
-        if (!TimelineSort.useDateAdded || dateAdded <= 0L) return dateTaken
-        val age = System.currentTimeMillis() - dateAdded
-        val windowMs = TimelineSort.recentWindowDays * 86_400_000L
-        return if (age in 0L..windowMs) maxOf(dateAdded, dateTaken) else dateTaken
+    get() = when (TimelineSort.mode) {
+        DateSortMode.DATE_TAKEN -> dateTaken
+        DateSortMode.DATE_ADDED -> if (dateAdded > 0L) dateAdded else dateTaken
+        DateSortMode.HYBRID -> {
+            if (dateAdded <= 0L) dateTaken
+            else {
+                val age = System.currentTimeMillis() - dateAdded
+                val windowMs = TimelineSort.recentWindowDays * 86_400_000L
+                if (age in 0L..windowMs) maxOf(dateAdded, dateTaken) else dateTaken
+            }
+        }
     }
 
 val MediaImage.isScreenshot: Boolean

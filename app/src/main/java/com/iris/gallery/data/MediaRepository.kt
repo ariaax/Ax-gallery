@@ -328,6 +328,7 @@ class MediaRepository(private val context: Context) {
     }
 
     suspend fun loadImages(trashed: Boolean = false): List<MediaImage> = withContext(Dispatchers.IO) {
+        ExifDateStore.ensureLoaded(context)
         val now = System.currentTimeMillis()
         recentMovedOrDeletedIds.entries.removeIf { now - it.value > TOMBSTONE_TTL_MS }
         recentMovedOrDeletedPaths.entries.removeIf { now - it.value > TOMBSTONE_TTL_MS }
@@ -542,6 +543,11 @@ class MediaRepository(private val context: Context) {
                             }
                         }
 
+                        if (!isVid && takenTime == cursorDateTaken && (cursorDateTaken <= 0L || isSyntheticDateTaken)) {
+                            val storedExif = ExifDateStore.get(mediaId)
+                            if (storedExif != null) takenTime = storedExif
+                        }
+
                         if (takenTime <= 0L || (isSyntheticDateTaken && takenTime == cursorDateTaken)) {
                             takenTime = resolveDateTaken(
                                 cursorDateTaken = cursorDateTaken,
@@ -593,6 +599,46 @@ class MediaRepository(private val context: Context) {
             saveSnapshot(sorted)
         }
         sorted
+    }
+
+    private fun looksSyntheticDate(img: MediaImage): Boolean {
+        val t = img.dateTaken / 1000L
+        return t <= 0L ||
+            (img.dateAdded > 0L && t == img.dateAdded / 1000L) ||
+            (img.dateModified > 0L && t == img.dateModified / 1000L)
+    }
+
+    /**
+     * Reads the real EXIF date of photos whose MediaStore date looks fake (equal to the added/modified time),
+     * one file at a time in the background, and remembers it. Returns how many photos got a new date.
+     */
+    suspend fun enrichExifDates(images: List<MediaImage>): Int = withContext(Dispatchers.IO) {
+        ExifDateStore.ensureLoaded(context)
+        if (!ExifDateStore.enabled) return@withContext 0
+        val candidates = images.filter {
+            !it.isVideo && it.id > 0L && it.path.isNotBlank() &&
+                !ExifDateStore.isChecked(it.id) && looksSyntheticDate(it)
+        }
+        if (candidates.isEmpty()) return@withContext 0
+        val updates = HashMap<Long, Long>()
+        for ((index, img) in candidates.withIndex()) {
+            val exif = runCatching { extractExifDateTaken(context, img.uri, img.path) }.getOrNull()
+            ExifDateStore.put(img.id, exif ?: 0L)
+            if (exif != null && exif > 0L && Math.abs(exif - img.dateTaken) > 1_000L) {
+                updates[img.id] = exif
+            }
+            if (index % 100 == 99) ExifDateStore.save()
+            kotlinx.coroutines.yield()
+        }
+        ExifDateStore.save()
+        if (updates.isNotEmpty()) applyExifDates(updates)
+        updates.size
+    }
+
+    fun applyExifDates(updates: Map<Long, Long>) {
+        for ((id, millis) in updates) {
+            inMemoryCache.computeIfPresent(id) { _, old -> old.copy(dateTaken = millis) }
+        }
     }
 
     suspend fun renameMedia(item: MediaImage, newName: String): MediaImage? = withContext(Dispatchers.IO) {

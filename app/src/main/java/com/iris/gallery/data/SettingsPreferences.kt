@@ -182,6 +182,10 @@ data class SettingsState(
     val dismissedMemoriesTip: Boolean = false,
     val secureSharingMode: SecureSharingMode = SecureSharingMode.OFF,
     val dismissedSecureSharingTip: Boolean = false,
+    val dateSortMode: DateSortMode = DateSortMode.HYBRID,
+    val recentWindowDays: Int = 7,
+    val glassEnabled: Boolean = true,
+    val backgroundExifDates: Boolean = true,
 ) {
     val hasPin: Boolean get() = appLockPinHash.isNotEmpty()
 }
@@ -190,6 +194,23 @@ class SettingsPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("iris_gallery_settings", Context.MODE_PRIVATE)
     private val _state = MutableStateFlow(read())
     val state: StateFlow<SettingsState> = _state.asStateFlow()
+
+    init {
+        applyRuntime(_state.value)
+    }
+
+    /** Pushes settings that live outside Compose state (timeline order, glass, background dates). */
+    private fun applyRuntime(s: SettingsState) {
+        TimelineSort.mode = s.dateSortMode
+        TimelineSort.recentWindowDays = s.recentWindowDays
+        com.iris.gallery.ui.AxGlass.enabled = s.glassEnabled
+        ExifDateStore.enabled = s.backgroundExifDates
+    }
+
+    fun setDateSortMode(mode: DateSortMode) = update { copy(dateSortMode = mode) }
+    fun setRecentWindowDays(days: Int) = update { copy(recentWindowDays = days.coerceIn(1, 90)) }
+    fun setGlassEnabled(enabled: Boolean) = update { copy(glassEnabled = enabled) }
+    fun setBackgroundExifDates(enabled: Boolean) = update { copy(backgroundExifDates = enabled) }
 
     fun setThemeMode(mode: ThemeMode) = update { copy(themeMode = mode) }
     fun setLanguage(lang: String) = update { copy(language = lang) }
@@ -297,6 +318,7 @@ class SettingsPreferences(context: Context) {
     private fun update(transform: SettingsState.() -> SettingsState) {
         _state.value = _state.value.transform()
         write(_state.value)
+        applyRuntime(_state.value)
     }
 
     private fun read(): SettingsState {
@@ -370,6 +392,10 @@ class SettingsPreferences(context: Context) {
             dismissedMemoriesTip = prefs.getBoolean("dismissed_memories_tip", false),
             secureSharingMode = runCatching { SecureSharingMode.valueOf(prefs.getString("secure_sharing_mode", null).orEmpty()) }.getOrDefault(SecureSharingMode.OFF),
             dismissedSecureSharingTip = prefs.getBoolean("dismissed_secure_sharing_tip", false),
+            dateSortMode = runCatching { DateSortMode.valueOf(prefs.getString("ax_date_sort_mode", null).orEmpty()) }.getOrDefault(DateSortMode.HYBRID),
+            recentWindowDays = prefs.getInt("ax_recent_window_days", 7).coerceIn(1, 90),
+            glassEnabled = prefs.getBoolean("ax_glass_enabled", true),
+            backgroundExifDates = prefs.getBoolean("ax_background_exif_dates", true),
         )
     }
 
@@ -432,6 +458,10 @@ class SettingsPreferences(context: Context) {
             .putBoolean("dismissed_memories_tip", state.dismissedMemoriesTip)
             .putString("secure_sharing_mode", state.secureSharingMode.name)
             .putBoolean("dismissed_secure_sharing_tip", state.dismissedSecureSharingTip)
+            .putString("ax_date_sort_mode", state.dateSortMode.name)
+            .putInt("ax_recent_window_days", state.recentWindowDays)
+            .putBoolean("ax_glass_enabled", state.glassEnabled)
+            .putBoolean("ax_background_exif_dates", state.backgroundExifDates)
             .apply()
     }
 }
