@@ -304,6 +304,18 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private var refreshJob: Job? = null
+    private var exifJob: Job? = null
+
+    /** Reads real photo dates in the background (once per photo); refreshes the list if any date changed. */
+    private fun startExifEnrichment(list: List<MediaImage>) {
+        if (!com.iris.gallery.data.ExifDateStore.enabled || exifJob?.isActive == true) return
+        exifJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val changed = runCatching { repository.enrichExifDates(list) }.getOrDefault(0)
+            if (changed > 0) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { refresh(showLoading = false) }
+            }
+        }
+    }
 
     fun refresh(showLoading: Boolean = true, forceClearCache: Boolean = false) {
         val current = refreshJob
@@ -352,6 +364,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                             loaded
                         }
                         _uiState.update { it.copy(images = combined, loading = false, trashed = trashList, error = null) }
+                        startExifEnrichment(combined)
                         if (_duplicateState.value.hasScanned) _duplicateState.value = DuplicateScanState()
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e

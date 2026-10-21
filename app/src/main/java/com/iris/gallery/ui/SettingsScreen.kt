@@ -120,6 +120,7 @@ import androidx.compose.ui.res.stringResource
 import com.iris.gallery.R
 import com.iris.gallery.data.AccentColor
 import com.iris.gallery.data.CornerStyle
+import com.iris.gallery.data.DateSortMode
 import com.iris.gallery.data.DeleteMode
 import com.iris.gallery.data.GridSpacing
 import com.iris.gallery.data.PreferredEditor
@@ -195,6 +196,83 @@ fun SettingsScreen(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+        // Section: Ax Gallery (timeline order, liquid glass, background dates)
+        item {
+            SettingsSectionHeader(Icons.Outlined.Palette, "Ax Gallery")
+        }
+
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Timeline order", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        when (settings.dateSortMode) {
+                            DateSortMode.HYBRID -> "New files stay on top for the recent window, then move to their real date taken."
+                            DateSortMode.DATE_ADDED -> "Always ordered by the day the file was saved to this phone."
+                            DateSortMode.DATE_TAKEN -> "Always ordered by the date the photo or video was created."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            modifier = Modifier.weight(1f),
+                            selected = settings.dateSortMode == DateSortMode.HYBRID,
+                            onClick = { preferences.setDateSortMode(DateSortMode.HYBRID) },
+                            label = { Text("Hybrid", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        )
+                        FilterChip(
+                            modifier = Modifier.weight(1f),
+                            selected = settings.dateSortMode == DateSortMode.DATE_ADDED,
+                            onClick = { preferences.setDateSortMode(DateSortMode.DATE_ADDED) },
+                            label = { Text("Date added", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        )
+                        FilterChip(
+                            modifier = Modifier.weight(1f),
+                            selected = settings.dateSortMode == DateSortMode.DATE_TAKEN,
+                            onClick = { preferences.setDateSortMode(DateSortMode.DATE_TAKEN) },
+                            label = { Text("Date taken", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        )
+                    }
+                    if (settings.dateSortMode == DateSortMode.HYBRID) {
+                        Text("Recent window: ${settings.recentWindowDays} days", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            for (d in listOf(3, 7, 14, 30)) {
+                                FilterChip(
+                                    modifier = Modifier.weight(1f),
+                                    selected = settings.recentWindowDays == d,
+                                    onClick = { preferences.setRecentWindowDays(d) },
+                                    label = { Text("$d d", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1) }
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                    SettingsSwitchRow(
+                        title = "Liquid glass",
+                        subtitle = "Frosted glass bars, panels and icy edges. Turn off for a flat, lighter look.",
+                        checked = settings.glassEnabled,
+                        onCheckedChange = { preferences.setGlassEnabled(it) }
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                    SettingsSwitchRow(
+                        title = "Read photo dates in background",
+                        subtitle = "Quietly finds the real date of photos with a wrong date, so they sit in the right place.",
+                        checked = settings.backgroundExifDates,
+                        onCheckedChange = { preferences.setBackgroundExifDates(it) }
+                    )
+                }
+            }
+        }
+
         // Section: Language & Region
         item {
             SettingsSectionHeader(Icons.Outlined.Language, stringResource(R.string.settings_section_language))

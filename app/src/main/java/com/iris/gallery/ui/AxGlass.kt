@@ -81,7 +81,8 @@ import androidx.compose.ui.unit.dp
 
 /** Global switch for the Liquid Glass look (a settings toggle can drive this later). */
 object AxGlass {
-    @Volatile var enabled: Boolean = true
+    /** Compose state, so flipping the setting updates the UI immediately. */
+    var enabled: Boolean by mutableStateOf(true)
 }
 
 /**
