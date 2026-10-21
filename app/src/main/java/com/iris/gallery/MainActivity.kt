@@ -2271,6 +2271,10 @@ private fun GalleryScaffold(
     val showFloatingBar = (isLandscape || AxGlass.enabled) && selectedIds.isEmpty() && selectedId == null && editorImage == null && activeOverlayScreen == null && externalMedia == null
 
     val axGlass = rememberAxGlassState()
+    var dateSortFirstRun by remember { mutableStateOf(true) }
+    LaunchedEffect(settings.dateSortMode, settings.recentWindowDays) {
+        if (dateSortFirstRun) dateSortFirstRun = false else viewModel.refresh(showLoading = false)
+    }
     Box(Modifier.fillMaxSize()) {
         Scaffold(
         topBar = {
@@ -3329,7 +3333,7 @@ private fun GalleryScaffold(
       }
     }
 
-    if (showFloatingBar) {
+    if (showFloatingBar && AxGlass.enabled) {
         AxEdgeHalo(top = true, sweepKey = currentVisibleTab, modifier = Modifier.align(Alignment.TopCenter))
         AxEdgeHalo(top = false, sweepKey = currentVisibleTab, modifier = Modifier.align(Alignment.BottomCenter))
     }
