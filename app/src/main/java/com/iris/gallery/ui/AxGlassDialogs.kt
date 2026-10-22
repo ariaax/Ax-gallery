@@ -2,6 +2,7 @@ package com.iris.gallery.ui
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -217,4 +218,18 @@ fun AxBarTitle(text: String) {
             brush = Brush.verticalGradient(listOf(c, c.copy(alpha = 0.78f), tint.copy(alpha = 0.9f))),
         ),
     )
+}
+
+/** Icy-blue frosted glass, same look as the video control bar (works over video, where blur is impossible). */
+fun Modifier.axIcyPanel(corner: androidx.compose.ui.unit.Dp): Modifier {
+    val shape = RoundedCornerShape(corner)
+    return this
+        .clip(shape)
+        .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
+        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
+        .border(
+            1.2.dp,
+            Brush.linearGradient(listOf(Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.50f))),
+            shape,
+        )
 }
