@@ -188,6 +188,7 @@ import com.iris.gallery.ui.AxEdgeHalo
 import com.iris.gallery.ui.axGlassBorder
 import com.iris.gallery.ui.AxWindowBlur
 import com.iris.gallery.ui.AxBarButton
+import com.iris.gallery.ui.AxBarTitle
 import com.iris.gallery.ui.axGlassSheetEdge
 import com.iris.gallery.ui.AxDockTab
 import androidx.compose.animation.core.animateDpAsState
@@ -2344,7 +2345,7 @@ private fun GalleryScaffold(
                                 Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         } else {
-                            Text(count, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            AxBarTitle(count)
                         }
                     }
                 },
