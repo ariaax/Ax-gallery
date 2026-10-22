@@ -542,6 +542,10 @@ private fun GalleryApp(
     viewModel: GalleryViewModel = viewModel(),
 ) {
     val context = LocalContext.current
+    var dateSortFirstRun by remember { mutableStateOf(true) }
+    LaunchedEffect(settings.dateSortMode, settings.recentWindowDays) {
+        if (dateSortFirstRun) dateSortFirstRun = false else viewModel.refresh(showLoading = false)
+    }
     val permissions = remember { requiredPermissions() }
     var permitted by remember {
         mutableStateOf(hasMediaPermission(context))
@@ -2271,10 +2275,6 @@ private fun GalleryScaffold(
     val showFloatingBar = (isLandscape || AxGlass.enabled) && selectedIds.isEmpty() && selectedId == null && editorImage == null && activeOverlayScreen == null && externalMedia == null
 
     val axGlass = rememberAxGlassState()
-    var dateSortFirstRun by remember { mutableStateOf(true) }
-    LaunchedEffect(settings.dateSortMode, settings.recentWindowDays) {
-        if (dateSortFirstRun) dateSortFirstRun = false else viewModel.refresh(showLoading = false)
-    }
     Box(Modifier.fillMaxSize()) {
         Scaffold(
         topBar = {
