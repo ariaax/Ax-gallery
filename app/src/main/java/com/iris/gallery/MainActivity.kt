@@ -187,6 +187,8 @@ import com.iris.gallery.ui.AxGlassNavBar
 import com.iris.gallery.ui.AxEdgeHalo
 import com.iris.gallery.ui.axGlassBorder
 import com.iris.gallery.ui.AxWindowBlur
+import com.iris.gallery.ui.AxBarButton
+import com.iris.gallery.ui.axGlassSheetEdge
 import com.iris.gallery.ui.AxDockTab
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.graphics.TransformOrigin
@@ -2348,20 +2350,20 @@ private fun GalleryScaffold(
                 },
                 navigationIcon = {
                     if (isFileSearching && canSearchOnScreen) {
-                        IconButton(onClick = { isFileSearching = false; fileSearchQuery = "" }) {
+                        AxBarButton(onClick = { isFileSearching = false; fileSearchQuery = "" }) {
                             Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.clear_search))
                         }
                     } else if (selectedIds.isNotEmpty()) {
-                        IconButton(onClick = ::clearSelection) { Icon(Icons.Outlined.Close, stringResource(R.string.action_clear_selection)) }
+                        AxBarButton(onClick = ::clearSelection) { Icon(Icons.Outlined.Close, stringResource(R.string.action_clear_selection)) }
                     } else if (destination == 1 && selectedAlbum != null) {
-                        IconButton(onClick = {
+                        AxBarButton(onClick = {
                             selectedAlbumId = null
                             if (isFileSearching) { isFileSearching = false; fileSearchQuery = "" }
                         }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, albumsTabLabel) }
                     } else if (destination == 3 && librarySection == "locked" && selectedLockedAlbum != null) {
-                        IconButton(onClick = { selectedLockedAlbum = null }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.section_locked)) }
+                        AxBarButton(onClick = { selectedLockedAlbum = null }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.section_locked)) }
                     } else if (destination == 3 && librarySection != null) {
-                        IconButton(onClick = {
+                        AxBarButton(onClick = {
                             librarySection = null
                             selectedLockedAlbum = null
                             if (isFileSearching) { isFileSearching = false; fileSearchQuery = "" }
@@ -2371,17 +2373,17 @@ private fun GalleryScaffold(
                 actions = {
                     if (selectedIds.isNotEmpty()) {
                         if (destination == 3 && librarySection == "trash") {
-                            IconButton(onClick = { val selected = activeMedia.filter { it.id in selectedIds }; clearSelection(); handleRestore(selected) }) {
+                            AxBarButton(onClick = { val selected = activeMedia.filter { it.id in selectedIds }; clearSelection(); handleRestore(selected) }) {
                                 Icon(Icons.Outlined.RestoreFromTrash, stringResource(R.string.action_restore))
                             }
                         }
                         if (destination == 3 && librarySection == "locked") {
-                            IconButton(onClick = { val selected = activeMedia.filter { it.id in selectedIds }; clearSelection(); onUnlockMedia(selected) }) {
+                            AxBarButton(onClick = { val selected = activeMedia.filter { it.id in selectedIds }; clearSelection(); onUnlockMedia(selected) }) {
                                 Icon(Icons.Outlined.LockOpen, stringResource(R.string.action_remove_from_locked))
                             }
                         }
-                        IconButton(onClick = ::shareSelection) { Icon(Icons.Outlined.Share, stringResource(R.string.action_share)) }
-                        IconButton(onClick = {
+                        AxBarButton(onClick = ::shareSelection) { Icon(Icons.Outlined.Share, stringResource(R.string.action_share)) }
+                        AxBarButton(onClick = {
                             val selected = activeMedia.filter { it.id in selectedIds }
                             if (selected.isNotEmpty()) {
                                 if (destination == 3 && (librarySection == "trash" || librarySection == "locked")) {
@@ -2398,7 +2400,7 @@ private fun GalleryScaffold(
                             }
                         }) { Icon(Icons.Outlined.DeleteOutline, stringResource(R.string.action_delete)) }
                         Box {
-                            IconButton(onClick = { selectionMenuExpanded = true }) {
+                            AxBarButton(onClick = { selectionMenuExpanded = true }) {
                                 Icon(Icons.Outlined.MoreVert, stringResource(R.string.action_more))
                             }
                             DropdownMenu(selectionMenuExpanded, onDismissRequest = { selectionMenuExpanded = false }) {
@@ -2487,7 +2489,7 @@ private fun GalleryScaffold(
                     } else if (!isFileSearching || !canSearchOnScreen) {
                         val canSearch = destination == 0 || destination == 2 || (destination == 1 && selectedAlbum != null) || (destination == 3 && librarySection == "videos")
                         if (canSearch && !isFileSearching) {
-                            IconButton(onClick = { isFileSearching = true }) {
+                            AxBarButton(onClick = { isFileSearching = true }) {
                                 Icon(Icons.Outlined.Search, stringResource(R.string.action_search))
                             }
                         }
@@ -2500,7 +2502,7 @@ private fun GalleryScaffold(
                                 mutableStateOf(albumOverride != null)
                             }
                             Box {
-                                IconButton(onClick = { albumSortMenuExpanded = true }) {
+                                AxBarButton(onClick = { albumSortMenuExpanded = true }) {
                                     Icon(Icons.AutoMirrored.Outlined.Sort, stringResource(R.string.action_sort))
                                 }
                                 DropdownMenu(
@@ -2561,7 +2563,7 @@ private fun GalleryScaffold(
                             }
                             var albumOptionsMenuExpanded by remember { mutableStateOf(false) }
                             Box {
-                                IconButton(onClick = { albumOptionsMenuExpanded = true }) {
+                                AxBarButton(onClick = { albumOptionsMenuExpanded = true }) {
                                     Icon(Icons.Outlined.MoreVert, stringResource(R.string.action_more_options))
                                 }
                                 DropdownMenu(
@@ -2616,7 +2618,7 @@ private fun GalleryScaffold(
                         }
                         val canToggleGrid = destination == 0 || destination == 2 || (destination == 1 && selectedAlbum != null) || (destination == 3 && (librarySection == "trash" || librarySection == "locked" || librarySection == "memories" || librarySection == "formats" || librarySection == "editor"))
                         if (canToggleGrid) {
-                            IconButton(onClick = {
+                            AxBarButton(onClick = {
                                 compactGrid = !compactGrid
                                 customCellSize = if (compactGrid) 80.dp else 112.dp
                                 settingsPreferences.setPhotoGridSize(customCellSize.value)
@@ -2629,7 +2631,7 @@ private fun GalleryScaffold(
                         }
                         val inSubpage = (destination == 1 && selectedAlbum != null) || (destination == 3 && librarySection != null)
                         if (destination == 1 && selectedAlbum == null && albumSort == com.iris.gallery.data.AlbumSort.CUSTOM) {
-                            IconButton(onClick = { isEditingAlbumOrder = !isEditingAlbumOrder }) {
+                            AxBarButton(onClick = { isEditingAlbumOrder = !isEditingAlbumOrder }) {
                                 Icon(
                                     if (isEditingAlbumOrder) Icons.Filled.Check else Icons.Outlined.Edit,
                                     contentDescription = stringResource(
@@ -2640,7 +2642,7 @@ private fun GalleryScaffold(
                             }
                         }
                         if (!inSubpage) {
-                            IconButton(onClick = {
+                            AxBarButton(onClick = {
                                 activeOverlayScreen = "settings"
                             }) {
                                 Icon(Icons.Outlined.Settings, stringResource(R.string.section_settings))
@@ -7197,7 +7199,7 @@ private fun PhotoDetailsSheet(
         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
         contentColor = MaterialTheme.colorScheme.onSurface,
         scrimColor = Color.Black.copy(alpha = 0.30f),
-        modifier = Modifier.axGlassBorder(glassSheetShape),
+        modifier = Modifier.axGlassSheetEdge(),
     ) {
         AxWindowBlur(40)
         Column(
