@@ -1,6 +1,16 @@
 package com.iris.gallery.ui
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,7 +58,7 @@ fun ModalBottomSheet(
     val glass = AxGlass.enabled
     androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        modifier = if (glass) modifier.axGlassBorder(shape) else modifier,
+        modifier = if (glass) modifier.axGlassSheetEdge() else modifier,
         sheetState = sheetState,
         shape = shape,
         containerColor = if (glass) containerColor.copy(alpha = minOf(containerColor.alpha, SHEET_ALPHA)) else containerColor,
@@ -126,4 +136,52 @@ fun DropdownMenu(
             content = content,
         )
     }
+}
+
+/** Glass hairline along the TOP edge of a sheet only (a full outline showed a stray line at the sheet's bottom). */
+@Composable
+fun Modifier.axGlassSheetEdge(corner: androidx.compose.ui.unit.Dp = 28.dp): Modifier {
+    val c = MaterialTheme.colorScheme.onSurface
+    return this.drawWithContent {
+        drawContent()
+        val r = corner.toPx()
+        val w = size.width
+        val path = Path().apply {
+            moveTo(0f, r)
+            arcTo(Rect(0f, 0f, 2 * r, 2 * r), 180f, 90f, false)
+            lineTo(w - r, 0f)
+            arcTo(Rect(w - 2 * r, 0f, w, 2 * r), 270f, 90f, false)
+        }
+        drawPath(
+            path,
+            Brush.horizontalGradient(listOf(c.copy(alpha = 0.28f), c.copy(alpha = 0.46f), c.copy(alpha = 0.28f))),
+            style = Stroke(width = 1.dp.toPx()),
+        )
+    }
+}
+
+/** Top-bar icon button: a small frosted glass circle when liquid glass is on, a normal icon button otherwise. */
+@Composable
+fun AxBarButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    if (!AxGlass.enabled) {
+        androidx.compose.material3.IconButton(onClick = onClick, modifier = modifier, enabled = enabled, content = content)
+        return
+    }
+    val c = MaterialTheme.colorScheme.onSurface
+    androidx.compose.material3.IconButton(
+        onClick = onClick,
+        modifier = modifier
+            .padding(horizontal = 2.dp)
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Brush.verticalGradient(listOf(c.copy(alpha = 0.18f), c.copy(alpha = 0.07f))))
+            .axGlassBorder(CircleShape),
+        enabled = enabled,
+        content = content,
+    )
 }
