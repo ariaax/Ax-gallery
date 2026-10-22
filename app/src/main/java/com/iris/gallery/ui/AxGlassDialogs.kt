@@ -2,6 +2,7 @@ package com.iris.gallery.ui
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -179,17 +180,20 @@ fun AxBarButton(
         return
     }
     val c = MaterialTheme.colorScheme.onSurface
-    androidx.compose.material3.IconButton(
-        onClick = onClick,
+    androidx.compose.foundation.layout.Box(
         modifier = modifier
-            .padding(horizontal = 5.dp)
-            .size(36.dp)
+            .padding(horizontal = 4.dp)
+            .size(34.dp)
             .clip(CircleShape)
             .background(Brush.verticalGradient(listOf(c.copy(alpha = 0.18f), c.copy(alpha = 0.07f))))
-            .axGlassBorder(CircleShape),
-        enabled = enabled,
-        content = content,
-    )
+            .axGlassBorder(CircleShape)
+            .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
+        contentAlignment = androidx.compose.ui.Alignment.Center,
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides c,
+        ) { content() }
+    }
 }
 
 /** Top-bar title: light, airy and slightly tracked with an icy gradient when liquid glass is on. */
