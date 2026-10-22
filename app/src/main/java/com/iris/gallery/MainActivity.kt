@@ -188,6 +188,7 @@ import com.iris.gallery.ui.AxEdgeHalo
 import com.iris.gallery.ui.axGlassBorder
 import com.iris.gallery.ui.AxWindowBlur
 import com.iris.gallery.ui.AxBarButton
+import com.iris.gallery.ui.axIcyPanel
 import com.iris.gallery.ui.AxBarTitle
 import com.iris.gallery.ui.axGlassSheetEdge
 import com.iris.gallery.ui.AxDockTab
@@ -5308,7 +5309,7 @@ private fun PhotoViewer(
             modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
           ) {
-            IconButton(onClick = { triggerAnimatedDismiss() }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(Icons.Outlined.ArrowBack, stringResource(R.string.action_back), tint = Color.White) }
+            IconButton(onClick = { triggerAnimatedDismiss() }, modifier = Modifier.padding(horizontal = 3.dp).axIcyPanel(24.dp)) { Icon(Icons.Outlined.ArrowBack, stringResource(R.string.action_back), tint = Color.White) }
             val currentLocale = rememberAppLocale()
             val headerDate = remember(current.dateTaken, currentLocale, timelineDateFormat, smartYearHiding, customTimelineDateFormat, showViewerTime) {
                 val localDate = Instant.ofEpochMilli(current.dateTaken).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -5363,10 +5364,10 @@ private fun PhotoViewer(
                         style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            IconButton(onClick = { showInfo = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(Icons.Outlined.Info, stringResource(R.string.details_title), tint = Color.White) }
+            IconButton(onClick = { showInfo = true }, modifier = Modifier.padding(horizontal = 3.dp).axIcyPanel(24.dp)) { Icon(Icons.Outlined.Info, stringResource(R.string.details_title), tint = Color.White) }
             if (!isLocked && !isInTrash && current.id > 0) {
                 Box {
-                    IconButton(onClick = { viewerMenuExpanded = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) {
+                    IconButton(onClick = { viewerMenuExpanded = true }, modifier = Modifier.padding(horizontal = 3.dp).axIcyPanel(24.dp)) {
                         Icon(Icons.Outlined.MoreVert, stringResource(R.string.action_more), tint = Color.White)
                     }
                     DropdownMenu(
