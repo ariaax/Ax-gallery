@@ -6,6 +6,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
@@ -176,12 +182,35 @@ fun AxBarButton(
     androidx.compose.material3.IconButton(
         onClick = onClick,
         modifier = modifier
-            .padding(horizontal = 2.dp)
-            .size(40.dp)
+            .padding(horizontal = 5.dp)
+            .size(36.dp)
             .clip(CircleShape)
             .background(Brush.verticalGradient(listOf(c.copy(alpha = 0.18f), c.copy(alpha = 0.07f))))
             .axGlassBorder(CircleShape),
         enabled = enabled,
         content = content,
+    )
+}
+
+/** Top-bar title: light, airy and slightly tracked with an icy gradient when liquid glass is on. */
+@Composable
+fun AxBarTitle(text: String) {
+    if (!AxGlass.enabled) {
+        Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        return
+    }
+    val c = MaterialTheme.colorScheme.onSurface
+    val tint = MaterialTheme.colorScheme.primary
+    Text(
+        text = text,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        style = TextStyle(
+            fontFamily = FontFamily.SansSerif,
+            fontWeight = FontWeight.Light,
+            fontSize = 30.sp,
+            letterSpacing = 1.2.sp,
+            brush = Brush.verticalGradient(listOf(c, c.copy(alpha = 0.78f), tint.copy(alpha = 0.9f))),
+        ),
     )
 }
