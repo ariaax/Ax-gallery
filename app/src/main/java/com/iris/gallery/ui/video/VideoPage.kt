@@ -18,6 +18,10 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -786,8 +790,10 @@ fun VideoPage(
         AnimatedVisibility(
           visible = controlsVisible,
           modifier = Modifier.align(Alignment.BottomCenter),
-          enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 5 },
-          exit = fadeOut(tween(140)) + slideOutVertically(tween(180)) { it / 5 },
+          enter = fadeIn(tween(220)) +
+              scaleIn(spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow), initialScale = 0.88f) +
+              slideInVertically(tween(280, easing = FastOutSlowInEasing)) { it / 4 },
+          exit = fadeOut(tween(150)) + scaleOut(tween(170), targetScale = 0.94f) + slideOutVertically(tween(180)) { it / 6 },
         ) {
         BoxWithConstraints(
             modifier = Modifier
@@ -797,17 +803,17 @@ fun VideoPage(
         ) {
         val compactLandscape = maxHeight < 500.dp
         Column(
-            modifier = Modifier.widthIn(max = if (compactLandscape) 500.dp else 340.dp).fillMaxWidth()
+            modifier = Modifier.widthIn(max = if (compactLandscape) 560.dp else 520.dp).fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(start = 16.dp, end = 16.dp, top = if (compactLandscape) 4.dp else 128.dp,
+                .padding(start = 12.dp, end = 12.dp, top = if (compactLandscape) 4.dp else 128.dp,
                     bottom = if (compactLandscape) 10.dp else 140.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(Color.Black.copy(alpha = 0.34f))
-                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)))
+                .clip(RoundedCornerShape(30.dp))
+                .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
+                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
                 .border(1.2.dp, Brush.linearGradient(listOf(
-                    Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.06f), Color.White.copy(alpha = 0.30f))),
-                    RoundedCornerShape(22.dp))
-                .padding(horizontal = 14.dp, vertical = 4.dp),
+                    Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.50f))),
+                    RoundedCornerShape(30.dp))
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             AnimatedVisibility(scrubbing && preview != null) {
@@ -830,16 +836,17 @@ fun VideoPage(
                 ),
                 thumb = {
                     Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
-                        Box(Modifier.size(22.dp).background(Color.White.copy(alpha = 0.22f), CircleShape))
-                        Box(Modifier.size(12.dp).background(Color.White, CircleShape))
+                        val core by animateDpAsState(if (scrubbing) 18.dp else 12.dp, spring(dampingRatio = 0.55f), label = "thumb")
+                        Box(Modifier.size(22.dp).background(Color.White.copy(alpha = if (scrubbing) 0.34f else 0.22f), CircleShape))
+                        Box(Modifier.size(core).background(Color.White, CircleShape))
                     }
                 },
                 track = { sliderState ->
                     val fraction = sliderState.value.coerceIn(0f, 1f)
                     Box(
-                        Modifier.fillMaxWidth().height(5.dp)
+                        Modifier.fillMaxWidth().height(4.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.22f))
+                            .background(Color.White.copy(alpha = 0.30f))
                     ) {
                         Box(
                             Modifier.fillMaxWidth(fraction).fillMaxHeight()
@@ -851,9 +858,9 @@ fun VideoPage(
             )
             }
             }
-            val bs = if (compactLandscape) 32.dp else 36.dp
+            val bs = 32.dp
             val controlButtons: @Composable () -> Unit = {
-            Row(horizontalArrangement = Arrangement.spacedBy(if (compactLandscape) 8.dp else 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
                 AxVideoGlassButton(size = bs, plain = true, onClick = {
                     val next = engine.toggleMute()
                     isMuted = next
@@ -886,13 +893,15 @@ fun VideoPage(
                     engine.player.repeatMode = if (nextLoop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
                     gestureFeedback = if (nextLoop) "Loop: On" else "Loop: Off"
                 }) {
+                    val loopSpin by animateFloatAsState(if (isLooping) 360f else 0f, tween(450, easing = FastOutSlowInEasing), label = "loopSpin")
                     Icon(
+                        modifier = Modifier.graphicsLayer { rotationZ = loopSpin },
                         imageVector = if (isLooping) Icons.Filled.RepeatOne else Icons.Outlined.Repeat,
                         contentDescription = stringResource(R.string.action_repeat),
                         tint = if (isLooping) Color(0xFFB9D4FF) else Color.White
                     )
                 }
-                AxVideoGlassButton(size = if (compactLandscape) 38.dp else 44.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
+                AxVideoGlassButton(size = 40.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
                     AnimatedContent(
                         targetState = playing,
                         transitionSpec = {
@@ -930,21 +939,11 @@ fun VideoPage(
                 }
             }
             }
-            if (compactLandscape) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelSmall)
-                    seekBar(Modifier.weight(1f).height(26.dp))
-                    Text(formatTime(duration()), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall)
-                    controlButtons()
-                }
-            } else {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelSmall)
-                    seekBar(Modifier.weight(1f).height(26.dp))
-                    Text(formatTime(duration()), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall)
-                }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelSmall)
+                seekBar(Modifier.weight(1f).height(26.dp))
+                Text(formatTime(duration()), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelSmall)
                 controlButtons()
             }
         }
@@ -961,13 +960,17 @@ private fun AxVideoGlassButton(
     plain: Boolean = false,
     content: @Composable () -> Unit,
 ) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (pressed) 0.86f else 1f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium), label = "press")
     Box(
         modifier = Modifier
             .size(size)
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .clip(CircleShape)
             .then(
                 if (plain) Modifier else Modifier
-                    .background(Color.White.copy(alpha = if (active) 0.24f else 0.12f))
+                    .background(Color.White.copy(alpha = if (active) 0.30f else 0.14f))
                     .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.Transparent)))
                     .border(
                         1.dp,
@@ -975,7 +978,7 @@ private fun AxVideoGlassButton(
                         CircleShape,
                     )
             )
-            .clickable(onClick = onClick),
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         CompositionLocalProvider(LocalContentColor provides Color.White) { content() }
