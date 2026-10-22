@@ -207,7 +207,7 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.DropdownMenu
+import com.iris.gallery.ui.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
@@ -5289,7 +5289,7 @@ private fun PhotoViewer(
           }
         }
         AnimatedVisibility(
-          visible = controlsVisible,
+          visible = controlsVisible && !showInfo,
           modifier = Modifier
               .align(Alignment.TopCenter)
               .graphicsLayer { alpha = controlsDismissAlpha },
@@ -5449,7 +5449,7 @@ private fun PhotoViewer(
             val showFilmstripHere = showFilmstrip && images.size > 1
             val bottomOffset = if (isLandscapeViewer) 24.dp else if (showFilmstripHere) 168.dp else 96.dp
             AnimatedVisibility(
-                visible = controlsVisible,
+                visible = controlsVisible && !showInfo,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
@@ -5660,7 +5660,7 @@ private fun PhotoViewer(
                 }
         }
         AnimatedVisibility(
-          visible = controlsVisible,
+          visible = controlsVisible && !showInfo,
           modifier = Modifier
               .align(Alignment.BottomCenter)
               .navigationBarsPadding()
@@ -5939,7 +5939,7 @@ private fun PhotoViewer(
             LaunchedEffect(pagerState.currentPage) {
                 sideFilmState.animateScrollToItem((pagerState.currentPage - 2).coerceAtLeast(0))
             }
-            val dockVisible = controlsVisible && !gestureHudActive
+            val dockVisible = controlsVisible && !gestureHudActive && !showInfo
             // ---- left dock: media strip ----
             AnimatedVisibility(
                 visible = dockVisible && showFilmstrip && images.size > 1,
