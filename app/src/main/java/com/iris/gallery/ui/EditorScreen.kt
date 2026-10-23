@@ -170,7 +170,7 @@ fun EditorScreen(image: MediaImage, onClose: () -> Unit, onSaved: (saved: Boolea
     val context = LocalContext.current
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val scope = rememberCoroutineScope()
-    val settingsPrefs = remember { SettingsPreferences(context) }
+    val settingsPrefs = remember { SettingsPreferences.get(context) }
     var overwriteOriginal by remember(image.id) {
         mutableStateOf(settingsPrefs.state.value.editorOverwriteOriginal)
     }
@@ -2103,7 +2103,7 @@ private fun applyExifTags(dstExif: ExifInterface, tags: Map<String, String>) {
         dstExif.setAttribute(tag, value)
     }
     dstExif.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
-    dstExif.setAttribute(ExifInterface.TAG_SOFTWARE, "Iris Gallery")
+    dstExif.setAttribute(ExifInterface.TAG_SOFTWARE, "Ax Gallery")
 }
 
 private fun applyExifToFile(file: File, tags: Map<String, String>) {
@@ -2340,7 +2340,7 @@ private suspend fun saveEditedCopy(
             put(MediaStore.Images.Media.TITLE, effectiveTitle)
         }
         if (Build.VERSION.SDK_INT >= 29) {
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Iris")
+            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Ax")
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
     }

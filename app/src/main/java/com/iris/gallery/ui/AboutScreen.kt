@@ -150,7 +150,7 @@ fun AboutScreen(
                 ) {
                     Image(
                         painter = painterResource(id = R.mipmap.ic_launcher_foreground),
-                        contentDescription = "Iris Gallery Logo",
+                        contentDescription = "Ax Gallery Logo",
                         modifier = Modifier.size(76.dp)
                     )
                 }
@@ -200,15 +200,15 @@ fun AboutScreen(
                         icon = Icons.Outlined.Psychology,
                         title = androidx.compose.ui.res.stringResource(R.string.about_developer_label),
                         subtitle = androidx.compose.ui.res.stringResource(R.string.about_developer_name)
-                    ) { openUrl("https://bn3di.is-a.dev") }
+                    ) { openUrl("https://github.com/ariaax") }
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                     AboutLinkRow(
                         icon = Icons.Outlined.Language,
                         title = androidx.compose.ui.res.stringResource(R.string.about_website_label),
-                        subtitle = "https://bn3di.is-a.dev"
-                    ) { openUrl("https://bn3di.is-a.dev") }
+                        subtitle = "github.com/ariaax"
+                    ) { openUrl("https://github.com/ariaax") }
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
@@ -216,7 +216,7 @@ fun AboutScreen(
                         icon = Icons.Outlined.Code,
                         title = androidx.compose.ui.res.stringResource(R.string.about_source_label),
                         subtitle = androidx.compose.ui.res.stringResource(R.string.about_source_url)
-                    ) { openUrl("https://github.com/MohamadOday/iris-gallery") }
+                    ) { openUrl("https://github.com/ariaax/Ax-gallery") }
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
@@ -224,7 +224,7 @@ fun AboutScreen(
                         icon = Icons.Outlined.VerifiedUser,
                         title = androidx.compose.ui.res.stringResource(R.string.about_license_label),
                         subtitle = androidx.compose.ui.res.stringResource(R.string.about_license_name)
-                    ) { openUrl("https://github.com/MohamadOday/iris-gallery/blob/main/LICENSE") }
+                    ) { openUrl("https://github.com/ariaax/Ax-gallery/blob/main/LICENSE") }
                 }
             }
         }
@@ -500,7 +500,7 @@ fun MesopotamiaOpticsSheet(onClose: () -> Unit) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "From the earliest mathematics, astronomy, and cuneiform writing in ancient Sumer, Babylon, and Mesopotamia, to the groundbreaking optics of Basra that created the Camera: Iris Gallery honors this timeless heritage of preserving visual memories.",
+                    "From the earliest mathematics, astronomy, and cuneiform writing in ancient Sumer, Babylon, and Mesopotamia, to the groundbreaking optics of Basra that created the Camera: Ax Gallery honors this timeless heritage of preserving visual memories.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
