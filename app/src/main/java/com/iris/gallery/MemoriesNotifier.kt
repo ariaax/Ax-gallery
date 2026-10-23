@@ -66,7 +66,7 @@ object MemoriesNotifications {
     }
 
     fun scheduleFromSettings(context: Context) {
-        val settings = SettingsPreferences(context).state.value
+        val settings = SettingsPreferences.get(context).state.value
         schedule(
             context = context,
             enabled = settings.memoriesNotificationEnabled,
@@ -78,7 +78,7 @@ object MemoriesNotifications {
 
 class MemoriesReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val settings = SettingsPreferences(context).state.value
+        val settings = SettingsPreferences.get(context).state.value
         if (!settings.memoriesNotificationEnabled) return
 
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context,

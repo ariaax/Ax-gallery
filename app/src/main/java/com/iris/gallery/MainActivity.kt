@@ -188,7 +188,6 @@ import com.iris.gallery.ui.AxEdgeHalo
 import com.iris.gallery.ui.axGlassBorder
 import com.iris.gallery.ui.AxWindowBlur
 import com.iris.gallery.ui.AxBarButton
-import com.iris.gallery.ui.axIcyPanel
 import com.iris.gallery.ui.AxBarTitle
 import com.iris.gallery.ui.axGlassSheetEdge
 import com.iris.gallery.ui.AxDockTab
@@ -412,7 +411,7 @@ class MainActivity : ComponentActivity() {
         currentIntentState.value = intent
         IrisPhotoWidget.refreshAll(this)
         enableEdgeToEdge()
-        val settingsPreferences = SettingsPreferences(this)
+        val settingsPreferences = SettingsPreferences.get(this)
         val initialSettings = settingsPreferences.state.value
         val isDark = when (initialSettings.themeMode) {
             com.iris.gallery.data.ThemeMode.LIGHT -> false
@@ -949,7 +948,7 @@ private fun GalleryApp(
                             }
                         } else {
                             viewModel.setLocked(mediaList.map { it.id }, true)
-                            Toast.makeText(context, "${mediaList.size} item(s) hidden in Iris Gallery", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "${mediaList.size} item(s) hidden in Ax Gallery", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -1066,7 +1065,7 @@ private fun GalleryApp(
                                 lockedAuthorized = true
                             } else {
                                 val keyguard = context.getSystemService(KeyguardManager::class.java)
-                                val intent = keyguard?.createConfirmDeviceCredentialIntent("Unlock Iris", "View your locked media")
+                                val intent = keyguard?.createConfirmDeviceCredentialIntent("Unlock Ax Gallery", "View your locked media")
                                 if (intent == null) lockedAuthorized = true else unlockLauncher.launch(intent)
                             }
                         },
@@ -5309,7 +5308,7 @@ private fun PhotoViewer(
             modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
           ) {
-            IconButton(onClick = { triggerAnimatedDismiss() }, modifier = Modifier.padding(horizontal = 3.dp).axIcyPanel(24.dp)) { Icon(Icons.Outlined.ArrowBack, stringResource(R.string.action_back), tint = Color.White) }
+            IconButton(onClick = { triggerAnimatedDismiss() }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(Icons.Outlined.ArrowBack, stringResource(R.string.action_back), tint = Color.White) }
             val currentLocale = rememberAppLocale()
             val headerDate = remember(current.dateTaken, currentLocale, timelineDateFormat, smartYearHiding, customTimelineDateFormat, showViewerTime) {
                 val localDate = Instant.ofEpochMilli(current.dateTaken).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -5364,10 +5363,10 @@ private fun PhotoViewer(
                         style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            IconButton(onClick = { showInfo = true }, modifier = Modifier.padding(horizontal = 3.dp).axIcyPanel(24.dp)) { Icon(Icons.Outlined.Info, stringResource(R.string.details_title), tint = Color.White) }
+            IconButton(onClick = { showInfo = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(Icons.Outlined.Info, stringResource(R.string.details_title), tint = Color.White) }
             if (!isLocked && !isInTrash && current.id > 0) {
                 Box {
-                    IconButton(onClick = { viewerMenuExpanded = true }, modifier = Modifier.padding(horizontal = 3.dp).axIcyPanel(24.dp)) {
+                    IconButton(onClick = { viewerMenuExpanded = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) {
                         Icon(Icons.Outlined.MoreVert, stringResource(R.string.action_more), tint = Color.White)
                     }
                     DropdownMenu(
