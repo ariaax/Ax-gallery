@@ -233,10 +233,10 @@ fun VideoPage(
             override fun onIsPlayingChanged(value: Boolean) { playing = value }
             override fun onVolumeChanged(volume: Float) { isMuted = volume == 0f }
             override fun onRenderedFirstFrame() { isFirstFrameRendered = true }
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) { playbackError = error.errorCodeName }
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) { playbackError = describePlaybackError(error) }
             override fun onPlaybackStateChanged(state: Int) { if (state == Player.STATE_READY) playbackError = null }
         }
-        engine.player.playerError?.let { playbackError = it.errorCodeName }
+        engine.player.playerError?.let { playbackError = describePlaybackError(it) }
         engine.player.addListener(listener)
         if (autoPlay) engine.player.play()
         try {
@@ -771,7 +771,7 @@ fun VideoPage(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text("This video can't be played here", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                Text(code, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
+                Text(code, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
                 androidx.compose.material3.TextButton(onClick = {
                     runCatching {
                         val view = android.content.Intent(android.content.Intent.ACTION_VIEW)
@@ -1067,5 +1067,20 @@ private fun VideoGestureHud(
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
             )
         }
+    }
+}
+/** Short technical reason for a playback failure: error code, which decoder/format failed, and the system message. */
+@OptIn(UnstableApi::class)
+private fun describePlaybackError(e: androidx.media3.common.PlaybackException): String {
+    val ex = e as? androidx.media3.exoplayer.ExoPlaybackException
+    val format = ex?.rendererFormat
+    return buildString {
+        append(e.errorCodeName)
+        if (ex != null && ex.type == androidx.media3.exoplayer.ExoPlaybackException.TYPE_RENDERER) {
+            append('\n').append(ex.rendererName ?: "renderer ${ex.rendererIndex}")
+            if (format != null) append(" · ").append(format.sampleMimeType ?: "?")
+        }
+        val cause = e.cause
+        if (cause != null) append('\n').append(cause.javaClass.simpleName).append(": ").append((cause.message ?: "").take(90))
     }
 }

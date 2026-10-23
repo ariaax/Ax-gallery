@@ -2,6 +2,8 @@ package com.iris.gallery.ui.video
 
 import android.content.Context
 import android.net.Uri
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -23,6 +25,7 @@ interface VideoEngine {
     fun release()
 }
 
+@OptIn(UnstableApi::class)
 class Media3VideoEngine(context: Context) : VideoEngine {
     // Decoder fallback: if the first hardware decoder for a format fails, try the next one instead of giving up.
     private val exoPlayer = ExoPlayer.Builder(
