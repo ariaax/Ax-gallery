@@ -484,6 +484,8 @@ fun AlbumsGrid(
                             )
                         }
 
+                        AlbumAppBadge(album, Modifier.align(Alignment.BottomStart).padding(6.dp))
+
                         // Floating Pin Badge on top-right of pinned album image
                         if (sort != AlbumSort.CUSTOM && isPinned) {
                             Surface(
