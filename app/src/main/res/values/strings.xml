@@ -14,7 +14,7 @@
 
     <!-- Sections -->
     <string name="section_settings">Settings</string>
-    <string name="section_about">About Iris</string>
+    <string name="section_about">About Ax Gallery</string>
     <string name="section_trash">Trash</string>
     <string name="section_locked">Locked</string>
     <string name="section_duplicates">Duplicates</string>
@@ -83,7 +83,7 @@
 
     <!-- Permission Screen -->
     <string name="permission_title">Your gallery, beautifully yours</string>
-    <string name="permission_desc">Allow photo access to browse your library. Iris never uploads or analyzes your photos.</string>
+    <string name="permission_desc">Allow photo access to browse your library. Ax Gallery never uploads or analyzes your photos.</string>
     <string name="permission_button">Choose photos</string>
 
     <!-- Empty States -->
@@ -119,9 +119,9 @@
     <string name="dialog_delete_vault_item_title">Permanently delete %1$s?</string>
     <string name="dialog_delete_vault_item_message">This item will be permanently removed from your private vault.</string>
     <string name="prompt_free_vault_title">Prompt-Free Vault</string>
-    <string name="prompt_free_vault_desc">Granting \'All Files Access\' allows Iris Gallery to move and hide photos in your private vault silently without Android asking for delete confirmation each time.\n\nIris is 100% offline with zero internet access, so your files never leave your device.</string>
+    <string name="prompt_free_vault_desc">Granting \'All Files Access\' allows Ax Gallery to move and hide photos in your private vault silently without Android asking for delete confirmation each time.\n\nIris is 100% offline with zero internet access, so your files never leave your device.</string>
     <string name="dialog_prompt_free_vault_title">Prompt-Free Vault</string>
-    <string name="dialog_prompt_free_vault_message">Granting \'All Files Access\' allows Iris Gallery to move and hide photos in your private vault silently without Android asking for delete confirmation each time.\n\nIris is 100% offline with zero internet access, so your files never leave your device.</string>
+    <string name="dialog_prompt_free_vault_message">Granting \'All Files Access\' allows Ax Gallery to move and hide photos in your private vault silently without Android asking for delete confirmation each time.\n\nIris is 100% offline with zero internet access, so your files never leave your device.</string>
 
     <!-- Media Types & Titles -->
     <string name="media_type_photo">photo</string>
@@ -198,7 +198,7 @@
     <string name="duplicates_keep_best_delete">Keep best, delete %1$d selected</string>
     <string name="duplicates_scan_count">%1$d of %2$d</string>
     <string name="duplicates_hero_title">Clean up with confidence</string>
-    <string name="duplicates_hero_desc">Iris compares files and small on-device visual fingerprints. Photos never leave your phone, and nothing is removed without Android\'s confirmation.</string>
+    <string name="duplicates_hero_desc">Ax Gallery compares files and small on-device visual fingerprints. Photos never leave your phone, and nothing is removed without Android\'s confirmation.</string>
     <string name="duplicates_comparing_progress">Comparing %1$d of %2$d</string>
     <string name="duplicates_scan_again">Scan again</string>
     <string name="duplicates_scan_library">Scan library</string>
@@ -299,7 +299,7 @@
     <string name="exif_artist_label">Author / Photographer</string>
     <string name="exif_artist_hint">e.g. Jane Doe</string>
     <string name="exif_copyright_label">Copyright Notice</string>
-    <string name="exif_copyright_hint">e.g. © 2026 Mohamad Oday</string>
+    <string name="exif_copyright_hint">e.g. © 2026 Aria ax</string>
     <string name="exif_software_label">Software / Tool</string>
     <string name="exif_camera_make_label">Camera Manufacturer</string>
     <string name="exif_camera_make_hint">e.g. Sony, Canon, Google, Nikon</string>
@@ -436,15 +436,15 @@
     <string name="settings_section_behavior">Behavior &amp; Security</string>
     <string name="settings_startup_tab">Default Startup Tab</string>
     <string name="settings_app_lock_title">Gallery App Lock</string>
-    <string name="settings_app_lock_desc">Require custom PIN to open Iris Gallery and Image Picker</string>
+    <string name="settings_app_lock_desc">Require custom PIN to open Ax Gallery and Image Picker</string>
     <string name="settings_change_pin">Change Gallery PIN</string>
     <string name="settings_biometric_unlock_title">Fingerprint / Biometric Unlock</string>
-    <string name="settings_biometric_unlock_desc">Allow unlocking Iris Gallery with your fingerprint</string>
+    <string name="settings_biometric_unlock_desc">Allow unlocking Ax Gallery with your fingerprint</string>
     <string name="settings_hide_vault_title">Hide Vault Media from Storage</string>
-    <string name="settings_hide_vault_desc">Moves locked photos and videos to private app storage so other apps and file managers cannot see them. When disabled, items are only hidden within Iris Gallery.</string>
+    <string name="settings_hide_vault_desc">Moves locked photos and videos to private app storage so other apps and file managers cannot see them. When disabled, items are only hidden within Ax Gallery.</string>
     <string name="settings_silent_vault_title">Prompt-Free Vault Management</string>
     <string name="settings_silent_vault_desc_granted">All Files Access granted — vault operations are silent with zero system confirmation popups.</string>
-    <string name="settings_silent_vault_desc_prompt">Grant \'All Files Access\' so Iris can move and hide photos in the vault without Android confirmation popups.</string>
+    <string name="settings_silent_vault_desc_prompt">Grant \'All Files Access\' so Ax Gallery can move and hide photos in the vault without Android confirmation popups.</string>
     <string name="settings_vault_biometric_title">Biometric Lock for Private Vault</string>
     <string name="settings_vault_biometric_desc">Require device credential/PIN when viewing locked vault items</string>
     <string name="settings_confirm_delete_title">Confirm Before Deleting</string>
@@ -459,20 +459,20 @@
     <string name="album_sample_downloads">Downloads</string>
     <string name="album_sample_wallpapers">Wallpapers</string>
     <string name="settings_preferred_editor_title">Default Photo Editor</string>
-    <string name="settings_preferred_editor_desc">Choose whether tapping edit opens Iris Editor or external apps</string>
+    <string name="settings_preferred_editor_desc">Choose whether tapping edit opens Ax Editor or external apps</string>
     <string name="settings_editor_always_ask">Always ask</string>
-    <string name="settings_editor_builtin">Iris Editor (Built-in)</string>
+    <string name="settings_editor_builtin">Ax Editor (Built-in)</string>
     <string name="settings_editor_external">External Editor</string>
 
     <string name="editor_choice_title">Edit Photo</string>
-    <string name="editor_builtin_title">Iris Editor</string>
+    <string name="editor_builtin_title">Ax Editor</string>
     <string name="editor_builtin_desc">Built-in filters, cropping, and color adjustments</string>
     <string name="editor_external_title">External Editor</string>
     <string name="editor_external_desc">Open in ImageToolbox, Lightroom, Snapseed, etc.</string>
     <string name="editor_remember_choice">Always use this option</string>
     <string name="edit_with_external_title">Edit photo with…</string>
     <string name="edit_video_with_external_title">Edit video with…</string>
-    <string name="action_edit_builtin">Edit with Iris Editor</string>
+    <string name="action_edit_builtin">Edit with Ax Editor</string>
     <string name="action_edit_external">Edit with external app</string>
     <string name="no_external_editor_found">No external editing app found</string>
 
@@ -484,7 +484,7 @@
     <string name="settings_reset_confirm">Reset to Defaults</string>
 
     <!-- App Lock & PIN Dialogs -->
-    <string name="app_lock_title">Unlock Iris Gallery</string>
+    <string name="app_lock_title">Unlock Ax Gallery</string>
     <string name="app_lock_picker_title">Unlock to Select Media</string>
     <string name="app_lock_welcome_back">Welcome Back</string>
     <string name="app_lock_select_media">Select Media</string>
@@ -494,7 +494,7 @@
     <string name="app_lock_subtitle">Enter Gallery PIN to unlock</string>
     <string name="app_lock_picker_subtitle">Enter Gallery PIN to select photos</string>
     <string name="app_lock_wrong_pin">Incorrect PIN. Please try again.</string>
-    <string name="app_lock_biometric_title">Unlock Iris Gallery</string>
+    <string name="app_lock_biometric_title">Unlock Ax Gallery</string>
     <string name="app_lock_biometric_subtitle">Scan your fingerprint to continue</string>
     <string name="app_lock_scan_fingerprint">Scan your fingerprint to continue</string>
     <string name="app_lock_biometric_negative">Use PIN</string>
@@ -574,15 +574,15 @@
     <string name="editor_warmth">Warmth</string>
 
     <!-- About Screen -->
-    <string name="about_title">About Iris</string>
+    <string name="about_title">About Ax Gallery</string>
     <string name="about_developer_project">Developer &amp; Project</string>
     <string name="about_developer_label">Developer</string>
-    <string name="about_developer_name">Mohamad Oday (@MohamadOday)</string>
+    <string name="about_developer_name">Aria ax (@ariaax)</string>
     <string name="about_website_label">Website &amp; Portfolio</string>
     <string name="about_source_label">Source Code &amp; Repository</string>
-    <string name="about_source_url">github.com/MohamadOday/iris-gallery</string>
+    <string name="about_source_url">github.com/ariaax/Ax-gallery</string>
     <string name="about_license_label">License</string>
-    <string name="about_license_name">Apache License 2.0 (Open Source)</string>
+    <string name="about_license_name">Apache License 2.0 · based on Iris Gallery by Mohamad Oday</string>
     <string name="about_general_info">General Information</string>
     <string name="about_arch_title">Architecture</string>
     <string name="about_arch_desc">100% Offline-first local gallery with zero network permissions</string>
@@ -615,7 +615,7 @@
     <!-- Toasts -->
     <string name="toast_items_vaulted">%1$d item(s) moved to hidden vault</string>
     <string name="toast_vault_items_moved">%1$d item(s) moved to hidden vault</string>
-    <string name="toast_vault_items_locked_gallery">%1$d item(s) hidden in Iris Gallery</string>
+    <string name="toast_vault_items_locked_gallery">%1$d item(s) hidden in Ax Gallery</string>
     <string name="toast_vault_items_restored">%1$d item(s) restored from vault</string>
     <string name="toast_vault_items_deleted">%1$d item(s) permanently deleted</string>
     <string name="toast_lock_cancelled">Lock cancelled</string>
@@ -628,9 +628,9 @@
     <string name="toast_pin_enabled">Gallery PIN enabled</string>
     <string name="toast_pin_changed">Gallery PIN updated</string>
     <string name="toast_pin_disabled">Gallery PIN removed</string>
-    <string name="toast_edited_saved">Edited copy saved to Pictures/Iris</string>
+    <string name="toast_edited_saved">Edited copy saved to Pictures/Ax</string>
     <string name="toast_edited_failed">Could not save edited copy</string>
-    <string name="toast_editor_saved">Edited copy saved to Pictures/Iris</string>
+    <string name="toast_editor_saved">Edited copy saved to Pictures/Ax</string>
     <string name="toast_editor_failed">Could not save edited copy</string>
     <string name="toast_optics_unlocked">Ibn al-Haytham Optics Unlocked!</string>
     <string name="toast_item_moved_to_trash">Moved to Trash (kept for 30 days)</string>
@@ -750,8 +750,8 @@
 
     <!-- Trash & Vault Enhancements -->
     <string name="settings_system_trash_title">Use System Trash Bin</string>
-    <string name="settings_system_trash_desc">Sync deleted media with Android system trash (MediaStore). When disabled, media is kept in Iris Gallery\'s private in-app trash.</string>
-    <string name="action_hide_in_iris">Hide in Iris Only</string>
+    <string name="settings_system_trash_desc">Sync deleted media with Android system trash (MediaStore). When disabled, media is kept in Ax Gallery\'s private in-app trash.</string>
+    <string name="action_hide_in_iris">Hide in Ax Only</string>
     <string name="toast_vault_restore_failed">Failed to restore items. Grant \'All Files Access\' in settings.</string>
 
     <!-- Wallpaper Settings & Targets -->
@@ -805,7 +805,7 @@
     <string name="viewer_secure_sharing_tip_all">Secure sharing: all metadata is stripped before sharing. Tap to configure.</string>
     <string name="viewer_secure_sharing_tip_off">Secure sharing: files are shared with full metadata. Tap to configure.</string>
     <string name="dialog_secure_sharing_hint_title">Secure Sharing</string>
-    <string name="dialog_secure_sharing_hint_desc">Iris can strip GPS coordinates and camera metadata before sharing to protect your privacy. Original files remain untouched.</string>
+    <string name="dialog_secure_sharing_hint_desc">Ax Gallery can strip GPS coordinates and camera metadata before sharing to protect your privacy. Original files remain untouched.</string>
     <string name="action_dont_show_again">Don\'t show again</string>
     <string name="action_configure">Configure</string>
 
