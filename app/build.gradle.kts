@@ -11,8 +11,8 @@ android {
         applicationId = "com.ax.gallery"
         minSdk = 26
         targetSdk = 35
-        versionCode = 17
-        versionName = "0.9.0"
+        versionCode = 18
+        versionName = "0.9.5"
     }
 
     buildFeatures {
@@ -22,8 +22,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // R8: smaller & faster app. If anything ever misbehaves, set both to false.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         create("optimized") {
