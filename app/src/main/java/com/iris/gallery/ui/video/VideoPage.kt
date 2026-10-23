@@ -187,6 +187,7 @@ fun VideoPage(
     var offset by remember(media.id) { mutableStateOf(Offset.Zero) }
     var size by remember { mutableStateOf(IntSize.Zero) }
     var gestureFeedback by remember { mutableStateOf<String?>(null) }
+    var playbackError by remember(media.id) { mutableStateOf<String?>(null) }
     val hudActive = brightnessHudVisible || volumeHudVisible
     LaunchedEffect(hudActive, active) { if (active) onHudActive(hudActive) }
     var feedbackOnLeft by remember { mutableStateOf(false) }
@@ -232,7 +233,10 @@ fun VideoPage(
             override fun onIsPlayingChanged(value: Boolean) { playing = value }
             override fun onVolumeChanged(volume: Float) { isMuted = volume == 0f }
             override fun onRenderedFirstFrame() { isFirstFrameRendered = true }
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) { playbackError = error.errorCodeName }
+            override fun onPlaybackStateChanged(state: Int) { if (state == Player.STATE_READY) playbackError = null }
         }
+        engine.player.playerError?.let { playbackError = it.errorCodeName }
         engine.player.addListener(listener)
         if (autoPlay) engine.player.play()
         try {
@@ -752,6 +756,30 @@ fun VideoPage(
                     tint = Color.White,
                     modifier = Modifier.size(36.dp)
                 )
+            }
+        }
+
+        playbackError?.let { code ->
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 28.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xFF0E1420).copy(alpha = 0.80f))
+                    .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(24.dp))
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("This video can't be played here", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                Text(code, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
+                androidx.compose.material3.TextButton(onClick = {
+                    runCatching {
+                        val view = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                            .setDataAndType(media.uri, media.mimeType.ifBlank { "video/*" })
+                            .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        context.startActivity(android.content.Intent.createChooser(view, null))
+                    }
+                }) { Text("Open with another app", color = Color(0xFFB9D4FF)) }
             }
         }
 

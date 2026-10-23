@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 
 interface VideoEngine {
@@ -23,7 +24,11 @@ interface VideoEngine {
 }
 
 class Media3VideoEngine(context: Context) : VideoEngine {
-    private val exoPlayer = ExoPlayer.Builder(context).build()
+    // Decoder fallback: if the first hardware decoder for a format fails, try the next one instead of giving up.
+    private val exoPlayer = ExoPlayer.Builder(
+        context,
+        DefaultRenderersFactory(context).setEnableDecoderFallback(true),
+    ).build()
     override val player: Player = exoPlayer
     private var currentUri: Uri? = null
 
