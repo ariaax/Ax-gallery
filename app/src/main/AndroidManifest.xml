@@ -69,6 +69,53 @@
         <intent>
             <action android:name="android.intent.action.SET_WALLPAPER" />
         </intent>
+        <package android:name="com.Slack" />
+        <package android:name="com.adobe.lrmobile" />
+        <package android:name="com.android.chrome" />
+        <package android:name="com.camerasideas.instashot" />
+        <package android:name="com.canva.editor" />
+        <package android:name="com.discord" />
+        <package android:name="com.facebook.katana" />
+        <package android:name="com.facebook.lite" />
+        <package android:name="com.facebook.orca" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.instagram.android" />
+        <package android:name="com.instagram.barcelona" />
+        <package android:name="com.lemon.lvoverseas" />
+        <package android:name="com.niksoftware.snapseed" />
+        <package android:name="com.picsart.studio" />
+        <package android:name="com.pinterest" />
+        <package android:name="com.reddit.frontpage" />
+        <package android:name="com.snapchat.android" />
+        <package android:name="com.ss.android.ugc.aweme" />
+        <package android:name="com.ss.android.ugc.trill" />
+        <package android:name="com.tencent.mm" />
+        <package android:name="com.tumblr" />
+        <package android:name="com.twitter.android" />
+        <package android:name="com.viber.voip" />
+        <package android:name="com.vsco.cam" />
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <package android:name="com.zhiliaoapp.musically" />
+        <package android:name="is.xyz.mpv" />
+        <package android:name="jp.naver.line.android" />
+        <package android:name="jp.pxv.android" />
+        <package android:name="nekox.messenger" />
+        <package android:name="org.joinmastodon.android" />
+        <package android:name="org.proninyaroslav.libretorrent" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="org.telegram.messenger.web" />
+        <package android:name="org.telegram.plus" />
+        <package android:name="org.thoughtcrime.securesms" />
+        <package android:name="org.thunderdog.challegram" />
+        <package android:name="org.videolan.vlc" />
+        <package android:name="tv.danmaku.bili" />
+        <package android:name="tw.nekomimi.nekogram" />
+        <package android:name="us.zoom.videomeetings" />
+        <package android:name="xyz.blueskyweb.app" />
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
     </queries>
 
     <application
