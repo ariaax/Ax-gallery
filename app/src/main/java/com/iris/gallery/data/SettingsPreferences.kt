@@ -191,6 +191,16 @@ data class SettingsState(
 }
 
 class SettingsPreferences(context: Context) {
+    companion object {
+        @Volatile private var instance: SettingsPreferences? = null
+
+        /** One shared instance for the whole app, so a change made in Settings is seen everywhere at once. */
+        fun get(context: Context): SettingsPreferences =
+            instance ?: synchronized(this) {
+                instance ?: SettingsPreferences(context.applicationContext).also { instance = it }
+            }
+    }
+
     private val prefs = context.getSharedPreferences("iris_gallery_settings", Context.MODE_PRIVATE)
     private val _state = MutableStateFlow(read())
     val state: StateFlow<SettingsState> = _state.asStateFlow()

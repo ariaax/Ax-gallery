@@ -329,6 +329,7 @@ class MediaRepository(private val context: Context) {
 
     suspend fun loadImages(trashed: Boolean = false): List<MediaImage> = withContext(Dispatchers.IO) {
         ExifDateStore.ensureLoaded(context)
+        TimelineSort.refreshNow()
         val now = System.currentTimeMillis()
         recentMovedOrDeletedIds.entries.removeIf { now - it.value > TOMBSTONE_TTL_MS }
         recentMovedOrDeletedPaths.entries.removeIf { now - it.value > TOMBSTONE_TTL_MS }

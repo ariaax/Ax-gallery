@@ -42,6 +42,10 @@ enum class DateSortMode {
 object TimelineSort {
     @Volatile var mode: DateSortMode = DateSortMode.HYBRID
     @Volatile var recentWindowDays: Int = 7
+
+    /** "Now", frozen per load, so sorting never sees a photo cross the recent-window edge mid-sort. */
+    @Volatile var nowMs: Long = System.currentTimeMillis()
+    fun refreshNow() { nowMs = System.currentTimeMillis() }
 }
 
 /** The date used for ordering and for the timeline day headers. */
@@ -52,7 +56,7 @@ val MediaImage.sortDate: Long
         DateSortMode.HYBRID -> {
             if (dateAdded <= 0L) dateTaken
             else {
-                val age = System.currentTimeMillis() - dateAdded
+                val age = TimelineSort.nowMs - dateAdded
                 val windowMs = TimelineSort.recentWindowDays * 86_400_000L
                 if (age in 0L..windowMs) maxOf(dateAdded, dateTaken) else dateTaken
             }
