@@ -406,6 +406,16 @@ data class TrashFeedback(
 class MainActivity : ComponentActivity() {
     private val currentIntentState = mutableStateOf<Intent?>(null)
 
+    override fun onPause() {
+        super.onPause()
+        if (!isInMultiWindowMode) com.iris.gallery.ui.video.Media3VideoEngine.pauseAll()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        com.iris.gallery.ui.video.Media3VideoEngine.pauseAll()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         currentIntentState.value = intent
@@ -4949,6 +4959,17 @@ private fun PhotoViewer(
         }
     }
     DisposableEffect(videoEngine) { onDispose { videoEngine.release() } }
+    // Stop audio when the app leaves the foreground (video must not keep playing in the background).
+    val videoLifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(videoLifecycleOwner, videoEngine) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                videoEngine.player.pause()
+            }
+        }
+        videoLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { videoLifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     LaunchedEffect(videoMuted) {
         if (videoEngine.isMuted != videoMuted) {
             videoEngine.setMuted(videoMuted)
