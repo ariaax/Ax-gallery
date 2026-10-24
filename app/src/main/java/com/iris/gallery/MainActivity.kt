@@ -2345,7 +2345,7 @@ private fun GalleryScaffold(
                                 Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         } else {
-                            AxBarTitle(count)
+                            AxBarTitle(count, if (destination == 1) selectedAlbum else null)
                         }
                     }
                 },
