@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launch logo: "A" slides in, red "X" spins in. Runs on the render thread, so it stays smooth while the app loads. -->
+<!-- Launch logo: a ring draws itself, "A" is drawn in white, the red "X" is drawn stroke by stroke and glows.
+     Runs on the render thread, so it stays smooth while the app loads. -->
 <animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt">
 
@@ -9,89 +10,190 @@
             android:height="288dp"
             android:viewportWidth="288"
             android:viewportHeight="288">
-            <group android:name="a_group">
+
+            <group
+                android:name="logo_group"
+                android:pivotX="144"
+                android:pivotY="144">
+
+                <!-- thin ring -->
+                <path
+                    android:name="ring_path"
+                    android:pathData="M144,62 a82,82 0 1,1 0,164 a82,82 0 1,1 0,-164"
+                    android:strokeColor="#59FFFFFF"
+                    android:strokeWidth="2"
+                    android:trimPathEnd="0" />
+
+                <!-- soft red glow behind the X -->
+                <path
+                    android:name="glow1_path"
+                    android:pathData="M150,102 L206,186"
+                    android:strokeColor="#E5222F"
+                    android:strokeWidth="26"
+                    android:strokeAlpha="0"
+                    android:strokeLineCap="round" />
+                <path
+                    android:name="glow2_path"
+                    android:pathData="M206,102 L150,186"
+                    android:strokeColor="#E5222F"
+                    android:strokeWidth="26"
+                    android:strokeAlpha="0"
+                    android:strokeLineCap="round" />
+
+                <!-- A -->
                 <path
                     android:name="a_path"
-                    android:pathData="M70,194 L106,94 L142,194 M84,166 L128,166"
-                    android:strokeColor="#FFFFFF"
-                    android:strokeWidth="14"
-                    android:strokeAlpha="0"
-                    android:strokeLineJoin="miter" />
-            </group>
-            <group
-                android:name="x_group"
-                android:pivotX="186"
-                android:pivotY="144">
+                    android:pathData="M76,186 L104,102 L132,186 M86,160 L122,160"
+                    android:strokeWidth="12"
+                    android:strokeLineCap="round"
+                    android:strokeLineJoin="round"
+                    android:trimPathEnd="0">
+                    <aapt:attr name="android:strokeColor">
+                        <gradient
+                            android:startX="104"
+                            android:startY="102"
+                            android:endX="104"
+                            android:endY="186"
+                            android:type="linear">
+                            <item android:color="#FFFFFF" android:offset="0" />
+                            <item android:color="#B7C6E8" android:offset="1" />
+                        </gradient>
+                    </aapt:attr>
+                </path>
+
+                <!-- X, two strokes -->
                 <path
-                    android:name="x_path"
-                    android:pathData="M152,94 L220,194 M220,94 L152,194"
-                    android:strokeColor="#E5222F"
-                    android:strokeWidth="14"
-                    android:strokeAlpha="0" />
+                    android:name="x1_path"
+                    android:pathData="M150,102 L206,186"
+                    android:strokeWidth="12"
+                    android:strokeLineCap="round"
+                    android:trimPathEnd="0">
+                    <aapt:attr name="android:strokeColor">
+                        <gradient
+                            android:startX="150"
+                            android:startY="102"
+                            android:endX="206"
+                            android:endY="186"
+                            android:type="linear">
+                            <item android:color="#FF4D5A" android:offset="0" />
+                            <item android:color="#D4121F" android:offset="1" />
+                        </gradient>
+                    </aapt:attr>
+                </path>
+                <path
+                    android:name="x2_path"
+                    android:pathData="M206,102 L150,186"
+                    android:strokeWidth="12"
+                    android:strokeLineCap="round"
+                    android:trimPathEnd="0">
+                    <aapt:attr name="android:strokeColor">
+                        <gradient
+                            android:startX="206"
+                            android:startY="102"
+                            android:endX="150"
+                            android:endY="186"
+                            android:type="linear">
+                            <item android:color="#FF4D5A" android:offset="0" />
+                            <item android:color="#D4121F" android:offset="1" />
+                        </gradient>
+                    </aapt:attr>
+                </path>
             </group>
         </vector>
     </aapt:attr>
 
-    <target android:name="a_group">
+    <target android:name="ring_path">
         <aapt:attr name="android:animation">
             <objectAnimator
-                android:duration="450"
-                android:interpolator="@android:interpolator/overshoot"
-                android:propertyName="translateX"
-                android:valueFrom="-90"
-                android:valueTo="0"
+                android:duration="560"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="trimPathEnd"
+                android:startOffset="0"
+                android:valueFrom="0"
+                android:valueTo="1"
                 android:valueType="floatType" />
         </aapt:attr>
     </target>
     <target android:name="a_path">
         <aapt:attr name="android:animation">
             <objectAnimator
-                android:duration="250"
-                android:propertyName="strokeAlpha"
+                android:duration="380"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="trimPathEnd"
+                android:startOffset="100"
                 android:valueFrom="0"
                 android:valueTo="1"
                 android:valueType="floatType" />
         </aapt:attr>
     </target>
-    <target android:name="x_group">
-        <aapt:attr name="android:animation">
-            <set>
-                <objectAnimator
-                    android:duration="500"
-                    android:interpolator="@android:interpolator/overshoot"
-                    android:propertyName="rotation"
-                    android:startOffset="150"
-                    android:valueFrom="-150"
-                    android:valueTo="0"
-                    android:valueType="floatType" />
-                <objectAnimator
-                    android:duration="500"
-                    android:interpolator="@android:interpolator/overshoot"
-                    android:propertyName="scaleX"
-                    android:startOffset="150"
-                    android:valueFrom="0.3"
-                    android:valueTo="1"
-                    android:valueType="floatType" />
-                <objectAnimator
-                    android:duration="500"
-                    android:interpolator="@android:interpolator/overshoot"
-                    android:propertyName="scaleY"
-                    android:startOffset="150"
-                    android:valueFrom="0.3"
-                    android:valueTo="1"
-                    android:valueType="floatType" />
-            </set>
-        </aapt:attr>
-    </target>
-    <target android:name="x_path">
+    <target android:name="x1_path">
         <aapt:attr name="android:animation">
             <objectAnimator
-                android:duration="200"
-                android:propertyName="strokeAlpha"
-                android:startOffset="150"
+                android:duration="250"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="trimPathEnd"
+                android:startOffset="330"
                 android:valueFrom="0"
                 android:valueTo="1"
                 android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+    <target android:name="x2_path">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="250"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="trimPathEnd"
+                android:startOffset="450"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+    <target android:name="glow1_path">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="220"
+                android:interpolator="@android:interpolator/linear_out_slow_in"
+                android:propertyName="strokeAlpha"
+                android:startOffset="560"
+                android:valueFrom="0"
+                android:valueTo="0.3"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+    <target android:name="glow2_path">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="220"
+                android:interpolator="@android:interpolator/linear_out_slow_in"
+                android:propertyName="strokeAlpha"
+                android:startOffset="560"
+                android:valueFrom="0"
+                android:valueTo="0.3"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+    <target android:name="logo_group">
+        <aapt:attr name="android:animation">
+<set>
+            <objectAnimator
+                android:duration="700"
+                android:interpolator="@android:interpolator/overshoot"
+                android:propertyName="scaleX"
+                android:startOffset="0"
+                android:valueFrom="0.9"
+                android:valueTo="1"
+                android:valueType="floatType" />
+            <objectAnimator
+                android:duration="700"
+                android:interpolator="@android:interpolator/overshoot"
+                android:propertyName="scaleY"
+                android:startOffset="0"
+                android:valueFrom="0.9"
+                android:valueTo="1"
+                android:valueType="floatType" />
+            </set>
         </aapt:attr>
     </target>
 </animated-vector>
