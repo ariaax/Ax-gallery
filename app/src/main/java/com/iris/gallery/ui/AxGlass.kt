@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
@@ -122,7 +123,18 @@ fun rememberAxGlassState(): AxGlassState {
 private val blurSupported: Boolean get() = Build.VERSION.SDK_INT >= 31
 
 // Immutable, so one shared instance avoids allocating a new effect on every frame.
-private val NavBlurEffect = BlurEffect(28f, 28f, TileMode.Clamp)
+// Blur + strong saturation boost: the bar picks up (and intensifies) the colours of whatever is behind it.
+private val NavBlurEffect: androidx.compose.ui.graphics.RenderEffect by lazy {
+    if (Build.VERSION.SDK_INT >= 31) {
+        val matrix = android.graphics.ColorMatrix().apply { setSaturation(2.1f) }
+        val blur = android.graphics.RenderEffect.createBlurEffect(30f, 30f, android.graphics.Shader.TileMode.CLAMP)
+        android.graphics.RenderEffect
+            .createColorFilterEffect(android.graphics.ColorMatrixColorFilter(matrix), blur)
+            .asComposeRenderEffect()
+    } else {
+        BlurEffect(28f, 28f, TileMode.Clamp)
+    }
+}
 private val PanelBlurEffect = BlurEffect(24f, 24f, TileMode.Clamp)
 
 /** Put this on the big content area that should show up blurred behind the glass bar. */
@@ -183,13 +195,14 @@ fun AxGlassNavBar(
     val itemWidth = 76.dp
     val shape = RoundedCornerShape(32.dp)
     val density = LocalDensity.current
-    val tint = if (dark) Color.Black.copy(alpha = if (blurSupported) 0.28f else 0.82f)
-    else Color.White.copy(alpha = if (blurSupported) 0.34f else 0.88f)
+    val tint = if (dark) Color.Black.copy(alpha = if (blurSupported) 0.16f else 0.82f)
+    else Color.White.copy(alpha = if (blurSupported) 0.22f else 0.88f)
+    val accent = MaterialTheme.colorScheme.primary
     val edge = Brush.linearGradient(
         listOf(
-            Color.White.copy(alpha = if (dark) 0.55f else 0.85f),
-            Color.White.copy(alpha = 0.06f),
-            Color.White.copy(alpha = if (dark) 0.30f else 0.55f),
+            Color.White.copy(alpha = if (dark) 0.80f else 0.95f),
+            accent.copy(alpha = 0.35f),
+            Color.White.copy(alpha = if (dark) 0.50f else 0.75f),
         )
     )
     val lensOffset by animateDpAsState(
@@ -207,7 +220,7 @@ fun AxGlassNavBar(
                 state.barSize = Size(it.size.width.toFloat(), it.size.height.toFloat())
                 state.cornerRadiusPx = with(density) { 32.dp.toPx() }
             }
-            .shadow(10.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f))
+            .shadow(10.dp, shape, clip = false, ambientColor = accent.copy(alpha = 0.55f), spotColor = accent.copy(alpha = 0.55f))
             .clip(shape)
             .background(tint)
             .drawBehind {
@@ -219,7 +232,7 @@ fun AxGlassNavBar(
                     )
                 )
             }
-            .border(1.2.dp, edge, shape),
+            .border(1.6.dp, edge, shape),
     ) {
         // glass lens on the selected tab
         Box(
@@ -228,11 +241,12 @@ fun AxGlassNavBar(
                 .width(itemWidth)
                 .height(barHeight - 12.dp)
                 .clip(RoundedCornerShape(26.dp))
+                .background(accent.copy(alpha = 0.30f))
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color.White.copy(alpha = if (dark) 0.32f else 0.55f),
-                            Color.White.copy(alpha = if (dark) 0.10f else 0.22f),
+                            Color.White.copy(alpha = if (dark) 0.34f else 0.55f),
+                            Color.White.copy(alpha = if (dark) 0.08f else 0.18f),
                         )
                     )
                 )
