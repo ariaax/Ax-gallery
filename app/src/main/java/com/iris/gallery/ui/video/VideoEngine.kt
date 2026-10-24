@@ -31,7 +31,17 @@ class Media3VideoEngine(context: Context) : VideoEngine {
     private val exoPlayer = ExoPlayer.Builder(
         context,
         DefaultRenderersFactory(context).setEnableDecoderFallback(true),
-    ).build()
+    ).build().also { p ->
+        p.setAudioAttributes(
+            androidx.media3.common.AudioAttributes.Builder()
+                .setUsage(androidx.media3.common.C.USAGE_MEDIA)
+                .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE)
+                .build(),
+            /* handleAudioFocus = */ true,
+        )
+        p.setHandleAudioBecomingNoisy(true)
+        synchronized(live) { live.add(p) }
+    }
     override val player: Player = exoPlayer
     private var currentUri: Uri? = null
 
@@ -42,5 +52,18 @@ class Media3VideoEngine(context: Context) : VideoEngine {
         exoPlayer.prepare()
     }
 
-    override fun release() = exoPlayer.release()
+    override fun release() {
+        synchronized(live) { live.remove(exoPlayer) }
+        exoPlayer.release()
+    }
+
+    companion object {
+        private val live = mutableSetOf<ExoPlayer>()
+
+        /** Pauses every player this app owns (called when the app leaves the foreground). */
+        fun pauseAll() {
+            val copy = synchronized(live) { live.toList() }
+            copy.forEach { runCatching { it.pause() } }
+        }
+    }
 }
