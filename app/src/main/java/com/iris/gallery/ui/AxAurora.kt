@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import kotlin.math.cos
 import kotlin.math.max
@@ -61,4 +62,7 @@ fun Modifier.axAurora(): Modifier {
             blob(c2, w * (0.50f + 0.50f * cos(p)), h * (0.55f + 0.25f * sin(p * 2f)), r * 0.9f)
             blob(c3, w * (0.50f + 0.45f * sin(p * 2f + 1.5f)), h * (0.85f + 0.12f * cos(p)), r * 0.9f)
         }
+        // Everything below (the whole screen content) is cached in its own layer, so the moving
+        // background no longer forces the content to be re-recorded on every frame.
+        .graphicsLayer { }
 }
