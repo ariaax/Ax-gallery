@@ -69,6 +69,7 @@
         <intent>
             <action android:name="android.intent.action.SET_WALLPAPER" />
         </intent>
+        <package android:name="app.marlboroadvance.mpvex" />
         <package android:name="com.Slack" />
         <package android:name="com.adobe.lrmobile" />
         <package android:name="com.android.chrome" />
@@ -100,6 +101,7 @@
         <package android:name="is.xyz.mpv" />
         <package android:name="jp.naver.line.android" />
         <package android:name="jp.pxv.android" />
+        <package android:name="live.mehiz.mpvkt" />
         <package android:name="nekox.messenger" />
         <package android:name="org.joinmastodon.android" />
         <package android:name="org.proninyaroslav.libretorrent" />
@@ -115,6 +117,10 @@
         <package android:name="xyz.blueskyweb.app" />
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
         </intent>
     </queries>
 
