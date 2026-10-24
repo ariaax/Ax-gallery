@@ -482,23 +482,6 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
-
-        // Animated AX intro on a normal launcher start only (not for picker / view intents or rotation).
-        if (savedInstanceState == null && intent?.action == Intent.ACTION_MAIN) {
-            val introView = androidx.compose.ui.platform.ComposeView(this)
-            introView.setContent {
-                com.iris.gallery.ui.AxIntro(onFinished = {
-                    (introView.parent as? android.view.ViewGroup)?.removeView(introView)
-                })
-            }
-            addContentView(
-                introView,
-                android.view.ViewGroup.LayoutParams(
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                ),
-            )
-        }
     }
 
     override fun onNewIntent(intent: Intent) {
