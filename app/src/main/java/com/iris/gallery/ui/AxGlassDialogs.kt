@@ -8,6 +8,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.material3.Text
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -197,27 +201,62 @@ fun AxBarButton(
     }
 }
 
-/** Top-bar title: light, airy and slightly tracked with an icy gradient when liquid glass is on. */
+/**
+ * Top-bar title: light, airy and slightly tracked with an icy gradient when liquid glass is on.
+ * Inside an album that belongs to an app, that app's icon floats faded and glassy BEHIND the title.
+ */
 @Composable
-fun AxBarTitle(text: String) {
+fun AxBarTitle(text: String, album: MediaAlbum? = null) {
     if (!AxGlass.enabled) {
         Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         return
     }
     val c = MaterialTheme.colorScheme.onSurface
     val tint = MaterialTheme.colorScheme.primary
-    Text(
-        text = text,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        style = TextStyle(
-            fontFamily = FontFamily.SansSerif,
-            fontWeight = FontWeight.Light,
-            fontSize = 30.sp,
-            letterSpacing = 1.2.sp,
-            brush = Brush.verticalGradient(listOf(c, c.copy(alpha = 0.78f), tint.copy(alpha = 0.9f))),
-        ),
+    val badge = rememberAlbumBadge(album)
+    val appear by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (badge != null) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(900),
+        label = "titleBadge",
     )
+    androidx.compose.foundation.layout.Box(contentAlignment = androidx.compose.ui.Alignment.CenterStart) {
+        if (badge != null) {
+            val ghost = Modifier
+                .size(58.dp)
+                .graphicsLayer {
+                    alpha = 0.42f * appear
+                    val sc = 0.75f + 0.25f * appear
+                    scaleX = sc
+                    scaleY = sc
+                }
+                .clip(CircleShape)
+                .blur(6.dp)
+            when (badge) {
+                is AlbumBadge.App -> androidx.compose.foundation.Image(badge.bitmap, null, ghost)
+                is AlbumBadge.Vector -> androidx.compose.material3.Icon(badge.icon, null, tint = Color.White, modifier = ghost.padding(10.dp))
+            }
+            // thin glass ring so it reads as frosted glass, not just a smudge
+            androidx.compose.foundation.layout.Box(
+                Modifier
+                    .size(58.dp)
+                    .graphicsLayer { alpha = appear }
+                    .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape),
+            )
+        }
+        Text(
+            text = text,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = if (badge != null) 8.dp else 0.dp),
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Light,
+                fontSize = 30.sp,
+                letterSpacing = 1.2.sp,
+                brush = Brush.verticalGradient(listOf(c, c.copy(alpha = 0.78f), tint.copy(alpha = 0.9f))),
+            ),
+        )
+    }
 }
 
 /** Icy-blue frosted glass, same look as the video control bar (works over video, where blur is impossible). */
