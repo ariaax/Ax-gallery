@@ -2292,6 +2292,7 @@ private fun GalleryScaffold(
     Box(Modifier.fillMaxSize()) {
         Scaffold(
         containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         modifier = Modifier.axAurora(),
         topBar = {
           if (!(destination == 3 && librarySection == "folder_view")) {
