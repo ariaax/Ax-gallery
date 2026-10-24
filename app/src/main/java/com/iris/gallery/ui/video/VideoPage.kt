@@ -772,14 +772,28 @@ fun VideoPage(
             ) {
                 Text("This video can't be played here", color = Color.White, style = MaterialTheme.typography.titleMedium)
                 Text(code, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
-                androidx.compose.material3.TextButton(onClick = {
-                    runCatching {
-                        val view = android.content.Intent(android.content.Intent.ACTION_VIEW)
-                            .setDataAndType(media.uri, media.mimeType.ifBlank { "video/*" })
-                            .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        context.startActivity(android.content.Intent.createChooser(view, null))
-                    }
-                }) { Text("Open with another app", color = Color(0xFFB9D4FF)) }
+                Box(
+                    modifier = Modifier
+                        .padding(top = 12.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
+                        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
+                        .border(
+                            1.2.dp,
+                            Brush.linearGradient(listOf(Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.50f))),
+                            RoundedCornerShape(50),
+                        )
+                        .clickable {
+                            runCatching {
+                                val view = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                                    .setDataAndType(media.uri, media.mimeType.ifBlank { "video/*" })
+                                    .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                context.startActivity(android.content.Intent.createChooser(view, null))
+                            }
+                        }
+                        .padding(horizontal = 22.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text("Open with another app", color = Color.White, style = MaterialTheme.typography.labelLarge) }
             }
         }
 
