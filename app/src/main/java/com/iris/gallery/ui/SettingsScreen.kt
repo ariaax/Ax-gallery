@@ -176,6 +176,7 @@ fun SettingsScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         modifier = Modifier.axAurora(),
         topBar = {
             TopAppBar(
