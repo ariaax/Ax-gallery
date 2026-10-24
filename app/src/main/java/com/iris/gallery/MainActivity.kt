@@ -182,6 +182,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.NavigationBar
 import com.iris.gallery.ui.AxFavoriteButton
 import com.iris.gallery.ui.AxGlass
+import com.iris.gallery.ui.axAurora
 import com.iris.gallery.ui.axGlassPanel
 import com.iris.gallery.ui.AxGlassNavBar
 import com.iris.gallery.ui.AxEdgeHalo
@@ -2290,6 +2291,8 @@ private fun GalleryScaffold(
     val axGlass = rememberAxGlassState()
     Box(Modifier.fillMaxSize()) {
         Scaffold(
+        containerColor = Color.Transparent,
+        modifier = Modifier.axAurora(),
         topBar = {
           if (!(destination == 3 && librarySection == "folder_view")) {
             val canSearchOnScreen = destination == 0 || destination == 2 || (destination == 1 && selectedAlbum != null) || (destination == 3 && librarySection == "videos")
