@@ -29,14 +29,14 @@ fun Modifier.axAurora(): Modifier {
     if (!AxGlass.enabled) return this.background(bg)
     val cs = MaterialTheme.colorScheme
     val dark = bg.luminance() < 0.5f
-    val alpha = if (dark) 0.26f else 0.20f
+    val alpha = if (dark) 0.13f else 0.10f
     val c1 = cs.primary
     val c2 = cs.tertiary
     val c3 = cs.secondary
     val phase = rememberInfiniteTransition(label = "aurora").animateFloat(
         initialValue = 0f,
         targetValue = (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(tween(36000, easing = LinearEasing), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(16000, easing = LinearEasing), RepeatMode.Restart),
         label = "aurora phase",
     )
     return this
@@ -44,7 +44,7 @@ fun Modifier.axAurora(): Modifier {
         .drawBehind {
             val w = size.width
             val h = size.height
-            val r = max(w, h) * 0.75f
+            val r = max(w, h) * 0.5f
             val p = phase.value
             fun blob(color: Color, cx: Float, cy: Float, radius: Float) {
                 drawCircle(
@@ -57,8 +57,8 @@ fun Modifier.axAurora(): Modifier {
                     center = Offset(cx, cy),
                 )
             }
-            blob(c1, w * (0.15f + 0.20f * sin(p)), h * (0.12f + 0.10f * cos(p)), r)
-            blob(c2, w * (0.90f + 0.12f * cos(p * 2f)), h * (0.50f + 0.18f * sin(p)), r * 0.85f)
-            blob(c3, w * (0.30f + 0.20f * sin(p * 2f + 1.5f)), h * (0.95f + 0.08f * cos(p)), r * 0.9f)
+            blob(c1, w * (0.50f + 0.45f * sin(p)), h * (0.20f + 0.18f * cos(p)), r)
+            blob(c2, w * (0.50f + 0.50f * cos(p)), h * (0.55f + 0.25f * sin(p * 2f)), r * 0.9f)
+            blob(c3, w * (0.50f + 0.45f * sin(p * 2f + 1.5f)), h * (0.85f + 0.12f * cos(p)), r * 0.9f)
         }
 }
