@@ -175,6 +175,8 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
+        modifier = Modifier.axAurora(),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.section_settings)) },
@@ -183,7 +185,7 @@ fun SettingsScreen(
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.action_back))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
     ) { scaffoldPadding ->

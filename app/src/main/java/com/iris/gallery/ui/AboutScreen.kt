@@ -91,6 +91,8 @@ fun AboutScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
+        modifier = Modifier.axAurora(),
         topBar = {
             TopAppBar(
                 title = { Text(androidx.compose.ui.res.stringResource(R.string.section_about)) },
@@ -99,7 +101,7 @@ fun AboutScreen(
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, androidx.compose.ui.res.stringResource(R.string.action_back))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
     ) { scaffoldPadding ->

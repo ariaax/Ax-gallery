@@ -3,6 +3,9 @@ package com.iris.gallery.ui
 import android.os.Build
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -191,7 +194,7 @@ fun AxGlassNavBar(
     )
     val lensOffset by animateDpAsState(
         targetValue = itemWidth * selectedIndex,
-        animationSpec = tween(320, easing = FastOutSlowInEasing),
+        animationSpec = spring(dampingRatio = 0.62f, stiffness = 380f),
         label = "glass lens offset",
     )
 
@@ -225,16 +228,36 @@ fun AxGlassNavBar(
                 .width(itemWidth)
                 .height(barHeight - 12.dp)
                 .clip(RoundedCornerShape(26.dp))
-                .background(Color.White.copy(alpha = if (dark) 0.20f else 0.38f))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = if (dark) 0.32f else 0.55f),
+                            Color.White.copy(alpha = if (dark) 0.10f else 0.22f),
+                        )
+                    )
+                )
+                .border(
+                    1.dp,
+                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.08f))),
+                    RoundedCornerShape(26.dp),
+                )
         )
         Row(Modifier.padding(horizontal = 6.dp).fillMaxHeight()) {
             for (i in 0 until count) {
+                val itemSource = remember { MutableInteractionSource() }
+                val pressed by itemSource.collectIsPressedAsState()
+                val pressScale by animateFloatAsState(
+                    if (pressed) 0.86f else 1f,
+                    spring(dampingRatio = 0.5f, stiffness = 500f),
+                    label = "tab press",
+                )
                 Box(
                     modifier = Modifier
                         .width(itemWidth)
                         .fillMaxHeight()
+                        .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
                         .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
+                            interactionSource = itemSource,
                             indication = null,
                         ) { onSelect(i) },
                     contentAlignment = Alignment.Center,
