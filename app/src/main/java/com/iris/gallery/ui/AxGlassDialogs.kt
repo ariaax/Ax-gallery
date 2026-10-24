@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.getValue
@@ -189,9 +190,7 @@ fun AxBarButton(
         modifier = modifier
             .padding(horizontal = 4.dp)
             .size(34.dp)
-            .clip(CircleShape)
-            .background(Brush.verticalGradient(listOf(c.copy(alpha = 0.18f), c.copy(alpha = 0.07f))))
-            .axGlassBorder(CircleShape)
+            .axGlassSurface(CircleShape, strong = true)
             .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
         contentAlignment = androidx.compose.ui.Alignment.Center,
     ) {
@@ -271,4 +270,81 @@ fun Modifier.axIcyPanel(corner: androidx.compose.ui.unit.Dp): Modifier {
             Brush.linearGradient(listOf(Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.50f))),
             shape,
         )
+}
+
+/** Glass chip (filter / sort). Selected chips get a brighter, tinted fill. Falls back to a Material chip. */
+@Composable
+fun AxGlassChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    label: @Composable () -> Unit,
+) {
+    if (!AxGlass.enabled) {
+        androidx.compose.material3.FilterChip(
+            selected = selected, onClick = onClick, modifier = modifier, label = label,
+            leadingIcon = leadingIcon, trailingIcon = trailingIcon,
+        )
+        return
+    }
+    val c = MaterialTheme.colorScheme.onSurface
+    val tint = MaterialTheme.colorScheme.primary
+    val shape = RoundedCornerShape(50)
+    val top = if (selected) tint.copy(alpha = 0.38f) else c.copy(alpha = 0.16f)
+    val bottom = if (selected) tint.copy(alpha = 0.16f) else c.copy(alpha = 0.06f)
+    androidx.compose.foundation.layout.Row(
+        modifier = modifier
+            .height(36.dp)
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(top, bottom)))
+            .axGlassSurface(shape, strong = selected)
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides c,
+            androidx.compose.material3.LocalTextStyle provides MaterialTheme.typography.labelLarge,
+        ) {
+            leadingIcon?.invoke()
+            label()
+            trailingIcon?.invoke()
+        }
+    }
+}
+
+/** Search field with a glass pill background. */
+@Composable
+fun AxGlassSearchField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: @Composable () -> Unit,
+    leadingIcon: @Composable () -> Unit,
+    trailingIcon: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = MaterialTheme.colorScheme.onSurface
+    val shape = RoundedCornerShape(26.dp)
+    val glass = AxGlass.enabled
+    androidx.compose.material3.OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = if (glass) {
+            modifier.axGlassSurface(shape, strong = true)
+        } else modifier,
+        placeholder = placeholder,
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
+        singleLine = true,
+        shape = shape,
+        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+            unfocusedContainerColor = if (glass) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+            focusedContainerColor = if (glass) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            unfocusedBorderColor = Color.Transparent,
+            focusedBorderColor = if (glass) Color.Transparent else MaterialTheme.colorScheme.primary,
+        ),
+    )
 }

@@ -57,7 +57,6 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.VerticalAlignBottom
 import androidx.compose.material.icons.outlined.VerticalAlignTop
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -298,7 +297,7 @@ fun AlbumsGrid(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // Search albums input field
-                    OutlinedTextField(
+                    AxGlassSearchField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
@@ -311,14 +310,6 @@ fun AlbumsGrid(
                                 }
                             }
                         },
-                        singleLine = true,
-                        shape = RoundedCornerShape(24.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary
-                        )
                     )
 
                     Row(
@@ -333,22 +324,22 @@ fun AlbumsGrid(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            FilterChip(
+                            AxGlassChip(
                                 selected = selectedCategory == AlbumCategory.ALL,
                                 onClick = { selectedCategory = AlbumCategory.ALL },
                                 label = { Text(stringResource(com.iris.gallery.R.string.filter_all_albums)) }
                             )
-                            FilterChip(
+                            AxGlassChip(
                                 selected = selectedCategory == AlbumCategory.CAMERA_SYSTEM,
                                 onClick = { selectedCategory = AlbumCategory.CAMERA_SYSTEM },
                                 label = { Text(stringResource(com.iris.gallery.R.string.filter_camera_system)) }
                             )
-                            FilterChip(
+                            AxGlassChip(
                                 selected = selectedCategory == AlbumCategory.APPS,
                                 onClick = { selectedCategory = AlbumCategory.APPS },
                                 label = { Text(stringResource(com.iris.gallery.R.string.filter_apps)) }
                             )
-                            FilterChip(
+                            AxGlassChip(
                                 selected = selectedCategory == AlbumCategory.VIDEOS,
                                 onClick = { selectedCategory = AlbumCategory.VIDEOS },
                                 label = { Text(stringResource(com.iris.gallery.R.string.filter_videos)) }
@@ -366,7 +357,8 @@ fun AlbumsGrid(
                         }
 
                         Box {
-                            AssistChip(
+                            AxGlassChip(
+                                selected = false,
                                 modifier = Modifier.widthIn(max = 145.dp),
                                 onClick = { sortMenuExpanded = true },
                                 label = {
@@ -390,7 +382,6 @@ fun AlbumsGrid(
                                         modifier = Modifier.size(18.dp)
                                     )
                                 },
-                                shape = RoundedCornerShape(12.dp)
                             )
                             DropdownMenu(
                                 expanded = sortMenuExpanded,
