@@ -518,6 +518,12 @@ class MediaRepository(private val context: Context) {
                             }
                         }
 
+                        // Non-destructive ghost filter: hide rows whose file is gone from primary storage
+                        // (never deletes anything from MediaStore).
+                        if (!trashed && filePath.startsWith("/storage/emulated/") && !File(filePath).exists()) {
+                            continue
+                        }
+
                         var effectiveModified = cursorDateModified
                         var effectiveSize = itemSize
                         if (diskModifiedMs > 0L) {

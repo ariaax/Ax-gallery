@@ -15,6 +15,7 @@ import android.util.Log
 import android.widget.ScrollView
 import android.widget.TextView
 import coil3.ImageLoader
+import okio.Path.Companion.toOkioPath
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.decode.StaticImageDecoder
@@ -113,6 +114,12 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
                 } else {
                     add(GifDecoder.Factory())
                 }
+            }
+            .diskCache {
+                coil3.disk.DiskCache.Builder()
+                    .directory(context.cacheDir.resolve("image_cache").toOkioPath())
+                    .maxSizeBytes(150L * 1024 * 1024)
+                    .build()
             }
             .build()
     }
