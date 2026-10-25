@@ -29,6 +29,10 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.key
 import com.iris.gallery.ui.AxIosEase
 import com.iris.gallery.ui.axPushIn
+import com.iris.gallery.ui.AxHero
+import com.iris.gallery.ui.AxHeroClip
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.draw.drawBehind
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
@@ -427,6 +431,18 @@ class MainActivity : ComponentActivity() {
         currentIntentState.value = intent
         IrisPhotoWidget.refreshAll(this)
         enableEdgeToEdge()
+        // Some phones keep third-party apps at 60 Hz; ask for the display's fastest mode so animations look smooth.
+        runCatching {
+            @Suppress("DEPRECATION")
+            val disp = if (Build.VERSION.SDK_INT >= 30) display else windowManager.defaultDisplay
+            val cur = disp?.mode
+            val best = disp?.supportedModes
+                ?.filter { cur != null && it.physicalWidth == cur.physicalWidth && it.physicalHeight == cur.physicalHeight }
+                ?.maxByOrNull { it.refreshRate }
+            if (best != null) {
+                window.attributes = window.attributes.also { it.preferredDisplayModeId = best.modeId }
+            }
+        }
         val settingsPreferences = SettingsPreferences.get(this)
         val initialSettings = settingsPreferences.state.value
         val isDark = when (initialSettings.themeMode) {
@@ -4546,10 +4562,13 @@ private fun PhotoGrid(
               }
               items(group.value, key = { it.id }, contentType = { "photo" }) { image ->
                 val selected = image.id in selectedIds
-                Box(Modifier.animateItem(fadeInSpec = null).aspectRatio(1f).clip(RoundedCornerShape(if (selected) 14.dp else cornerStyle.dp.dp))
+                val heroCell = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
+                Box(Modifier.animateItem(fadeInSpec = null).aspectRatio(1f)
+                    .onGloballyPositioned { heroCell[0] = it }
+                    .clip(RoundedCornerShape(if (selected) 14.dp else cornerStyle.dp.dp))
                     .combinedClickable(onClick = {
                         if (suppressReleaseClickId == image.id) suppressReleaseClickId = null
-                        else onOpen(image)
+                        else { AxHero.mark(heroCell[0], image.id); onOpen(image) }
                     },
                         onLongClick = null)) {
                     MediaThumbnail(
@@ -5048,9 +5067,16 @@ private fun PhotoViewer(
     }
 
     val dismissOffsetY = remember { Animatable(0f) }
-    // iOS-style open: the viewer eases up from slightly smaller + transparent; no bounce.
-    val openAnim = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { openAnim.animateTo(1f, spring(dampingRatio = 1f, stiffness = 420f)) }
+    // Hero open: grows out of the thumbnail that was tapped (when we know where it is);
+    // otherwise a soft fade + scale. No bounce either way.
+    val heroStartRect = remember { AxHero.rectFor(images.getOrNull(initialPage)?.id) }
+    var heroRect by remember { mutableStateOf(heroStartRect) }
+    val heroP = remember { Animatable(if (heroStartRect != null) 0f else 1f) }
+    val openAnim = remember { Animatable(if (heroStartRect != null) 1f else 0f) }
+    LaunchedEffect(Unit) {
+        if (heroStartRect != null) heroP.animateTo(1f, spring(dampingRatio = 1f, stiffness = 380f))
+        else openAnim.animateTo(1f, spring(dampingRatio = 1f, stiffness = 420f))
+    }
     val closeAnim = remember { Animatable(0f) }
     // ---- Depth Photo (Google GDepth / Nokia / OEM portrait) detection & rendering ----
     val isDepthPhoto = currentExif?.isDepthPhoto == true
@@ -5148,14 +5174,43 @@ private fun PhotoViewer(
     val dismissThresholdPx = remember(context) { 120f * context.resources.displayMetrics.density }
     val flingThresholdPx = remember(context) { 30f * context.resources.displayMetrics.density }
 
+    // Swipe up: the photo follows the finger (with some resistance); on release past the threshold
+    // the info sheet opens and the photo stays slightly lifted above it, otherwise it springs back.
+    val infoLift = remember { Animatable(0f) }
+    LaunchedEffect(showInfo) {
+        infoLift.animateTo(
+            if (showInfo) -viewerHeightPx * 0.10f else 0f,
+            spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMediumLow),
+        )
+    }
+    val onInfoDrag: (Float) -> Unit = { dy ->
+        coroutineScope.launch {
+            infoLift.snapTo((infoLift.value + dy * 0.6f).coerceIn(-viewerHeightPx * 0.22f, 0f))
+        }
+    }
+    val onInfoRelease: (Float, Float) -> Unit = { total, velocity ->
+        if (total < -90f || (total < -30f && velocity < -900f)) showInfo = true
+        else coroutineScope.launch {
+            infoLift.animateTo(0f, spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow))
+        }
+    }
+
     fun triggerAnimatedDismiss(velocity: Float = 0f) {
         if (isDismissing) return
         isDismissing = true
         videoEngine.player.pause()
         coroutineScope.launch {
             if (dismissOffsetY.value < 40f) {
-                // back button / close button / tap: shrink and fade out, like iOS
-                closeAnim.animateTo(1f, tween(durationMillis = 240, easing = AxIosEase))
+                // back button / close button / tap: shrink back into the thumbnail if we can, else fade out
+                val cellNow = if (heroStartRect != null && pagerState.currentPage == initialPage) {
+                    AxHero.rectFor(images.getOrNull(initialPage)?.id)
+                } else null
+                if (cellNow != null && cellNow.bottom > 0f && cellNow.top < viewerHeightPx) {
+                    heroRect = cellNow
+                    heroP.animateTo(0f, spring(dampingRatio = 1f, stiffness = 380f))
+                } else {
+                    closeAnim.animateTo(1f, tween(durationMillis = 240, easing = AxIosEase))
+                }
             } else {
                 // finished a drag-down: keep going in the same direction
                 dismissOffsetY.animateTo(
@@ -5194,29 +5249,61 @@ private fun PhotoViewer(
         }
     }
 
-    val dismissProgress = (dismissOffsetY.value / 350f).coerceIn(0f, 1f)
-    val openP = openAnim.value.coerceIn(0f, 1f)
-    val closeP = closeAnim.value.coerceIn(0f, 1f)
-    val shownP = openP * (1f - closeP)
-    val contentScale = (1f - (dismissProgress * 0.12f)) * (0.92f + 0.08f * openP) * (1f - 0.06f * closeP)
-    val bgAlpha = (1f - dismissProgress).coerceIn(0f, 1f) * shownP
-    val controlsDismissAlpha = (1f - (dismissOffsetY.value / 100f)).coerceIn(0f, 1f) * shownP
+    // These are read inside draw/layer lambdas only, so animating them does not recompose the viewer.
+    fun dismissProgressNow() = (dismissOffsetY.value / 350f).coerceIn(0f, 1f)
+    fun shownNow(): Float {
+        val base = if (heroStartRect != null) heroP.value else openAnim.value
+        return base.coerceIn(0f, 1f) * (1f - closeAnim.value.coerceIn(0f, 1f))
+    }
+    fun bgAlphaNow() = (1f - dismissProgressNow()).coerceIn(0f, 1f) * shownNow()
+    fun controlsAlphaNow(): Float {
+        val shown = if (heroStartRect != null) {
+            ((heroP.value - 0.55f) / 0.45f).coerceIn(0f, 1f) * (1f - closeAnim.value.coerceIn(0f, 1f))
+        } else shownNow()
+        return (1f - (dismissOffsetY.value / 100f)).coerceIn(0f, 1f) * shown
+    }
 
     Surface(
         modifier = Modifier
             .fillMaxSize()
-            .onSizeChanged { if (it.height > 0) viewerHeightPx = it.height.toFloat() },
-        color = Color(0xFF080808).copy(alpha = bgAlpha)
+            .onSizeChanged { if (it.height > 0) viewerHeightPx = it.height.toFloat() }
+            .drawBehind { drawRect(Color(0xFF080808), alpha = bgAlphaNow()) },
+        color = Color.Transparent
     ) {
       Box(Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    translationY = dismissOffsetY.value
-                    scaleX = contentScale
-                    scaleY = contentScale
-                    alpha = shownP
+                    val dprog = dismissProgressNow()
+                    val lift = infoLift.value
+                    val liftP = (-lift / (viewerHeightPx * 0.10f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                    val closeP = closeAnim.value.coerceIn(0f, 1f)
+                    var sc = (1f - dprog * 0.12f) * (1f - 0.08f * liftP) * (1f - 0.06f * closeP)
+                    var tx = 0f
+                    var ty = dismissOffsetY.value + lift
+                    val hr = heroRect
+                    val hp = heroP.value
+                    if (hr != null && hp < 0.999f) {
+                        val s0 = (hr.width / size.width).coerceIn(0.05f, 1f)
+                        sc *= s0 + (1f - s0) * hp
+                        tx = (hr.center.x - size.width / 2f) * (1f - hp)
+                        ty += (hr.center.y - size.height / 2f) * (1f - hp)
+                        shape = AxHeroClip(hp, s0, 12.dp.toPx())
+                        clip = true
+                    } else {
+                        clip = false
+                    }
+                    if (heroStartRect == null) {
+                        sc *= 0.92f + 0.08f * openAnim.value.coerceIn(0f, 1f)
+                        alpha = shownNow()
+                    } else {
+                        alpha = 1f - closeP
+                    }
+                    translationX = tx
+                    translationY = ty
+                    scaleX = sc
+                    scaleY = sc
                 }
         ) {
           HorizontalPager(
@@ -5287,6 +5374,8 @@ private fun PhotoViewer(
                     onTap = { controlsVisible = !controlsVisible },
                     onSwipeUp = { showInfo = true },
                     onSwipeDown = { triggerAnimatedDismiss() },
+                    onInfoDrag = onInfoDrag,
+                    onInfoRelease = onInfoRelease,
                     onDismissDrag = { dy ->
                         if (!isDismissing) {
                             coroutineScope.launch {
@@ -5329,7 +5418,7 @@ private fun PhotoViewer(
           visible = controlsVisible && !showInfo,
           modifier = Modifier
               .align(Alignment.TopCenter)
-              .graphicsLayer { alpha = controlsDismissAlpha },
+              .graphicsLayer { alpha = controlsAlphaNow() },
           enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { -it / 5 },
           exit = fadeOut(tween(140)) + slideOutVertically(tween(180)) { -it / 5 },
         ) {
@@ -5491,7 +5580,7 @@ private fun PhotoViewer(
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
                     .padding(start = 16.dp, end = 16.dp, bottom = bottomOffset)
-                    .graphicsLayer { alpha = controlsDismissAlpha },
+                    .graphicsLayer { alpha = controlsAlphaNow() },
                 enter = fadeIn(tween(220)) + slideInVertically(
                     animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow),
                     initialOffsetY = { it }
@@ -5702,7 +5791,7 @@ private fun PhotoViewer(
               .align(Alignment.BottomCenter)
               .navigationBarsPadding()
               .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
-              .graphicsLayer { alpha = controlsDismissAlpha },
+              .graphicsLayer { alpha = controlsAlphaNow() },
           enter = fadeIn(tween(220, easing = FastOutSlowInEasing)) +
                   slideInVertically(
                       animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow),
@@ -5983,7 +6072,7 @@ private fun PhotoViewer(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .padding(start = 14.dp, top = 84.dp, bottom = 12.dp)
-                    .graphicsLayer { alpha = controlsDismissAlpha },
+                    .graphicsLayer { alpha = controlsAlphaNow() },
                 enter = fadeIn(tween(260)) + slideInHorizontally(spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)) { -it },
                 exit = fadeOut(tween(160)) + slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { -it },
             ) {
@@ -6037,7 +6126,7 @@ private fun PhotoViewer(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 14.dp, top = 84.dp, bottom = 12.dp)
-                    .graphicsLayer { alpha = controlsDismissAlpha },
+                    .graphicsLayer { alpha = controlsAlphaNow() },
                 enter = fadeIn(tween(260)) + slideInHorizontally(spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)) { it },
                 exit = fadeOut(tween(160)) + slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { it },
             ) {
@@ -6575,6 +6664,8 @@ private fun ZoomablePhoto(
     onTap: () -> Unit,
     onSwipeUp: () -> Unit = {},
     onSwipeDown: () -> Unit = {},
+    onInfoDrag: (Float) -> Unit = {},
+    onInfoRelease: (Float, Float) -> Unit = { _, _ -> },
     onDismissDrag: (Float) -> Unit = {},
     onDismissRelease: (Float) -> Unit = {},
     onRotateGestureTriggered: () -> Unit = {},
@@ -6801,6 +6892,7 @@ private fun ZoomablePhoto(
                         var isRotating = false
                         var isSwipeUpDetected = false
                         var isDismissDragging = false
+                        var isInfoDragging = false
                         var lastDragTime = SystemClock.uptimeMillis()
                         var lastDragY = 0f
                         var releaseVelocityY = 0f
@@ -6817,6 +6909,10 @@ private fun ZoomablePhoto(
                                 }
                             }
                             if (pointersDown >= 2 || (pointersDown == 1 && scale > 1f && panStarted)) {
+                                if (isInfoDragging) {
+                                    isInfoDragging = false
+                                    onInfoRelease(0f, 0f)
+                                }
                                 if (isDismissDragging) {
                                     isDismissDragging = false
                                     onDismissRelease(0f)
@@ -6875,10 +6971,12 @@ private fun ZoomablePhoto(
                                 lastDragTime = now
                                 lastDragY = totalDragY
 
-                                if (!isSwipeUpDetected && !isDismissDragging && totalDragY < -75f && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX) * 1.5f) {
-                                    isSwipeUpDetected = true
+                                if (!isInfoDragging && !isDismissDragging && totalDragY < -18f && kotlin.math.abs(totalDragY) > kotlin.math.abs(totalDragX) * 1.5f) {
+                                    isInfoDragging = true
+                                }
+                                if (isInfoDragging) {
                                     event.changes.forEach { it.consume() }
-                                    onSwipeUp()
+                                    onInfoDrag(panChange.y)
                                 } else if (!isSwipeUpDetected) {
                                     if (!isDismissDragging && totalDragY > 15f && totalDragY > kotlin.math.abs(totalDragX) * 1.3f) {
                                         isDismissDragging = true
@@ -6890,6 +6988,9 @@ private fun ZoomablePhoto(
                                 }
                             }
                         } while (event.changes.any { it.pressed })
+                        if (isInfoDragging) {
+                            onInfoRelease(totalDragY, releaseVelocityY)
+                        }
                         if (isDismissDragging) {
                             onDismissRelease(releaseVelocityY)
                         }
