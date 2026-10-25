@@ -7,6 +7,17 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -59,9 +70,43 @@ fun Modifier.axPushIn(forward: Boolean): Modifier {
     val p = remember { Animatable(0f) }
     LaunchedEffect(Unit) { p.animateTo(1f, tween(360, easing = AxIosEase)) }
     return this.graphicsLayer {
+        // no off-screen buffer for the fade: much lighter on the GPU for a full-screen grid
+        compositingStrategy = CompositingStrategy.ModulateAlpha
         val v = p.value
         val dir = if (forward) 1f else -1f
         translationX = (1f - v) * size.width * (if (forward) 0.22f else 0.08f) * dir
         alpha = (v * 1.6f).coerceAtMost(1f)
+    }
+}
+
+/** Remembers which grid cell was tapped, so the viewer can grow out of it and shrink back into it. */
+object AxHero {
+    private var coords: LayoutCoordinates? = null
+    private var mediaId: Long = Long.MIN_VALUE
+
+    fun mark(c: LayoutCoordinates?, id: Long) {
+        coords = c
+        mediaId = id
+    }
+
+    /** Bounds (in window coordinates) of the tapped cell, only if it belongs to [id] and is still on screen. */
+    fun rectFor(id: Long?): Rect? {
+        val c = coords ?: return null
+        if (id == null || id != mediaId || !c.isAttached) return null
+        val r = c.boundsInRoot()
+        return if (r.width > 8f && r.height > 8f) r else null
+    }
+}
+
+/**
+ * Clip used while the viewer opens/closes. Local coordinates are those of the full-screen layer,
+ * which is scaled down by [s0] at p = 0: a screen-wide square then looks exactly like the thumbnail.
+ */
+class AxHeroClip(private val p: Float, private val s0: Float, private val cornerPx: Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val h = size.width + (size.height - size.width) * p
+        val top = (size.height - h) / 2f
+        val r = cornerPx * (1f - p) / (s0 + (1f - s0) * p)
+        return Outline.Rounded(RoundRect(0f, top, size.width, top + h, CornerRadius(r, r)))
     }
 }
