@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.dp
 
 /**
  * Screen background. Plain colour when liquid glass is off; otherwise a static "collage" made of
