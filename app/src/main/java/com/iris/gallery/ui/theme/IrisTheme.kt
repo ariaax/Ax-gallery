@@ -3,6 +3,7 @@ package com.iris.gallery.ui.theme
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -10,6 +11,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import com.iris.gallery.data.AccentColor
 import com.iris.gallery.data.ThemeMode
 
@@ -99,6 +101,19 @@ private fun createMonochromeDarkPalette(amoled: Boolean) = darkColorScheme(
     outlineVariant = Color(0xFF27272A),
 )
 
+/** Headings use a serif face (collage / poster feel); body text keeps the default sans. */
+private val AxTypography = Typography().let { t ->
+    t.copy(
+        displayLarge = t.displayLarge.copy(fontFamily = FontFamily.Serif),
+        displayMedium = t.displayMedium.copy(fontFamily = FontFamily.Serif),
+        displaySmall = t.displaySmall.copy(fontFamily = FontFamily.Serif),
+        headlineLarge = t.headlineLarge.copy(fontFamily = FontFamily.Serif),
+        headlineMedium = t.headlineMedium.copy(fontFamily = FontFamily.Serif),
+        headlineSmall = t.headlineSmall.copy(fontFamily = FontFamily.Serif),
+        titleLarge = t.titleLarge.copy(fontFamily = FontFamily.Serif),
+    )
+}
+
 @Composable
 fun IrisTheme(
     accentColor: AccentColor = AccentColor.IRIS,
@@ -131,7 +146,7 @@ fun IrisTheme(
     } else {
         val (primary, secondary, tertiary) = when (accentColor) {
             AccentColor.IRIS -> Triple(Color(0xFF8A4AF3), Color(0xFF6C5CE7), Color(0xFFD0BCFF))
-            AccentColor.LAPIS_MESOPOTAMIA -> Triple(Color(0xFF1976D2), Color(0xFF0288D1), Color(0xFFFFD700))
+            AccentColor.LAPIS_MESOPOTAMIA -> Triple(Color(0xFF2A3CF0), Color(0xFF5566FF), Color(0xFFFF4D5A))
             AccentColor.EMERALD -> Triple(Color(0xFF00897B), Color(0xFF26A69A), Color(0xFF80CBC4))
             AccentColor.ISHTAR_AMBER -> Triple(Color(0xFFF57C00), Color(0xFFFFA726), Color(0xFFFFD54F))
             AccentColor.ROSE -> Triple(Color(0xFFD81B60), Color(0xFFEC407A), Color(0xFFFF80AB))
@@ -157,5 +172,5 @@ fun IrisTheme(
         }
     }
 
-    MaterialTheme(colorScheme = colors, content = content)
+    MaterialTheme(colorScheme = colors, typography = AxTypography, content = content)
 }
