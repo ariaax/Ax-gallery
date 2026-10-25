@@ -186,12 +186,20 @@ fun AxBarButton(
         return
     }
     val c = MaterialTheme.colorScheme.onSurface
+    val src = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     androidx.compose.foundation.layout.Box(
         modifier = modifier
             .padding(horizontal = 4.dp)
             .size(34.dp)
+            .axPressScale(src, 0.86f)
             .axGlassSurface(CircleShape, strong = true)
-            .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
+            .clickable(
+                interactionSource = src,
+                indication = androidx.compose.foundation.LocalIndication.current,
+                enabled = enabled,
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClick = onClick,
+            ),
         contentAlignment = androidx.compose.ui.Alignment.Center,
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
@@ -294,13 +302,20 @@ fun AxGlassChip(
     val shape = RoundedCornerShape(50)
     val top = if (selected) tint.copy(alpha = 0.38f) else c.copy(alpha = 0.16f)
     val bottom = if (selected) tint.copy(alpha = 0.16f) else c.copy(alpha = 0.06f)
+    val src = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     androidx.compose.foundation.layout.Row(
         modifier = modifier
             .height(36.dp)
+            .axPressScale(src, 0.92f)
             .clip(shape)
             .background(Brush.verticalGradient(listOf(top, bottom)))
             .axGlassSurface(shape, strong = selected)
-            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+            .clickable(
+                interactionSource = src,
+                indication = androidx.compose.foundation.LocalIndication.current,
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClick = onClick,
+            )
             .padding(horizontal = 14.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),

@@ -46,7 +46,7 @@ fun Card(
         return
     }
     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
-        Column(modifier.axGlassSurface(shape), content = content)
+        Column(modifier.axEnter().axGlassSurface(shape), content = content)
     }
 }
 
@@ -65,7 +65,20 @@ fun Card(
         androidx.compose.material3.Card(onClick, modifier, enabled, shape, colors, elevation, border, content = content)
         return
     }
+    val src = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
-        Column(modifier.axGlassSurface(shape).clickable(enabled = enabled, onClick = onClick), content = content)
+        Column(
+            modifier
+                .axEnter()
+                .axPressScale(src, 0.96f)
+                .axGlassSurface(shape)
+                .clickable(
+                    interactionSource = src,
+                    indication = androidx.compose.foundation.LocalIndication.current,
+                    enabled = enabled,
+                    onClick = onClick,
+                ),
+            content = content,
+        )
     }
 }
