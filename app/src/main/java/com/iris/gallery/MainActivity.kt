@@ -25,6 +25,10 @@ import kotlin.math.roundToInt
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.runtime.key
+import com.iris.gallery.ui.AxIosEase
+import com.iris.gallery.ui.axPushIn
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
@@ -375,6 +379,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.runtime.key
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
@@ -2816,6 +2821,8 @@ private fun GalleryScaffold(
                 }
               ) {
                 CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+                 key(selectedAlbum?.id) {
+                  Box(Modifier.fillMaxSize().axPushIn(forward = selectedAlbum != null)) {
                   if (selectedAlbum != null) {
                     if (displayedAlbumPhotos.isNotEmpty()) PhotoGrid(
                       displayedAlbumPhotos, padding, albumPhotoGridState, cellSize = photoCellSize, onCellSizeChange = onCellSizeChange,
@@ -2865,10 +2872,14 @@ private fun GalleryScaffold(
                         }
                     },
                   ) { selectedAlbumId = it.id }
+                  }
+                 }
                 }
               }
             }
             GalleryTab.LIBRARY -> {
+              key(librarySection) {
+               Box(Modifier.fillMaxSize().axPushIn(forward = librarySection != null)) {
                 when (librarySection) {
                         "trash" -> if (trashed.isEmpty()) EmptyState(stringResource(R.string.empty_trash), padding) else PhotoGrid(
                             images = trashed,
@@ -3314,6 +3325,8 @@ private fun GalleryScaffold(
                             }
                         }
                     }
+               }
+              }
             }
             GalleryTab.FAVORITES -> {
                 if (displayedFavoritePhotos.isEmpty()) {
@@ -3845,14 +3858,8 @@ private fun GalleryScaffold(
     }
     AnimatedVisibility(
         visible = editorImage != null,
-        enter = fadeIn(animationSpec = androidx.compose.animation.core.tween(220)) + slideInVertically(
-            initialOffsetY = { it / 10 },
-            animationSpec = androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-        ),
-        exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(180)) + androidx.compose.animation.slideOutVertically(
-            targetOffsetY = { it / 10 },
-            animationSpec = androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-        )
+        enter = slideInVertically(tween(380, easing = AxIosEase)) { it } + fadeIn(tween(160)),
+        exit = slideOutVertically(tween(320, easing = AxIosEase)) { it } + fadeOut(tween(220, delayMillis = 100)),
     ) {
         editorImage?.let { image ->
             EditorScreen(image, onClose = { editorImage = null }, onSaved = { saved, overwritten ->
@@ -3960,14 +3967,8 @@ private fun GalleryScaffold(
 
         AnimatedVisibility(
             visible = activeOverlayScreen == "settings",
-            enter = fadeIn(animationSpec = androidx.compose.animation.core.tween(220)) + slideInVertically(
-                initialOffsetY = { it / 10 },
-                animationSpec = androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-            ),
-            exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(180)) + androidx.compose.animation.slideOutVertically(
-                targetOffsetY = { it / 10 },
-                animationSpec = androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-            )
+            enter = slideInHorizontally(tween(380, easing = AxIosEase)) { it } + fadeIn(tween(140)),
+            exit = slideOutHorizontally(tween(320, easing = AxIosEase)) { it } + fadeOut(tween(260)),
         ) {
             BackHandler(enabled = true) { activeOverlayScreen = null }
             SettingsScreen(
@@ -3985,14 +3986,8 @@ private fun GalleryScaffold(
 
         AnimatedVisibility(
             visible = activeOverlayScreen == "about",
-            enter = fadeIn(animationSpec = androidx.compose.animation.core.tween(220)) + slideInVertically(
-                initialOffsetY = { it / 10 },
-                animationSpec = androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-            ),
-            exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(180)) + androidx.compose.animation.slideOutVertically(
-                targetOffsetY = { it / 10 },
-                animationSpec = androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-            )
+            enter = slideInHorizontally(tween(380, easing = AxIosEase)) { it } + fadeIn(tween(140)),
+            exit = slideOutHorizontally(tween(320, easing = AxIosEase)) { it } + fadeOut(tween(260)),
         ) {
             BackHandler(enabled = true) { activeOverlayScreen = "settings" }
             AboutScreen(
@@ -5053,6 +5048,10 @@ private fun PhotoViewer(
     }
 
     val dismissOffsetY = remember { Animatable(0f) }
+    // iOS-style open: the viewer eases up from slightly smaller + transparent; no bounce.
+    val openAnim = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { openAnim.animateTo(1f, spring(dampingRatio = 1f, stiffness = 420f)) }
+    val closeAnim = remember { Animatable(0f) }
     // ---- Depth Photo (Google GDepth / Nokia / OEM portrait) detection & rendering ----
     val isDepthPhoto = currentExif?.isDepthPhoto == true
     val depthPhoto by produceState<com.iris.gallery.decoder.DepthPhoto?>(
@@ -5154,10 +5153,16 @@ private fun PhotoViewer(
         isDismissing = true
         videoEngine.player.pause()
         coroutineScope.launch {
-            dismissOffsetY.animateTo(
-                targetValue = viewerHeightPx,
-                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
-            )
+            if (dismissOffsetY.value < 40f) {
+                // back button / close button / tap: shrink and fade out, like iOS
+                closeAnim.animateTo(1f, tween(durationMillis = 240, easing = AxIosEase))
+            } else {
+                // finished a drag-down: keep going in the same direction
+                dismissOffsetY.animateTo(
+                    targetValue = viewerHeightPx,
+                    animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing)
+                )
+            }
             handleClose()
         }
     }
@@ -5190,9 +5195,12 @@ private fun PhotoViewer(
     }
 
     val dismissProgress = (dismissOffsetY.value / 350f).coerceIn(0f, 1f)
-    val contentScale = 1f - (dismissProgress * 0.12f)
-    val bgAlpha = (1f - dismissProgress).coerceIn(0f, 1f)
-    val controlsDismissAlpha = (1f - (dismissOffsetY.value / 100f)).coerceIn(0f, 1f)
+    val openP = openAnim.value.coerceIn(0f, 1f)
+    val closeP = closeAnim.value.coerceIn(0f, 1f)
+    val shownP = openP * (1f - closeP)
+    val contentScale = (1f - (dismissProgress * 0.12f)) * (0.92f + 0.08f * openP) * (1f - 0.06f * closeP)
+    val bgAlpha = (1f - dismissProgress).coerceIn(0f, 1f) * shownP
+    val controlsDismissAlpha = (1f - (dismissOffsetY.value / 100f)).coerceIn(0f, 1f) * shownP
 
     Surface(
         modifier = Modifier
@@ -5208,6 +5216,7 @@ private fun PhotoViewer(
                     translationY = dismissOffsetY.value
                     scaleX = contentScale
                     scaleY = contentScale
+                    alpha = shownP
                 }
         ) {
           HorizontalPager(
