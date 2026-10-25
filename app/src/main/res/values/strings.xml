@@ -119,9 +119,9 @@
     <string name="dialog_delete_vault_item_title">Permanently delete %1$s?</string>
     <string name="dialog_delete_vault_item_message">This item will be permanently removed from your private vault.</string>
     <string name="prompt_free_vault_title">Prompt-Free Vault</string>
-    <string name="prompt_free_vault_desc">Granting \'All Files Access\' allows Ax Gallery to move and hide photos in your private vault silently without Android asking for delete confirmation each time.\n\nIris is 100% offline with zero internet access, so your files never leave your device.</string>
+    <string name="prompt_free_vault_desc">Granting \'All Files Access\' allows Ax Gallery to move and hide photos in your private vault silently without Android asking for delete confirmation each time.\n\nAx is 100% offline with zero internet access, so your files never leave your device.</string>
     <string name="dialog_prompt_free_vault_title">Prompt-Free Vault</string>
-    <string name="dialog_prompt_free_vault_message">Granting \'All Files Access\' allows Ax Gallery to move and hide photos in your private vault silently without Android asking for delete confirmation each time.\n\nIris is 100% offline with zero internet access, so your files never leave your device.</string>
+    <string name="dialog_prompt_free_vault_message">Granting \'All Files Access\' allows Ax Gallery to move and hide photos in your private vault silently without Android asking for delete confirmation each time.\n\nAx is 100% offline with zero internet access, so your files never leave your device.</string>
 
     <!-- Media Types & Titles -->
     <string name="media_type_photo">photo</string>
