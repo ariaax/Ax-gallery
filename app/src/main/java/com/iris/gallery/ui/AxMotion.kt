@@ -81,6 +81,9 @@ fun Modifier.axPushIn(forward: Boolean): Modifier {
 
 /** Remembers which grid cell was tapped, so the viewer can grow out of it and shrink back into it. */
 object AxHero {
+    /** false while the open animation runs: heavy full-size decoding waits until it is finished. */
+    val settledState = androidx.compose.runtime.mutableStateOf(true)
+
     private var coords: LayoutCoordinates? = null
     private var mediaId: Long = Long.MIN_VALUE
 
