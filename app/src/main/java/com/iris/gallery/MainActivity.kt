@@ -5077,8 +5077,12 @@ private fun PhotoViewer(
     LaunchedEffect(Unit) {
         AxHero.settledState.value = false
         try {
-            if (heroStartRect != null) heroP.animateTo(1f, spring(dampingRatio = 1f, stiffness = 380f))
-            else openAnim.animateTo(1f, spring(dampingRatio = 1f, stiffness = 420f))
+            // let the heavy first composition/layout of the viewer finish before the clock starts,
+            // so its cost is not eaten by the first animation frames
+            androidx.compose.runtime.withFrameNanos { }
+            androidx.compose.runtime.withFrameNanos { }
+            if (heroStartRect != null) heroP.animateTo(1f, tween(420, easing = AxIosEase))
+            else openAnim.animateTo(1f, tween(380, easing = AxIosEase))
         } finally {
             AxHero.settledState.value = true
         }
@@ -5213,7 +5217,7 @@ private fun PhotoViewer(
                 } else null
                 if (cellNow != null && cellNow.bottom > 0f && cellNow.top < viewerHeightPx) {
                     heroRect = cellNow
-                    heroP.animateTo(0f, spring(dampingRatio = 1f, stiffness = 380f))
+                    heroP.animateTo(0f, tween(340, easing = AxIosEase))
                 } else {
                     closeAnim.animateTo(1f, tween(durationMillis = 240, easing = AxIosEase))
                 }
