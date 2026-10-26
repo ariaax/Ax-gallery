@@ -5581,13 +5581,24 @@ private fun PhotoViewer(
                     }
                 }
             }
+            val viewerMeta = remember(current.id, current.width, current.height, current.sizeBytes) {
+                buildList {
+                    if (current.width > 0 && current.height > 0) add("${current.width}\u00D7${current.height}")
+                    if (current.sizeBytes > 0) add(android.text.format.Formatter.formatShortFileSize(context, current.sizeBytes))
+                }.joinToString(" \u00B7 ")
+            }
+            val secondaryHeaderFull = when {
+                viewerMeta.isBlank() -> secondaryHeaderText
+                secondaryHeaderText.isBlank() -> viewerMeta
+                else -> "$viewerMeta \u00B7 $secondaryHeaderText"
+            }
             Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
                 if (primaryHeaderText.isNotBlank()) {
                     Text(primaryHeaderText, color = Color.White, style = MaterialTheme.typography.titleMedium,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                if (secondaryHeaderText.isNotBlank()) {
-                    Text(secondaryHeaderText, color = Color.White.copy(alpha = .75f),
+                if (secondaryHeaderFull.isNotBlank()) {
+                    Text(secondaryHeaderFull, color = Color.White.copy(alpha = .75f),
                         style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
