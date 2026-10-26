@@ -4175,6 +4175,7 @@ private fun PhotoGrid(
     onInvalidMedia: ((MediaImage) -> Unit)? = null,
     onOpen: (MediaImage) -> Unit,
 ) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val currentLocale = rememberAppLocale()
     val todayString = stringResource(R.string.timeline_today)
     val yesterdayString = stringResource(R.string.timeline_yesterday)
@@ -4461,6 +4462,7 @@ private fun PhotoGrid(
                         suppressReleaseClickId = id
                         hasDragged = false
                         previousDragIds = setOf(id)
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                         currentSetSelection?.invoke(id, selecting)
                     },
                     onDrag = { change, _ ->
