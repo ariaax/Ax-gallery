@@ -703,3 +703,34 @@ fun AxWindowBlur(radius: Int = 36) {
         }
     }
 }
+
+
+/** Dark, soft background colour taken from a photo (used behind the full-screen viewer). */
+fun axDominantDark(src: android.graphics.Bitmap): Color {
+    val fallback = Color(0xFF080808)
+    return try {
+        val base = if (src.config == android.graphics.Bitmap.Config.HARDWARE) src.copy(android.graphics.Bitmap.Config.ARGB_8888, false) ?: return fallback else src
+        val small = android.graphics.Bitmap.createScaledBitmap(base, 24, 24, true)
+        var r = 0.0; var g = 0.0; var b = 0.0; var wSum = 0.0
+        val hsv = FloatArray(3)
+        for (y in 0 until 24) for (x in 0 until 24) {
+            val p = small.getPixel(x, y)
+            android.graphics.Color.colorToHSV(p, hsv)
+            val w = 0.15 + hsv[1] * hsv[2] // favour colourful, bright pixels over grey/black ones
+            r += android.graphics.Color.red(p) * w
+            g += android.graphics.Color.green(p) * w
+            b += android.graphics.Color.blue(p) * w
+            wSum += w
+        }
+        if (small !== base) small.recycle()
+        if (base !== src) base.recycle()
+        if (wSum <= 0.0) return fallback
+        val avg = android.graphics.Color.rgb((r / wSum).toInt().coerceIn(0, 255), (g / wSum).toInt().coerceIn(0, 255), (b / wSum).toInt().coerceIn(0, 255))
+        android.graphics.Color.colorToHSV(avg, hsv)
+        hsv[1] = minOf(hsv[1], 0.55f)
+        hsv[2] = 0.22f
+        Color(android.graphics.Color.HSVToColor(hsv))
+    } catch (e: Throwable) {
+        fallback
+    }
+}
