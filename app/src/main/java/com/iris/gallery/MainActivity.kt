@@ -2190,10 +2190,13 @@ private fun GalleryScaffold(
             window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         }
     }
+    val axHapticCtx = androidx.compose.ui.platform.LocalContext.current
     fun toggleSelection(id: Long) {
+        com.iris.gallery.ui.AxHaptics.tick(axHapticCtx)
         selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
     }
     fun setSelection(id: Long, selected: Boolean) {
+        com.iris.gallery.ui.AxHaptics.tick(axHapticCtx)
         selectedIds = if (selected) selectedIds + id else selectedIds - id
     }
     fun setDateSelection(ids: List<Long>, selected: Boolean) {
@@ -2407,7 +2410,7 @@ private fun GalleryScaffold(
                         }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, libraryTabLabel) }
                     }
                 },
-                actions = {
+                actions = { com.iris.gallery.ui.AxBarActions {
                     if (selectedIds.isNotEmpty()) {
                         if (destination == 3 && librarySection == "trash") {
                             AxBarButton(onClick = { val selected = activeMedia.filter { it.id in selectedIds }; clearSelection(); handleRestore(selected) }) {
@@ -2686,7 +2689,7 @@ private fun GalleryScaffold(
                             }
                         }
                     }
-                },
+                } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
           }
@@ -4175,7 +4178,7 @@ private fun PhotoGrid(
     onInvalidMedia: ((MediaImage) -> Unit)? = null,
     onOpen: (MediaImage) -> Unit,
 ) {
-    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val axGridCtx = androidx.compose.ui.platform.LocalContext.current
     val currentLocale = rememberAppLocale()
     val todayString = stringResource(R.string.timeline_today)
     val yesterdayString = stringResource(R.string.timeline_yesterday)
@@ -4462,7 +4465,7 @@ private fun PhotoGrid(
                         suppressReleaseClickId = id
                         hasDragged = false
                         previousDragIds = setOf(id)
-                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        com.iris.gallery.ui.AxHaptics.heavy(axGridCtx)
                         currentSetSelection?.invoke(id, selecting)
                     },
                     onDrag = { change, _ ->
