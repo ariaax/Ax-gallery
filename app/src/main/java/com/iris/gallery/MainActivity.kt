@@ -5072,7 +5072,7 @@ private fun PhotoViewer(
     val dismissOffsetY = remember { Animatable(0f) }
     // Hero open: grows out of the thumbnail that was tapped (when we know where it is);
     // otherwise a soft fade + scale. No bounce either way.
-    val heroStartRect = remember { AxHero.rectFor(images.getOrNull(initialPage)?.id) }
+    val heroStartRect = remember<androidx.compose.ui.geometry.Rect?> { null } // hero animation disabled: plain quick fade
     var heroRect by remember { mutableStateOf(heroStartRect) }
     val heroP = remember { Animatable(if (heroStartRect != null) 0f else 1f) }
     val openAnim = remember { Animatable(if (heroStartRect != null) 1f else 0f) }
@@ -5084,7 +5084,7 @@ private fun PhotoViewer(
             androidx.compose.runtime.withFrameNanos { }
             androidx.compose.runtime.withFrameNanos { }
             if (heroStartRect != null) heroP.animateTo(1f, tween(420, easing = AxIosEase))
-            else openAnim.animateTo(1f, tween(380, easing = AxIosEase))
+            else openAnim.animateTo(1f, tween(150, easing = AxIosEase))
         } finally {
             AxHero.settledState.value = true
         }
@@ -5222,7 +5222,7 @@ private fun PhotoViewer(
                     heroRect = cellNow
                     heroP.animateTo(0f, tween(340, easing = AxIosEase))
                 } else {
-                    closeAnim.animateTo(1f, tween(durationMillis = 240, easing = AxIosEase))
+                    closeAnim.animateTo(1f, tween(durationMillis = 150, easing = AxIosEase))
                 }
             } else {
                 // finished a drag-down: keep going in the same direction
