@@ -5254,8 +5254,8 @@ private fun PhotoViewer(
                 if (!media.isVideo) {
                     val req = ImageRequest.Builder(context)
                         .data(media.uri)
-                        .size(coil3.size.Size.ORIGINAL)
-                        .precision(Precision.EXACT)
+                        .size(coil3.size.Size(4096, 4096))
+                        .precision(Precision.INEXACT)
                         .build()
                     imageLoader.enqueue(req)
                 }
@@ -6205,7 +6205,7 @@ private fun PhotoViewer(
                             val popupImageReq = remember(popupItem.id, popupItem.uri) {
                                 coil3.request.ImageRequest.Builder(context)
                                     .data(popupItem.uri)
-                                    .size(coil3.size.Size.ORIGINAL)
+                                    .size(coil3.size.Size(4096, 4096))
                                     .crossfade(120)
                                     .build()
                             }
@@ -6748,8 +6748,10 @@ private fun ZoomablePhoto(
             reqBuilder.size(targetDim, targetDim)
                 .precision(Precision.INEXACT)
         } else {
-            reqBuilder.size(coil3.size.Size.ORIGINAL)
-                .precision(Precision.EXACT)
+            // Cap the decode at 4096px per side: a 12000px panorama would otherwise need ~300 MB of RAM,
+            // which causes GC stalls. Smaller photos are not touched.
+            reqBuilder.size(coil3.size.Size(4096, 4096))
+                .precision(Precision.INEXACT)
         }
         reqBuilder.build()
     }
