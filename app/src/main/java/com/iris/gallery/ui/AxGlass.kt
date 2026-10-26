@@ -201,34 +201,32 @@ half4 main(float2 p) {
 """
 
 private var navShader: android.graphics.RuntimeShader? = null
+private var navCacheKey = ""
+private var navCacheEffect: androidx.compose.ui.graphics.RenderEffect? = null
 
-/** Light blur + real edge refraction (Android 13+); older phones keep the plain blur. */
+/** Light blur + real edge refraction (Android 13+); older phones keep the plain blur. Cached: rebuilt only when the bar's size changes. */
 private fun navGlassEffect(w: Float, h: Float, radius: Float): androidx.compose.ui.graphics.RenderEffect {
     if (Build.VERSION.SDK_INT < 33) return NavBlurEffect
+    val key = "${w.toInt()}x${h.toInt()}r${radius.toInt()}"
+    val cached = navCacheEffect
+    if (cached != null && key == navCacheKey) return cached
     return try {
         val sh = navShader ?: android.graphics.RuntimeShader(NAV_REFRACT_AGSL).also { navShader = it }
         sh.setFloatUniform("size", w, h)
         sh.setFloatUniform("radius", radius)
         sh.setFloatUniform("depth", minOf(h * 0.55f, 46f))
         val blur = android.graphics.RenderEffect.createBlurEffect(14f, 14f, android.graphics.Shader.TileMode.CLAMP)
-        val sat = android.graphics.RenderEffect.createColorFilterEffect(
-            android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix().apply { setSaturation(1.6f) }), blur
-        )
         val refr = android.graphics.RenderEffect.createRuntimeShaderEffect(sh, "content")
-        android.graphics.RenderEffect.createChainEffect(refr, sat).asComposeRenderEffect()
+        val eff = android.graphics.RenderEffect.createChainEffect(refr, blur).asComposeRenderEffect()
+        navCacheKey = key
+        navCacheEffect = eff
+        eff
     } catch (e: Throwable) {
         NavBlurEffect
     }
 }
 
-private val PanelBlurEffect: androidx.compose.ui.graphics.RenderEffect by lazy {
-    if (Build.VERSION.SDK_INT >= 31) {
-        val blur = android.graphics.RenderEffect.createBlurEffect(18f, 18f, android.graphics.Shader.TileMode.CLAMP)
-        android.graphics.RenderEffect.createColorFilterEffect(
-            android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix().apply { setSaturation(1.4f) }), blur
-        ).asComposeRenderEffect()
-    } else BlurEffect(18f, 18f, TileMode.Clamp)
-}
+private val PanelBlurEffect = BlurEffect(18f, 18f, TileMode.Clamp)
 
 /** Put this on the big content area that should show up blurred behind the glass bar. */
 fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
