@@ -27,6 +27,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.key
+import kotlinx.coroutines.flow.first
 import com.iris.gallery.ui.AxIosEase
 import com.iris.gallery.ui.axPushIn
 import com.iris.gallery.ui.AxHero
@@ -5074,8 +5075,13 @@ private fun PhotoViewer(
     val heroP = remember { Animatable(if (heroStartRect != null) 0f else 1f) }
     val openAnim = remember { Animatable(if (heroStartRect != null) 1f else 0f) }
     LaunchedEffect(Unit) {
-        if (heroStartRect != null) heroP.animateTo(1f, spring(dampingRatio = 1f, stiffness = 380f))
-        else openAnim.animateTo(1f, spring(dampingRatio = 1f, stiffness = 420f))
+        AxHero.settledState.value = false
+        try {
+            if (heroStartRect != null) heroP.animateTo(1f, spring(dampingRatio = 1f, stiffness = 380f))
+            else openAnim.animateTo(1f, spring(dampingRatio = 1f, stiffness = 420f))
+        } finally {
+            AxHero.settledState.value = true
+        }
     }
     val closeAnim = remember { Animatable(0f) }
     // ---- Depth Photo (Google GDepth / Nokia / OEM portrait) detection & rendering ----
@@ -5234,6 +5240,7 @@ private fun PhotoViewer(
                 zoomedImageId = null
             }
         }
+        androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
         listOf(currentIdx - 1, currentIdx + 1, currentIdx + 2).forEach { idx ->
             if (idx in images.indices) {
                 val media = images[idx]
@@ -6739,7 +6746,7 @@ private fun ZoomablePhoto(
         }
         reqBuilder.build()
     }
-    val painter = rememberAsyncImagePainter(model = imageRequest)
+    val painter = rememberAsyncImagePainter(model = if (AxHero.settledState.value) imageRequest else null)
     val painterState by painter.state.collectAsState()
     val fullImageLoaded = painterState is AsyncImagePainter.State.Success
 
