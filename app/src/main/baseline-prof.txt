@@ -1,0 +1,8 @@
+# Baseline profile: tells Android to pre-compile the app's own code, Compose and Coil on install,
+# so the app starts faster and scrolling is smoother from the very first launch.
+HSPLcom/iris/gallery/**->**(**)**
+HSPLandroidx/compose/**->**(**)**
+HSPLcoil3/**->**(**)**
+Lcom/iris/gallery/**;
+Landroidx/compose/**;
+Lcoil3/**;
