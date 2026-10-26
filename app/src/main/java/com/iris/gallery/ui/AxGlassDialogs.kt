@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.ColumnScope
@@ -173,6 +174,49 @@ fun Modifier.axGlassSheetEdge(corner: androidx.compose.ui.unit.Dp = 28.dp): Modi
     }
 }
 
+val LocalAxInBarGroup = androidx.compose.runtime.compositionLocalOf { false }
+
+/** Top-bar action buttons share ONE light glass pill (same look as the bottom bar). */
+@Composable
+fun AxBarActions(content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
+    if (!AxGlass.enabled) {
+        androidx.compose.foundation.layout.Row(content = content)
+        return
+    }
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val fill = if (dark) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.45f)
+    val base = if (dark) Color.Black.copy(alpha = 0.20f) else Color.Black.copy(alpha = 0.03f)
+    val rim = Brush.linearGradient(
+        listOf(
+            Color.White.copy(alpha = if (dark) 0.50f else 0.90f),
+            Color.White.copy(alpha = if (dark) 0.08f else 0.25f),
+            Color.White.copy(alpha = if (dark) 0.30f else 0.70f),
+        )
+    )
+    androidx.compose.runtime.CompositionLocalProvider(LocalAxInBarGroup provides true) {
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier
+                .padding(end = 8.dp)
+                .height(40.dp)
+                .drawWithContent {
+                    if (size.width > 4f) {
+                        val r = androidx.compose.ui.geometry.CornerRadius(size.height / 2f)
+                        drawRoundRect(base, cornerRadius = r)
+                        drawRoundRect(fill, cornerRadius = r)
+                        drawRoundRect(
+                            Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) 0.10f else 0.28f), Color.Transparent), endY = size.height * 0.55f),
+                            cornerRadius = r,
+                        )
+                        drawRoundRect(rim, cornerRadius = r, style = Stroke(width = 1.dp.toPx()))
+                    }
+                    drawContent()
+                },
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            content = content,
+        )
+    }
+}
+
 /** Top-bar icon button: a small frosted glass circle when liquid glass is on, a normal icon button otherwise. */
 @Composable
 fun AxBarButton(
@@ -187,12 +231,13 @@ fun AxBarButton(
     }
     val c = MaterialTheme.colorScheme.onSurface
     val src = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val grouped = LocalAxInBarGroup.current
     androidx.compose.foundation.layout.Box(
         modifier = modifier
-            .padding(horizontal = 4.dp)
-            .size(34.dp)
+            .padding(horizontal = if (grouped) 0.dp else 4.dp)
+            .size(if (grouped) 40.dp else 34.dp)
             .axPressScale(src, 0.86f)
-            .axGlassSurface(CircleShape, strong = true)
+            .then(if (grouped) Modifier.clip(CircleShape) else Modifier.axGlassSurface(CircleShape, strong = true))
             .clickable(
                 interactionSource = src,
                 indication = androidx.compose.foundation.LocalIndication.current,
@@ -257,10 +302,9 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
             modifier = Modifier.padding(start = if (badge != null) 8.dp else 0.dp),
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.Light,
-                fontSize = 30.sp,
-                letterSpacing = 1.2.sp,
-                brush = Brush.verticalGradient(listOf(c, c.copy(alpha = 0.78f), tint.copy(alpha = 0.9f))),
+                fontWeight = FontWeight.Bold,
+                fontSize = 28.sp,
+                color = c,
             ),
         )
     }
