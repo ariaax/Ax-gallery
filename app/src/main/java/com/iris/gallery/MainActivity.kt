@@ -548,6 +548,28 @@ private fun hasMediaPermission(context: android.content.Context): Boolean {
     }
 }
 
+private enum class SmartGroup(val label: String) {
+    SCREENSHOTS("Screenshots"),
+    RECORDINGS("Screen recordings"),
+    CAMERA("Camera"),
+    DOWNLOADS("Downloads"),
+    MESSENGERS("Messengers & social"),
+    LARGE("Large files (20 MB+)"),
+}
+
+private fun smartMatches(g: SmartGroup, m: MediaImage): Boolean {
+    val p = m.path.lowercase()
+    val b = m.bucketName.lowercase()
+    return when (g) {
+        SmartGroup.SCREENSHOTS -> !m.isVideo && ("screenshot" in p || "screenshot" in b)
+        SmartGroup.RECORDINGS -> m.isVideo && ("screenrecord" in p || "screen record" in p || "screen_record" in p || "recorder" in b)
+        SmartGroup.CAMERA -> "/dcim/camera" in p || b == "camera"
+        SmartGroup.DOWNLOADS -> "/download" in p || b == "download" || b == "downloads"
+        SmartGroup.MESSENGERS -> listOf("telegram", "whatsapp", "instagram", "/signal", "messenger", "/bale", "eitaa", "rubika", "snapchat", "twitter").any { it in p }
+        SmartGroup.LARGE -> m.sizeBytes >= 20L * 1024 * 1024
+    }
+}
+
 private enum class MediaFormatFilter(val label: String) {
     ALL("All"),
     VIDEOS("Videos"),
@@ -2371,6 +2393,7 @@ private fun GalleryScaffold(
                                 destination == 3 && librarySection == "duplicates" -> stringResource(R.string.section_duplicates)
                                 destination == 3 && librarySection == "memories" -> stringResource(R.string.section_memories)
                                 destination == 3 && librarySection == "formats" -> stringResource(R.string.library_formats_title)
+                                destination == 3 && librarySection == "smart" -> stringResource(R.string.library_smart_title)
                                 destination == 3 && librarySection == "editor" -> stringResource(R.string.library_editor_title)
                                 destination == 3 && librarySection == "folder_view" -> stringResource(R.string.section_folder_view)
                                 destination == 3 && librarySection != null -> librarySection!!.replaceFirstChar { it.uppercase() }
@@ -2656,7 +2679,7 @@ private fun GalleryScaffold(
                                 Text(stringResource(R.string.action_empty_trash), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                             }
                         }
-                        val canToggleGrid = destination == 0 || destination == 2 || (destination == 1 && selectedAlbum != null) || (destination == 3 && (librarySection == "trash" || librarySection == "locked" || librarySection == "memories" || librarySection == "formats" || librarySection == "editor"))
+                        val canToggleGrid = destination == 0 || destination == 2 || (destination == 1 && selectedAlbum != null) || (destination == 3 && (librarySection == "trash" || librarySection == "locked" || librarySection == "memories" || librarySection == "formats" || librarySection == "smart" || librarySection == "editor"))
                         if (canToggleGrid) {
                             AxBarButton(onClick = {
                                 compactGrid = !compactGrid
@@ -3264,6 +3287,53 @@ private fun GalleryScaffold(
                                             else if (onPick != null) onPick(it)
                                             else { viewerImages = currentFiltered; selectedId = it.id }
                                         }
+                                    }
+                                }
+                            }
+                        }
+                        "smart" -> {
+                            val smartGroups = remember(images) {
+                                SmartGroup.values().map { g -> g to images.filter { smartMatches(g, it) }.sortedByDescending { it.sortDate } }
+                                    .filter { it.second.isNotEmpty() }
+                            }
+                            var smartSel by remember { mutableStateOf<SmartGroup?>(null) }
+                            if (smartGroups.isEmpty()) {
+                                EmptyState(stringResource(R.string.empty_smart_groups), padding)
+                            } else {
+                                val activeGroup = smartGroups.firstOrNull { it.first == smartSel } ?: smartGroups.first()
+                                Column(Modifier.fillMaxSize().padding(padding)) {
+                                    LazyRow(
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        smartGroups.forEach { (g, list) ->
+                                            item(key = g.name) {
+                                                FilterChip(
+                                                    selected = activeGroup.first == g,
+                                                    onClick = { smartSel = g },
+                                                    label = { Text("${g.label} (${list.size})") },
+                                                )
+                                            }
+                                        }
+                                    }
+                                    PhotoGrid(
+                                        images = activeGroup.second,
+                                        padding = PaddingValues(0.dp),
+                                        gridState = libraryGridState,
+                                        cellSize = photoCellSize,
+                                        onCellSizeChange = onCellSizeChange,
+                                        cornerStyle = settings.cornerStyle,
+                                        gridSpacing = settings.gridSpacing,
+                                        showVideoDuration = settings.showVideoDurationBadge,
+                                        showFormatBadge = settings.showMediaFormatBadge,
+                                        selectedIds = selectedIds,
+                                        favorites = favorites,
+                                        onToggleSelection = if (onPick == null) ::toggleSelection else null,
+                                        onSetSelection = if (onPick == null) ::setSelection else null,
+                                    ) {
+                                        if (selectedIds.isNotEmpty()) toggleSelection(it.id)
+                                        else if (onPick != null) onPick(it)
+                                        else { viewerImages = activeGroup.second; selectedId = it.id }
                                     }
                                 }
                             }
@@ -4929,6 +4999,16 @@ private fun PhotoViewer(
             loadExifMetadata(context, current.uri, current.path)
         }
     }
+    val viewerBgTarget by produceState(Color(0xFF080808), current.id, current.isVideo) {
+        if (current.isVideo) { value = Color(0xFF080808); return@produceState }
+        androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
+        value = withContext(Dispatchers.Default) {
+            val bmp = com.iris.gallery.ui.ThumbnailCache.findForImage(current.id)
+                ?: com.iris.gallery.ui.loadThumbnailSync(context, current, 256)
+            if (bmp == null) Color(0xFF080808) else com.iris.gallery.ui.axDominantDark(bmp)
+        }
+    }
+    val viewerBg by androidx.compose.animation.animateColorAsState(viewerBgTarget, tween(350), label = "viewer bg")
     var currentPhotoHasGainmap by remember(current.id) { mutableStateOf(false) }
     val currentIsVideoHdr by produceState(initialValue = false, current.id, current.isVideo) {
         if (current.isVideo) {
@@ -5286,7 +5366,14 @@ private fun PhotoViewer(
         modifier = Modifier
             .fillMaxSize()
             .onSizeChanged { if (it.height > 0) viewerHeightPx = it.height.toFloat() }
-            .drawBehind { drawRect(Color(0xFF080808), alpha = bgAlphaNow()) },
+            .drawBehind {
+                drawRect(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(viewerBg, androidx.compose.ui.graphics.lerp(viewerBg, Color(0xFF040404), 0.65f))
+                    ),
+                    alpha = bgAlphaNow(),
+                )
+            },
         color = Color.Transparent
     ) {
       Box(Modifier.fillMaxSize()) {
