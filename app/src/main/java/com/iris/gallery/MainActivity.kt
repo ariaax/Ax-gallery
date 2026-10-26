@@ -5000,7 +5000,6 @@ private fun PhotoViewer(
         }
     }
     val viewerBgTarget by produceState(Color(0xFF080808), current.id, current.isVideo) {
-        if (current.isVideo) { value = Color(0xFF080808); return@produceState }
         androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
         value = withContext(Dispatchers.Default) {
             val bmp = com.iris.gallery.ui.ThumbnailCache.findForImage(current.id)
