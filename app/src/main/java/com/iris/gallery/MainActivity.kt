@@ -4919,6 +4919,7 @@ private fun PhotoViewer(
         }
     }
     val currentExif by produceState<ExifMetadata?>(initialValue = null, current.id, current.uri, current.dateTaken, current.description, current.title) {
+        androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
         value = withContext(Dispatchers.IO) {
             loadExifMetadata(context, current.uri, current.path)
         }
@@ -5002,6 +5003,7 @@ private fun PhotoViewer(
     val motionVideo by produceState<MotionVideo?>(initialValue = null, current.id, current.uri, current.isVideo) {
         if (!current.isVideo) {
             // Only images can be motion photos. Cheap filename hint or on-demand content parse.
+            androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
             value = withContext(Dispatchers.IO) {
                 MotionPhotoExtractor.detectMotionPhoto(context, current)
             }
@@ -5094,6 +5096,7 @@ private fun PhotoViewer(
         initialValue = null, current.id, current.uri, isDepthPhoto
     ) {
         if (isDepthPhoto && !current.isVideo) {
+            androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
             value = withContext(Dispatchers.IO) {
                 com.iris.gallery.decoder.DepthPhotoExtractor.detectDepthPhoto(context, current)
             }
