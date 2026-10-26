@@ -2745,7 +2745,7 @@ private fun GalleryScaffold(
           state = tabPagerState,
           beyondViewportPageCount = (visibleTabs.size - 1).coerceIn(0, 3),
           userScrollEnabled = selectedIds.isEmpty() && selectedAlbum == null && (destination != 3 || librarySection == null),
-          modifier = Modifier.fillMaxSize().axGlassSource(axGlass),
+          modifier = Modifier.fillMaxSize().nestedScroll(com.iris.gallery.ui.AxNavCollapse.connection).axGlassSource(axGlass),
         ) { page ->
           val activeTab = visibleTabs.getOrElse(page) { GalleryTab.PHOTOS }
           when (activeTab) {
