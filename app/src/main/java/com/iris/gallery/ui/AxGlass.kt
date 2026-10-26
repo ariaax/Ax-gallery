@@ -193,7 +193,14 @@ private fun navGlassEffect(w: Float, h: Float, radius: Float): androidx.compose.
     }
 }
 
-private val PanelBlurEffect = BlurEffect(24f, 24f, TileMode.Clamp)
+private val PanelBlurEffect: androidx.compose.ui.graphics.RenderEffect by lazy {
+    if (Build.VERSION.SDK_INT >= 31) {
+        val blur = android.graphics.RenderEffect.createBlurEffect(18f, 18f, android.graphics.Shader.TileMode.CLAMP)
+        android.graphics.RenderEffect.createColorFilterEffect(
+            android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix().apply { setSaturation(1.4f) }), blur
+        ).asComposeRenderEffect()
+    } else BlurEffect(18f, 18f, TileMode.Clamp)
+}
 
 /** Put this on the big content area that should show up blurred behind the glass bar. */
 fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
@@ -411,6 +418,7 @@ fun AxGlassNavBar(
                             .fillMaxHeight()
                             .graphicsLayer { alpha = itemAlpha }
                             .clickable(interactionSource = itemSource, indication = null) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 if (AxNavCollapse.collapsed) AxNavCollapse.collapsed = false
                                 else onSelect(i)
                             },
@@ -441,12 +449,12 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
         onDispose { state.regions.remove(region) }
     }
     val shape = RoundedCornerShape(corner)
-    val tint = Color.Black.copy(alpha = if (blurSupported && state.blurEnabled) 0.34f else 0.58f)
+    val tint = if (blurSupported && state.blurEnabled) Color.White.copy(alpha = 0.07f).compositeOver(Color.Black.copy(alpha = 0.22f)) else Color.Black.copy(alpha = 0.58f)
     val edge = Brush.linearGradient(
         listOf(
-            Color.White.copy(alpha = 0.50f),
-            Color.White.copy(alpha = 0.05f),
-            Color.White.copy(alpha = 0.28f),
+            Color.White.copy(alpha = 0.45f),
+            Color.White.copy(alpha = 0.06f),
+            Color.White.copy(alpha = 0.26f),
         )
     )
     return this
