@@ -93,6 +93,34 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import kotlin.math.roundToInt
 
+/** Direct vibrator haptics: works even when the phone's "touch feedback" setting is off. */
+object AxHaptics {
+    private fun vibrator(context: android.content.Context): android.os.Vibrator? = try {
+        if (Build.VERSION.SDK_INT >= 31) {
+            (context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager)?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+        }
+    } catch (e: Throwable) { null }
+
+    private fun fire(context: android.content.Context, heavy: Boolean) {
+        try {
+            val v = vibrator(context) ?: return
+            if (!v.hasVibrator()) return
+            if (Build.VERSION.SDK_INT >= 29) {
+                v.vibrate(android.os.VibrationEffect.createPredefined(
+                    if (heavy) android.os.VibrationEffect.EFFECT_HEAVY_CLICK else android.os.VibrationEffect.EFFECT_TICK))
+            } else {
+                v.vibrate(android.os.VibrationEffect.createOneShot(if (heavy) 30L else 14L, 120))
+            }
+        } catch (e: Throwable) { }
+    }
+
+    fun tick(context: android.content.Context) = fire(context, false)
+    fun heavy(context: android.content.Context) = fire(context, true)
+}
+
 /** Global switch for the Liquid Glass look (a settings toggle can drive this later). */
 object AxGlass {
     /** Compose state, so flipping the setting updates the UI immediately. */
@@ -279,7 +307,7 @@ fun AxGlassNavBar(
 ) {
     val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val density = LocalDensity.current
-    val haptic = LocalHapticFeedback.current
+    val axCtx = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     val accent = MaterialTheme.colorScheme.primary
     val c by animateFloatAsState(
@@ -356,7 +384,7 @@ fun AxGlassNavBar(
                             if (dragging) {
                                 dragging = false
                                 val target = dragIndex.roundToInt().coerceIn(0, count - 1)
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                AxHaptics.tick(axCtx)
                                 scope.launch {
                                     lensAnim.snapTo(dragIndex)
                                     lensAnim.animateTo(target.toFloat(), spring(dampingRatio = 0.62f, stiffness = 380f))
@@ -418,7 +446,7 @@ fun AxGlassNavBar(
                             .fillMaxHeight()
                             .graphicsLayer { alpha = itemAlpha }
                             .clickable(interactionSource = itemSource, indication = null) {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                AxHaptics.tick(axCtx)
                                 if (AxNavCollapse.collapsed) AxNavCollapse.collapsed = false
                                 else onSelect(i)
                             },
