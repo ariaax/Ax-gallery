@@ -82,6 +82,16 @@ import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import kotlin.math.roundToInt
 
 /** Global switch for the Liquid Glass look (a settings toggle can drive this later). */
 object AxGlass {
@@ -135,6 +145,54 @@ private val NavBlurEffect: androidx.compose.ui.graphics.RenderEffect by lazy {
         BlurEffect(28f, 28f, TileMode.Clamp)
     }
 }
+
+private const val NAV_REFRACT_AGSL = """
+uniform shader content;
+uniform float2 size;
+uniform float radius;
+uniform float depth;
+half4 main(float2 p) {
+    float2 c = size * 0.5;
+    float2 q = abs(p - c) - (c - float2(radius));
+    float outside = length(max(q, float2(0.0)));
+    float sd = outside + min(max(q.x, q.y), 0.0) - radius;
+    float inside = -sd;
+    if (inside >= depth) { return content.eval(p); }
+    float t = 1.0 - clamp(inside / depth, 0.0, 1.0);
+    float2 s = sign(p - c);
+    float2 g;
+    if (q.x > 0.0 || q.y > 0.0) { g = normalize(max(q, float2(0.0))) * s; }
+    else if (q.x > q.y) { g = float2(s.x, 0.0); }
+    else { g = float2(0.0, s.y); }
+    float2 sp = p - g * (t * t * depth * 0.9);
+    sp = clamp(sp, float2(1.0), size - float2(1.0));
+    half4 col = content.eval(sp);
+    col.rgb += half3(t * t * 0.10) * col.a;
+    return col;
+}
+"""
+
+private var navShader: android.graphics.RuntimeShader? = null
+
+/** Light blur + real edge refraction (Android 13+); older phones keep the plain blur. */
+private fun navGlassEffect(w: Float, h: Float, radius: Float): androidx.compose.ui.graphics.RenderEffect {
+    if (Build.VERSION.SDK_INT < 33) return NavBlurEffect
+    return try {
+        val sh = navShader ?: android.graphics.RuntimeShader(NAV_REFRACT_AGSL).also { navShader = it }
+        sh.setFloatUniform("size", w, h)
+        sh.setFloatUniform("radius", radius)
+        sh.setFloatUniform("depth", minOf(h * 0.55f, 46f))
+        val blur = android.graphics.RenderEffect.createBlurEffect(14f, 14f, android.graphics.Shader.TileMode.CLAMP)
+        val sat = android.graphics.RenderEffect.createColorFilterEffect(
+            android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix().apply { setSaturation(1.6f) }), blur
+        )
+        val refr = android.graphics.RenderEffect.createRuntimeShaderEffect(sh, "content")
+        android.graphics.RenderEffect.createChainEffect(refr, sat).asComposeRenderEffect()
+    } catch (e: Throwable) {
+        NavBlurEffect
+    }
+}
+
 private val PanelBlurEffect = BlurEffect(24f, 24f, TileMode.Clamp)
 
 /** Put this on the big content area that should show up blurred behind the glass bar. */
@@ -151,7 +209,7 @@ fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
         if (AxGlass.enabled && blurSupported && barSize.width > 1f && barSize.height > 1f) {
             val local = state.barOrigin - state.sourceOrigin
             val blur = state.blurLayer
-            blur.renderEffect = NavBlurEffect
+            blur.renderEffect = navGlassEffect(barSize.width, barSize.height, state.cornerRadiusPx)
             blur.clip = true
             blur.setRoundRectOutline(Offset.Zero, barSize, state.cornerRadiusPx)
             blur.record(this, layoutDirection, IntSize(barSize.width.toInt(), barSize.height.toInt())) {
@@ -178,8 +236,30 @@ fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
         }
     }
 
+/** Scroll direction -> the bar shrinks into a small pill while you scroll down, and grows back when you scroll up. */
+object AxNavCollapse {
+    var collapsed by mutableStateOf(false)
+    val connection = object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+        private var acc = 0f
+        override fun onPreScroll(
+            available: Offset,
+            source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
+        ): Offset {
+            val dy = available.y
+            if (dy == 0f) return Offset.Zero
+            if ((dy > 0f && acc < 0f) || (dy < 0f && acc > 0f)) acc = 0f
+            acc += dy
+            if (acc < -48f) { if (!collapsed) collapsed = true; acc = 0f }
+            else if (acc > 48f) { if (collapsed) collapsed = false; acc = 0f }
+            return Offset.Zero
+        }
+    }
+}
+
 /**
- * Floating glass pill (TikTok-style) with a sliding glass "lens" on the selected tab.
+ * Full-width floating glass bar (iOS 26 style): light translucent glass with a thin bright rim, an elastic
+ * "lens" that stretches while pressed/dragged and can be dragged across the tabs, and it shrinks into a
+ * small pill (only the selected tab) while scrolling down.
  */
 @Composable
 fun AxGlassNavBar(
@@ -191,94 +271,155 @@ fun AxGlassNavBar(
     icon: @Composable (index: Int, selected: Boolean) -> Unit,
 ) {
     val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val barHeight = 64.dp
-    val itemWidth = 76.dp
-    val shape = RoundedCornerShape(32.dp)
     val density = LocalDensity.current
-    val tint = if (dark) Color.Black.copy(alpha = if (blurSupported) 0.26f else 0.82f)
-    else Color.White.copy(alpha = if (blurSupported) 0.22f else 0.88f)
+    val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
     val accent = MaterialTheme.colorScheme.primary
+    val c by animateFloatAsState(
+        if (AxNavCollapse.collapsed) 1f else 0f,
+        spring(dampingRatio = 0.82f, stiffness = 420f),
+        label = "nav collapse",
+    )
+    val tint = if (dark) Color.White.copy(alpha = if (blurSupported) 0.07f else 0.20f).compositeOver(Color.Black.copy(alpha = if (blurSupported) 0.18f else 0.70f))
+    else Color.White.copy(alpha = if (blurSupported) 0.30f else 0.88f)
     val edge = Brush.linearGradient(
         listOf(
-            Color.White.copy(alpha = if (dark) 0.55f else 0.85f),
-            accent.copy(alpha = 0.20f),
-            Color.White.copy(alpha = if (dark) 0.35f else 0.60f),
+            Color.White.copy(alpha = if (dark) 0.50f else 0.90f),
+            Color.White.copy(alpha = if (dark) 0.08f else 0.25f),
+            Color.White.copy(alpha = if (dark) 0.30f else 0.70f),
         )
     )
-    val lensOffset by animateDpAsState(
-        targetValue = itemWidth * selectedIndex,
-        animationSpec = spring(dampingRatio = 0.62f, stiffness = 380f),
-        label = "glass lens offset",
+    val lensAnim = remember { Animatable(selectedIndex.toFloat()) }
+    var dragging by remember { mutableStateOf(false) }
+    var dragIndex by remember { mutableFloatStateOf(selectedIndex.toFloat()) }
+    var pressedAny by remember { mutableStateOf(false) }
+    LaunchedEffect(selectedIndex) {
+        if (!dragging) lensAnim.animateTo(selectedIndex.toFloat(), spring(dampingRatio = 0.62f, stiffness = 380f))
+    }
+    val lensScale by animateFloatAsState(
+        if (dragging || pressedAny) 1.16f else 1f,
+        spring(dampingRatio = 0.5f, stiffness = 520f),
+        label = "lens stretch",
     )
 
-    Box(
-        modifier = modifier
-            .width(itemWidth * count + 12.dp)
-            .height(barHeight)
-            .onGloballyPositioned {
-                state.barOrigin = it.positionInRoot()
-                state.barSize = Size(it.size.width.toFloat(), it.size.height.toFloat())
-                state.cornerRadiusPx = with(density) { 32.dp.toPx() }
-            }
-            .shadow(10.dp, shape, clip = false, ambientColor = accent.copy(alpha = 0.25f), spotColor = accent.copy(alpha = 0.25f))
-            .clip(shape)
-            .background(tint)
-            .drawBehind {
-                // soft top highlight, like light catching the glass edge
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = if (dark) 0.14f else 0.30f), Color.Transparent),
-                        endY = size.height * 0.55f,
-                    )
-                )
-            }
-            .border(1.6.dp, edge, shape),
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        // glass lens on the selected tab
+        val fullW = if (maxWidth > 520.dp) 520.dp else maxWidth
+        val itemFull = (fullW - 12.dp) / count
+        val itemW = itemFull + (58.dp - itemFull) * c
+        val barW = itemW * (1f + (count - 1) * (1f - c)) + 12.dp
+        val barH = 64.dp + (50.dp - 64.dp) * c
+        val shape = RoundedCornerShape(50)
+        val itemWPx = with(density) { itemW.toPx() }
+        val itemWPxState = rememberUpdatedState(itemWPx)
+        val padPx = with(density) { 6.dp.toPx() }
+
         Box(
-            Modifier
-                .offset(x = lensOffset + 6.dp, y = 6.dp)
-                .width(itemWidth)
-                .height(barHeight - 12.dp)
-                .clip(RoundedCornerShape(26.dp))
-                .background(accent.copy(alpha = 0.18f))
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = if (dark) 0.22f else 0.45f),
-                            Color.White.copy(alpha = if (dark) 0.06f else 0.15f),
+            modifier = Modifier
+                .width(barW)
+                .height(barH)
+                .onGloballyPositioned {
+                    state.barOrigin = it.positionInRoot()
+                    state.barSize = Size(it.size.width.toFloat(), it.size.height.toFloat())
+                    state.cornerRadiusPx = it.size.height / 2f
+                }
+                .shadow(14.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.24f))
+                .clip(shape)
+                .background(tint)
+                .drawBehind {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            listOf(Color.White.copy(alpha = if (dark) 0.10f else 0.28f), Color.Transparent),
+                            endY = size.height * 0.5f,
                         )
                     )
-                )
-                .border(
-                    1.dp,
-                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.08f))),
-                    RoundedCornerShape(26.dp),
-                )
-        )
-        Row(Modifier.padding(horizontal = 6.dp).fillMaxHeight()) {
-            for (i in 0 until count) {
-                val itemSource = remember { MutableInteractionSource() }
-                val pressed by itemSource.collectIsPressedAsState()
-                val pressScale by animateFloatAsState(
-                    if (pressed) 0.86f else 1f,
-                    spring(dampingRatio = 0.5f, stiffness = 500f),
-                    label = "tab press",
-                )
-                Box(
-                    modifier = Modifier
-                        .width(itemWidth)
-                        .fillMaxHeight()
-                        .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
-                        .clickable(
-                            interactionSource = itemSource,
-                            indication = null,
-                        ) { onSelect(i) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val iconColor = (if (dark) Color.White else Color.Black).copy(alpha = if (i == selectedIndex) 1f else 0.72f)
-                    CompositionLocalProvider(LocalContentColor provides iconColor) {
-                        icon(i, i == selectedIndex)
+                }
+                .border(1.dp, edge, shape)
+                .pointerInput(count) {
+                    detectHorizontalDragGestures(
+                        onDragStart = {
+                            if (!AxNavCollapse.collapsed) {
+                                dragging = true
+                                dragIndex = lensAnim.value
+                            }
+                        },
+                        onDragEnd = {
+                            if (dragging) {
+                                dragging = false
+                                val target = dragIndex.roundToInt().coerceIn(0, count - 1)
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                scope.launch {
+                                    lensAnim.snapTo(dragIndex)
+                                    lensAnim.animateTo(target.toFloat(), spring(dampingRatio = 0.62f, stiffness = 380f))
+                                }
+                                onSelect(target)
+                            }
+                        },
+                        onDragCancel = {
+                            dragging = false
+                            scope.launch { lensAnim.animateTo(selectedIndex.toFloat(), spring(dampingRatio = 0.62f, stiffness = 380f)) }
+                        },
+                        onHorizontalDrag = { change, dx ->
+                            if (dragging) {
+                                change.consume()
+                                dragIndex = (dragIndex + dx / itemWPxState.value).coerceIn(0f, count - 1f)
+                            }
+                        },
+                    )
+                },
+        ) {
+            // elastic glass lens on the selected tab
+            Box(
+                Modifier
+                    .offset {
+                        val idx = if (dragging) dragIndex else lensAnim.value
+                        val rowShift = -(itemWPx * selectedIndex) * c
+                        IntOffset((padPx + idx * itemWPx + rowShift).roundToInt(), 0)
+                    }
+                    .width(itemW)
+                    .fillMaxHeight()
+                    .padding(vertical = 6.dp)
+                    .graphicsLayer {
+                        scaleX = lensScale
+                        scaleY = 1f + (lensScale - 1f) * 0.55f
+                    }
+                    .clip(RoundedCornerShape(50))
+                    .background(if (dark) Color.White.copy(alpha = 0.16f) else Color.Black.copy(alpha = 0.07f))
+                    .background(accent.copy(alpha = 0.10f))
+                    .border(
+                        1.dp,
+                        Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) 0.45f else 0.85f), Color.White.copy(alpha = 0.06f))),
+                        RoundedCornerShape(50),
+                    )
+            )
+            Row(
+                Modifier
+                    .offset { IntOffset((padPx - itemWPx * selectedIndex * c).roundToInt(), 0) }
+                    .requiredWidth(itemW * count)
+                    .fillMaxHeight()
+            ) {
+                for (i in 0 until count) {
+                    val itemSource = remember { MutableInteractionSource() }
+                    val pressed by itemSource.collectIsPressedAsState()
+                    LaunchedEffect(pressed) { pressedAny = pressed }
+                    val itemAlpha = if (i == selectedIndex) 1f else (1f - c).coerceIn(0f, 1f)
+                    Box(
+                        modifier = Modifier
+                            .width(itemW)
+                            .fillMaxHeight()
+                            .graphicsLayer { alpha = itemAlpha }
+                            .clickable(interactionSource = itemSource, indication = null) {
+                                if (AxNavCollapse.collapsed) AxNavCollapse.collapsed = false
+                                else onSelect(i)
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val iconColor = (if (dark) Color.White else Color.Black).copy(alpha = if (i == selectedIndex) 1f else 0.70f)
+                        CompositionLocalProvider(LocalContentColor provides iconColor) {
+                            icon(i, i == selectedIndex)
+                        }
                     }
                 }
             }
