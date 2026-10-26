@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteOutline
@@ -73,6 +74,7 @@ fun LibraryScreen(
         item { LibraryCard(Icons.Outlined.Lock, stringResource(R.string.library_locked_title), stringResource(R.string.library_locked_subtitle, lockedCount)) { onOpen("locked") } }
         item { LibraryCard(Icons.Outlined.DeleteOutline, stringResource(R.string.library_trash_title), stringResource(R.string.library_trash_subtitle, trashCount)) { onOpen("trash") } }
         item { LibraryCard(Icons.Outlined.Edit, stringResource(R.string.library_editor_title), stringResource(R.string.library_editor_subtitle)) { onOpen("editor") } }
+        item { LibraryCard(Icons.Outlined.Category, stringResource(R.string.library_smart_title), stringResource(R.string.library_smart_subtitle)) { onOpen("smart") } }
         item { LibraryCard(Icons.Outlined.PhotoLibrary, stringResource(R.string.library_formats_title), stringResource(R.string.library_formats_subtitle)) { onOpen("formats") } }
         item { LibraryCard(Icons.Outlined.Folder, stringResource(R.string.section_folder_view), stringResource(R.string.section_folder_view_desc)) { onOpen("folder_view") } }
         item { LibraryCard(Icons.Outlined.FolderOff, stringResource(R.string.excluded_folders_title), stringResource(R.string.excluded_folders_desc)) { onOpen("excluded_folders") } }
