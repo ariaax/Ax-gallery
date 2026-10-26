@@ -161,6 +161,9 @@
     <string name="library_editor_title">Editor</string>
     <string name="library_editor_subtitle">Create a polished copy without touching the original</string>
     <string name="library_formats_title">Media formats</string>
+    <string name="library_smart_title">Smart groups</string>
+    <string name="library_smart_subtitle">Screenshots, downloads, messengers and large files, sorted automatically</string>
+    <string name="empty_smart_groups">Nothing to group yet</string>
     <string name="library_formats_subtitle">RAW, GIF, motion photos and panoramas</string>
     <string name="library_settings_title">Settings &amp; Customization</string>
     <string name="library_settings_subtitle">Themes, palettes, grid styles, and gestures</string>
