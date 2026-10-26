@@ -331,7 +331,7 @@ fun VideoPage(
     }
 
     Box(
-        Modifier.fillMaxSize().background(Color.Black).onSizeChanged { size = it }
+        Modifier.fillMaxSize().onSizeChanged { size = it }
             .pointerInput(media.id, active, doubleTapToZoom, doubleTapZoomLevel, multiStageZoom) {
                 detectTapGestures(
                     onTap = {
@@ -635,7 +635,7 @@ fun VideoPage(
             }
     ) {
         Box(
-            Modifier.fillMaxSize().background(Color.Black).graphicsLayer(
+            Modifier.fillMaxSize().graphicsLayer(
                 scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y,
             ),
         ) {
@@ -683,7 +683,7 @@ fun VideoPage(
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize().background(Color.Black)
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
