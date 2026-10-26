@@ -65,6 +65,8 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.5.1")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("org.aomedia.avif.android:avif:1.1.1.14d8e3c4")
+    // Installs the baseline profile (pre-compiled hot code) on first launch, also for side-loaded APKs.
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
