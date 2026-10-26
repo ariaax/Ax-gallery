@@ -127,6 +127,7 @@
     <application
         android:name=".IrisApplication"
         android:allowBackup="true"
+        android:largeHeap="true"
         android:appCategory="image"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
