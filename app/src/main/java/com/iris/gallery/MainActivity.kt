@@ -4999,15 +4999,45 @@ private fun PhotoViewer(
             loadExifMetadata(context, current.uri, current.path)
         }
     }
-    val viewerBgTarget by produceState(Color(0xFF080808), current.id, current.isVideo) {
+    val viewerColors by produceState(Pair(Color(0xFF080808), null as Color?), current.id, current.isVideo) {
         androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
         value = withContext(Dispatchers.Default) {
             val bmp = com.iris.gallery.ui.ThumbnailCache.findForImage(current.id)
                 ?: com.iris.gallery.ui.loadThumbnailSync(context, current, 256)
-            if (bmp == null) Color(0xFF080808) else com.iris.gallery.ui.axDominantDark(bmp)
+            if (bmp == null) Pair(Color(0xFF080808), null as Color?) else com.iris.gallery.ui.axPhotoColors(bmp)
         }
     }
-    val viewerBg by androidx.compose.animation.animateColorAsState(viewerBgTarget, tween(350), label = "viewer bg")
+    val viewerBg by androidx.compose.animation.animateColorAsState(viewerColors.first, tween(350), label = "viewer bg")
+    val defaultViewerAccent = MaterialTheme.colorScheme.primary
+    val viewerAccent by androidx.compose.animation.animateColorAsState(viewerColors.second ?: defaultViewerAccent, tween(350), label = "viewer accent")
+
+    // Gentle 3D parallax: the photo drifts and tilts a little when you tilt the phone.
+    val tiltX = remember { mutableFloatStateOf(0f) }
+    val tiltY = remember { mutableFloatStateOf(0f) }
+    val viewerPortrait = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
+    DisposableEffect(Unit) {
+        val sm = context.getSystemService(android.content.Context.SENSOR_SERVICE) as? android.hardware.SensorManager
+        val sensor = sm?.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER)
+        var baseZ = Float.NaN
+        var sx = 0f
+        var sy = 0f
+        val listener = object : android.hardware.SensorEventListener {
+            override fun onSensorChanged(e: android.hardware.SensorEvent) {
+                val gx = (-e.values[0] / 9.81f).coerceIn(-0.6f, 0.6f)
+                val gz = (e.values[2] / 9.81f).coerceIn(-1f, 1f)
+                if (baseZ.isNaN()) baseZ = gz
+                baseZ += (gz - baseZ) * 0.01f
+                val gy = (gz - baseZ).coerceIn(-0.5f, 0.5f)
+                sx += (gx - sx) * 0.10f
+                sy += (gy - sy) * 0.10f
+                tiltX.floatValue = sx
+                tiltY.floatValue = sy
+            }
+            override fun onAccuracyChanged(s: android.hardware.Sensor?, accuracy: Int) {}
+        }
+        if (sensor != null) sm?.registerListener(listener, sensor, android.hardware.SensorManager.SENSOR_DELAY_GAME)
+        onDispose { sm?.unregisterListener(listener) }
+    }
     var currentPhotoHasGainmap by remember(current.id) { mutableStateOf(false) }
     val currentIsVideoHdr by produceState(initialValue = false, current.id, current.isVideo) {
         if (current.isVideo) {
@@ -5416,8 +5446,29 @@ private fun PhotoViewer(
             beyondViewportPageCount = 1,
             userScrollEnabled = zoomedImageId != current.id && !isDismissing,
             pageSpacing = 16.dp,
-            modifier = Modifier.axGlassSource(viewerGlass),
+            modifier = Modifier.axGlassSource(viewerGlass).graphicsLayer {
+                if (!viewerPortrait || zoomedImageId != null) return@graphicsLayer
+                val d = density
+                translationX = tiltX.floatValue * 14f * d
+                translationY = -tiltY.floatValue * 14f * d
+                rotationY = tiltX.floatValue * 4f
+                rotationX = tiltY.floatValue * 4f
+                cameraDistance = 24f * d
+            },
           ) { page ->
+          Box(
+            Modifier.graphicsLayer {
+                // page-turn: each page hinges on its inner edge and folds away as you swipe
+                val position = -((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
+                val ap = kotlin.math.abs(position).coerceIn(0f, 1f)
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(if (position < 0f) 1f else 0f, 0.5f)
+                rotationY = 32f * position.coerceIn(-1f, 1f)
+                val sc = 1f - 0.07f * ap
+                scaleX = sc
+                scaleY = sc
+                cameraDistance = 14f * density
+            }
+          ) {
             val media = images[page]
             if (media.isVideo) {
                 VideoPage(
@@ -5518,7 +5569,8 @@ private fun PhotoViewer(
                 )
             }
           }
-        }
+                  }
+}
         AnimatedVisibility(
           visible = controlsVisible && !showInfo,
           modifier = Modifier
@@ -5728,7 +5780,7 @@ private fun PhotoViewer(
                                 Icon(
                                     if (depthEnabled) Icons.Filled.BlurOn else Icons.Outlined.BlurOff,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = viewerAccent,
                                     modifier = Modifier.size(20.dp),
                                 )
                                 Text(
@@ -5781,7 +5833,7 @@ private fun PhotoViewer(
                                     .size(thumbSize)
                                     .clip(RoundedCornerShape(8.dp))
                                     .then(
-                                        if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                                        if (isSelected) Modifier.border(2.dp, viewerAccent, RoundedCornerShape(8.dp))
                                         else Modifier.border(0.5.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
                                     )
                                     .pointerInput(item.id) {
@@ -5954,7 +6006,7 @@ private fun PhotoViewer(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.Comment,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = viewerAccent,
                             modifier = Modifier.size(18.dp),
                         )
                         Text(
@@ -5990,7 +6042,7 @@ private fun PhotoViewer(
                             Icon(
                                 Icons.Outlined.Info,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = viewerAccent,
                                 modifier = Modifier.size(15.dp),
                             )
                             Text(
@@ -6040,7 +6092,7 @@ private fun PhotoViewer(
                                 Icon(
                                     Icons.Outlined.Info,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = viewerAccent,
                                     modifier = Modifier.size(15.dp),
                                 )
                                 Text(
@@ -6113,7 +6165,7 @@ private fun PhotoViewer(
                             Icon(
                                 Icons.Outlined.Security,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = viewerAccent,
                                 modifier = Modifier.size(15.dp),
                             )
                             Text(
@@ -6298,7 +6350,7 @@ private fun PhotoViewer(
                         .clip(RoundedCornerShape(24.dp)),
                     shape = RoundedCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)),
+                    border = BorderStroke(2.dp, viewerAccent.copy(alpha = 0.7f)),
                     shadowElevation = 24.dp,
                     tonalElevation = 8.dp,
                 ) {
@@ -6608,7 +6660,7 @@ private fun PhotoViewer(
                 Icon(
                     Icons.Outlined.Security,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = viewerAccent,
                     modifier = Modifier.size(28.dp)
                 )
             },
@@ -6645,7 +6697,7 @@ private fun PhotoViewer(
                                     stringResource(secureSharingMode.getTitleRes()),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (secureSharingMode != SecureSharingMode.OFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    color = if (secureSharingMode != SecureSharingMode.OFF) viewerAccent else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             TextButton(onClick = {
@@ -6688,7 +6740,7 @@ private fun PhotoViewer(
                 Icon(
                     Icons.Outlined.Security,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = viewerAccent,
                     modifier = Modifier.size(28.dp)
                 )
             },
@@ -6714,7 +6766,7 @@ private fun PhotoViewer(
                             else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
                             border = BorderStroke(
                                 width = if (isSelected) 1.5.dp else 0.5.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                color = if (isSelected) viewerAccent else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -6732,7 +6784,7 @@ private fun PhotoViewer(
                                 Icon(
                                     modeIcon,
                                     contentDescription = null,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = if (isSelected) viewerAccent else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(22.dp)
                                 )
                                 Column(modifier = Modifier.weight(1f)) {
@@ -6740,7 +6792,7 @@ private fun PhotoViewer(
                                         stringResource(mode.getTitleRes()),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        color = if (isSelected) viewerAccent else MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         stringResource(mode.getDescriptionRes()),
