@@ -703,9 +703,9 @@ fun AxWindowBlur(radius: Int = 36) {
 }
 
 
-/** Dark, soft background colour taken from a photo (used behind the full-screen viewer). */
-fun axDominantDark(src: android.graphics.Bitmap): Color {
-    val fallback = Color(0xFF080808)
+/** (soft dark background, bright accent or null for grey photos) taken from a photo. */
+fun axPhotoColors(src: android.graphics.Bitmap): Pair<Color, Color?> {
+    val fallback = Pair(Color(0xFF080808), null as Color?)
     return try {
         val base = if (src.config == android.graphics.Bitmap.Config.HARDWARE) src.copy(android.graphics.Bitmap.Config.ARGB_8888, false) ?: return fallback else src
         val small = android.graphics.Bitmap.createScaledBitmap(base, 24, 24, true)
@@ -725,10 +725,14 @@ fun axDominantDark(src: android.graphics.Bitmap): Color {
         if (wSum <= 0.0) return fallback
         val avg = android.graphics.Color.rgb((r / wSum).toInt().coerceIn(0, 255), (g / wSum).toInt().coerceIn(0, 255), (b / wSum).toInt().coerceIn(0, 255))
         android.graphics.Color.colorToHSV(avg, hsv)
-        hsv[1] = minOf(hsv[1], 0.55f)
-        hsv[2] = 0.22f
-        Color(android.graphics.Color.HSVToColor(hsv))
+        val hue = hsv[0]; val sat = hsv[1]
+        val bg = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, minOf(sat, 0.55f), 0.22f)))
+        val accent = if (sat < 0.15f) null
+        else Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, sat.coerceIn(0.55f, 0.9f), 0.97f)))
+        Pair(bg, accent)
     } catch (e: Throwable) {
         fallback
     }
 }
+
+fun axDominantDark(src: android.graphics.Bitmap): Color = axPhotoColors(src).first
