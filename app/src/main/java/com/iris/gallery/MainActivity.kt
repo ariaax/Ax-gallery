@@ -175,6 +175,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.runtime.produceState
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -2349,7 +2350,7 @@ private fun GalleryScaffold(
         topBar = {
           if (!(destination == 3 && librarySection == "folder_view")) {
             val canSearchOnScreen = destination == 0 || destination == 2 || (destination == 1 && selectedAlbum != null) || (destination == 3 && librarySection == "videos")
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     if (isFileSearching && canSearchOnScreen) {
                         OutlinedTextField(
@@ -4628,7 +4629,7 @@ private fun PhotoGrid(
                             .animateItem(fadeInSpec = null)
                             .fillMaxWidth()
                             .then(headerClickModifier)
-                            .padding(start = 12.dp, end = 12.dp, top = 18.dp, bottom = 8.dp),
+                            .padding(start = 14.dp, end = 12.dp, top = 22.dp, bottom = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(group.key, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium,
