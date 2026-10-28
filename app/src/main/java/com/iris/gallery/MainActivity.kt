@@ -1478,6 +1478,7 @@ private fun GalleryApp(
                         initialViewUri = initialViewUri,
                         initialEditMode = initialEditMode,
                         initialOpenLatest = initialOpenLatest,
+                        intentNonce = intentNonce,
                         onInvalidMedia = { ghost ->
                             viewModel.markMediaDeleted(setOf(ghost.id), setOf(ghost.path))
                             viewModel.purgeGhostMedia(ghost)
@@ -1999,6 +2000,7 @@ private fun GalleryScaffold(
     initialViewUri: Uri? = null,
     initialEditMode: Boolean = false,
     initialOpenLatest: Boolean = false,
+    intentNonce: Int = 0,
     onInvalidMedia: ((MediaImage) -> Unit)? = null,
 ) {
     val context = LocalContext.current
