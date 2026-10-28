@@ -2418,6 +2418,8 @@ private fun GalleryScaffold(
                     }
                 },
                 navigationIcon = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
                     if (isFileSearching && canSearchOnScreen) {
                         AxBarButton(onClick = { isFileSearching = false; fileSearchQuery = "" }) {
                             Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.clear_search))
@@ -2437,6 +2439,14 @@ private fun GalleryScaffold(
                             selectedLockedAlbum = null
                             if (isFileSearching) { isFileSearching = false; fileSearchQuery = "" }
                         }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, libraryTabLabel) }
+                    }
+                
+                        val canSearchLeft = destination == 0 || destination == 2 || (destination == 1 && selectedAlbum != null) || (destination == 3 && librarySection == "videos")
+                        if (canSearchLeft && !isFileSearching && selectedIds.isEmpty()) {
+                            AxBarButton(onClick = { isFileSearching = true }) {
+                                Icon(Icons.Outlined.Search, stringResource(R.string.action_search))
+                            }
+                        }
                     }
                 },
                 actions = { com.iris.gallery.ui.AxBarActions {
@@ -2557,11 +2567,6 @@ private fun GalleryScaffold(
                         }
                     } else if (!isFileSearching || !canSearchOnScreen) {
                         val canSearch = destination == 0 || destination == 2 || (destination == 1 && selectedAlbum != null) || (destination == 3 && librarySection == "videos")
-                        if (canSearch && !isFileSearching) {
-                            AxBarButton(onClick = { isFileSearching = true }) {
-                                Icon(Icons.Outlined.Search, stringResource(R.string.action_search))
-                            }
-                        }
                         if (destination == 1 && selectedAlbum != null) {
                             val activeAlbum = selectedAlbum!!
                             val albumOverride = albumMediaSortOverrides[activeAlbum.id]
