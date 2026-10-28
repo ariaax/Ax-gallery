@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.provider.MediaStore
 import android.util.LruCache
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -216,12 +218,35 @@ fun AlbumAppBadge(album: MediaAlbum, modifier: Modifier = Modifier) {
         spin.animateTo(0f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessLow))
     }
 
+    val inf = androidx.compose.animation.core.rememberInfiniteTransition(label = "badge life")
+    val pulse = inf.animateFloat(
+        0f, 1f,
+        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(2400, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "badge pulse",
+    )
+    val bob = inf.animateFloat(
+        -1f, 1f,
+        androidx.compose.animation.core.infiniteRepeatable(
+            androidx.compose.animation.core.tween(1700, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            androidx.compose.animation.core.RepeatMode.Reverse,
+        ),
+        label = "badge bob",
+    )
     Box(
         modifier = modifier
             .graphicsLayer {
                 scaleX = scale.value
                 scaleY = scale.value
                 rotationZ = spin.value
+                translationY = bob.value * 1.5.dp.toPx()
+            }
+            .drawBehind {
+                val p = pulse.value
+                drawCircle(
+                    Color(0xFF7FB2FF).copy(alpha = (1f - p) * 0.55f),
+                    radius = size.minDimension / 2f * (1f + p * 0.7f),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.6.dp.toPx()),
+                )
             }
             .shadow(4.dp, CircleShape)
             .size(32.dp)

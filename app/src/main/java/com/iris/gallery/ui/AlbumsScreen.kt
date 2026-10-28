@@ -476,7 +476,6 @@ fun AlbumsGrid(
                             )
                         }
 
-                        AlbumAppBadge(album, Modifier.align(Alignment.BottomStart).padding(6.dp))
 
                         // glass rim around the cover + item-count chip (iOS 26 style)
                         Box(
@@ -605,11 +604,17 @@ fun AlbumsGrid(
                         }
                     }
 
-                    // Full-width album text container
+                    // album app icon sits to the left of the name, with a living pulse
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp, start = 2.dp, end = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        AlbumAppBadge(album, Modifier.size(30.dp))
                     Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 6.dp, start = 2.dp, end = 2.dp),
+                            .weight(1f)
+                            ,
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
@@ -641,6 +646,7 @@ fun AlbumsGrid(
                                 }
                             }
                         }
+                    }
                     }
                 }
             }
