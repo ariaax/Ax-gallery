@@ -492,6 +492,7 @@ class MainActivity : ComponentActivity() {
                     initialEditMode = isEditAction,
                     initialMemories = activeIntent.getBooleanExtra("open_memories", false),
                     initialOpenLatest = shouldOpenLatest,
+                    intentNonce = System.identityHashCode(activeIntent),
                     onPick = if (pickerMode) {{ media ->
                         val result = Intent().apply {
                             data = media.uri
@@ -596,6 +597,7 @@ private fun GalleryApp(
     initialEditMode: Boolean = false,
     initialMemories: Boolean = false,
     initialOpenLatest: Boolean = false,
+    intentNonce: Int = 0,
     onPick: ((MediaImage) -> Unit)? = null,
     viewModel: GalleryViewModel = viewModel(),
 ) {
@@ -2046,8 +2048,9 @@ private fun GalleryScaffold(
         }
     }
 
-    var initialUriHandled by remember { mutableStateOf(false) }
-    LaunchedEffect(initialViewUri, initialEditMode, initialOpenLatest, images) {
+    // A new "open with" intent (the app was already running) must be handled again, so the flag resets per intent.
+    var initialUriHandled by remember(initialViewUri, initialOpenLatest, intentNonce) { mutableStateOf(false) }
+    LaunchedEffect(initialViewUri, initialEditMode, initialOpenLatest, intentNonce, images) {
         if (!initialUriHandled) {
             if (initialViewUri != null) {
                 initialUriHandled = true
