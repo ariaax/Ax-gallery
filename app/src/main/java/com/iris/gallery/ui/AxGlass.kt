@@ -313,8 +313,8 @@ fun AxGlassNavBar(
         spring(dampingRatio = 0.82f, stiffness = 420f),
         label = "nav collapse",
     )
-    val tint = if (dark) Color.White.copy(alpha = if (blurSupported) 0.07f else 0.20f).compositeOver(Color.Black.copy(alpha = if (blurSupported) 0.18f else 0.70f))
-    else Color.White.copy(alpha = if (blurSupported) 0.62f else 0.92f)
+    val tint = if (dark) Color.White.copy(alpha = if (blurSupported) 0.16f else 0.24f).compositeOver(Color.Black.copy(alpha = if (blurSupported) 0.45f else 0.78f))
+    else Color.White.copy(alpha = if (blurSupported) 0.82f else 0.95f)
     val edge = Brush.linearGradient(
         listOf(
             Color.White.copy(alpha = if (dark) 0.50f else 0.90f),
@@ -358,7 +358,7 @@ fun AxGlassNavBar(
                     state.barSize = Size(it.size.width.toFloat(), it.size.height.toFloat())
                     state.cornerRadiusPx = it.size.height / 2f
                 }
-                .shadow(14.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.24f))
+                .shadow(14.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.30f), spotColor = Color.Black.copy(alpha = 0.40f))
                 .clip(shape)
                 .background(tint)
                 .drawBehind {
@@ -419,7 +419,7 @@ fun AxGlassNavBar(
                         scaleY = 1f + (lensScale - 1f) * 0.55f
                     }
                     .clip(RoundedCornerShape(50))
-                    .background(if (dark) Color.White.copy(alpha = 0.16f) else Color.Black.copy(alpha = 0.09f))
+                    .background(if (dark) Color.White.copy(alpha = 0.26f) else Color.Black.copy(alpha = 0.11f))
                     .border(
                         1.dp,
                         Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) 0.45f else 0.85f), Color.White.copy(alpha = 0.06f))),
@@ -449,7 +449,7 @@ fun AxGlassNavBar(
                             },
                         contentAlignment = Alignment.Center,
                     ) {
-                        val iconColor = (if (dark) Color.White else Color.Black).copy(alpha = if (i == selectedIndex) 1f else 0.70f)
+                        val iconColor = (if (dark) Color.White else Color.Black).copy(alpha = if (i == selectedIndex) 1f else 0.85f)
                         CompositionLocalProvider(LocalContentColor provides iconColor) {
                             icon(i, i == selectedIndex)
                         }

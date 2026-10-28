@@ -186,8 +186,8 @@ fun Modifier.axGlassSheetEdge(corner: androidx.compose.ui.unit.Dp = 28.dp): Modi
 @Composable
 fun Modifier.axBarPill(): Modifier {
     val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val fill = if (dark) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.45f)
-    val base = if (dark) Color.Black.copy(alpha = 0.20f) else Color.Black.copy(alpha = 0.03f)
+    val fill = if (dark) Color.White.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.80f)
+    val base = if (dark) Color.Black.copy(alpha = 0.40f) else Color.Black.copy(alpha = 0.06f)
     val rim = Brush.linearGradient(
         listOf(
             Color.White.copy(alpha = if (dark) 0.50f else 0.90f),
@@ -218,8 +218,8 @@ fun AxBarActions(content: @Composable androidx.compose.foundation.layout.RowScop
         return
     }
     val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val fill = if (dark) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.45f)
-    val base = if (dark) Color.Black.copy(alpha = 0.20f) else Color.Black.copy(alpha = 0.03f)
+    val fill = if (dark) Color.White.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.80f)
+    val base = if (dark) Color.Black.copy(alpha = 0.40f) else Color.Black.copy(alpha = 0.06f)
     val rim = Brush.linearGradient(
         listOf(
             Color.White.copy(alpha = if (dark) 0.50f else 0.90f),
