@@ -314,7 +314,7 @@ fun AxGlassNavBar(
         label = "nav collapse",
     )
     val tint = if (dark) Color.White.copy(alpha = if (blurSupported) 0.07f else 0.20f).compositeOver(Color.Black.copy(alpha = if (blurSupported) 0.18f else 0.70f))
-    else Color.White.copy(alpha = if (blurSupported) 0.30f else 0.88f)
+    else Color.White.copy(alpha = if (blurSupported) 0.62f else 0.92f)
     val edge = Brush.linearGradient(
         listOf(
             Color.White.copy(alpha = if (dark) 0.50f else 0.90f),
@@ -419,8 +419,7 @@ fun AxGlassNavBar(
                         scaleY = 1f + (lensScale - 1f) * 0.55f
                     }
                     .clip(RoundedCornerShape(50))
-                    .background(if (dark) Color.White.copy(alpha = 0.16f) else Color.Black.copy(alpha = 0.07f))
-                    .background(accent.copy(alpha = 0.10f))
+                    .background(if (dark) Color.White.copy(alpha = 0.16f) else Color.Black.copy(alpha = 0.09f))
                     .border(
                         1.dp,
                         Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) 0.45f else 0.85f), Color.White.copy(alpha = 0.06f))),

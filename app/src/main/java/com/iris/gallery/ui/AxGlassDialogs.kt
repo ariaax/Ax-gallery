@@ -147,6 +147,14 @@ fun DropdownMenu(
             offset = offset,
             scrollState = scrollState,
             properties = properties,
+            shape = RoundedCornerShape(22.dp),
+            containerColor = themed.surfaceContainer,
+            border = if (AxGlass.enabled) androidx.compose.foundation.BorderStroke(
+                1.dp,
+                androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.06f), Color.White.copy(alpha = 0.24f))
+                ),
+            ) else null,
             content = content,
         )
     }
@@ -171,6 +179,32 @@ fun Modifier.axGlassSheetEdge(corner: androidx.compose.ui.unit.Dp = 28.dp): Modi
             Brush.horizontalGradient(listOf(c.copy(alpha = 0.28f), c.copy(alpha = 0.46f), c.copy(alpha = 0.28f))),
             style = Stroke(width = 1.dp.toPx()),
         )
+    }
+}
+
+/** Light glass capsule (same look as the bottom bar): used behind the top-bar title. */
+@Composable
+fun Modifier.axBarPill(): Modifier {
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val fill = if (dark) Color.White.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.45f)
+    val base = if (dark) Color.Black.copy(alpha = 0.20f) else Color.Black.copy(alpha = 0.03f)
+    val rim = Brush.linearGradient(
+        listOf(
+            Color.White.copy(alpha = if (dark) 0.50f else 0.90f),
+            Color.White.copy(alpha = if (dark) 0.08f else 0.25f),
+            Color.White.copy(alpha = if (dark) 0.30f else 0.70f),
+        )
+    )
+    return this.drawWithContent {
+        val r = androidx.compose.ui.geometry.CornerRadius(size.height / 2f)
+        drawRoundRect(base, cornerRadius = r)
+        drawRoundRect(fill, cornerRadius = r)
+        drawRoundRect(
+            Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) 0.10f else 0.28f), Color.Transparent), endY = size.height * 0.55f),
+            cornerRadius = r,
+        )
+        drawRoundRect(rim, cornerRadius = r, style = Stroke(width = 1.dp.toPx()))
+        drawContent()
     }
 }
 
@@ -235,7 +269,7 @@ fun AxBarButton(
     androidx.compose.foundation.layout.Box(
         modifier = modifier
             .padding(horizontal = if (grouped) 0.dp else 4.dp)
-            .size(if (grouped) 40.dp else 34.dp)
+            .size(40.dp)
             .axPressScale(src, 0.86f)
             .then(if (grouped) Modifier.clip(CircleShape) else Modifier.axGlassSurface(CircleShape, strong = true))
             .clickable(
@@ -299,11 +333,14 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
             text = text,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = if (badge != null) 8.dp else 0.dp),
+            modifier = Modifier
+                .padding(start = if (badge != null) 8.dp else 0.dp)
+                .axBarPill()
+                .padding(horizontal = 18.dp, vertical = 9.dp),
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.Bold,
-                fontSize = 28.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp,
                 color = c,
             ),
         )

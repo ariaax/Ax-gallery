@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -477,6 +478,34 @@ fun AlbumsGrid(
 
                         AlbumAppBadge(album, Modifier.align(Alignment.BottomStart).padding(6.dp))
 
+                        // glass rim around the cover + item-count chip (iOS 26 style)
+                        Box(
+                            Modifier
+                                .matchParentSize()
+                                .border(
+                                    1.dp,
+                                    androidx.compose.ui.graphics.Brush.linearGradient(
+                                        listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.05f), Color.White.copy(alpha = 0.22f))
+                                    ),
+                                    RoundedCornerShape(cornerStyle.dp.dp),
+                                )
+                        )
+                        if (showCount) {
+                            Text(
+                                album.images.size.toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(6.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.38f))
+                                    .border(0.8.dp, Color.White.copy(alpha = 0.30f), CircleShape)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                            )
+                        }
+
                         // Floating Pin Badge on top-right of pinned album image
                         if (sort != AlbumSort.CUSTOM && isPinned) {
                             Surface(
@@ -610,15 +639,6 @@ fun AlbumsGrid(
                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                     )
                                 }
-                            }
-                            if (showCount) {
-                                Text(
-                                    androidx.compose.ui.res.stringResource(com.iris.gallery.R.string.album_items_count, album.images.size),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
                             }
                         }
                     }
