@@ -305,38 +305,19 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
         animationSpec = androidx.compose.animation.core.tween(900),
         label = "titleBadge",
     )
-    androidx.compose.foundation.layout.Box(contentAlignment = androidx.compose.ui.Alignment.CenterStart) {
-        if (badge != null) {
-            val ghost = Modifier
-                .size(58.dp)
-                .graphicsLayer {
-                    alpha = 0.42f * appear
-                    val sc = 0.75f + 0.25f * appear
-                    scaleX = sc
-                    scaleY = sc
-                }
-                .clip(CircleShape)
-                .blur(6.dp)
-            when (badge) {
-                is AlbumBadge.App -> androidx.compose.foundation.Image(badge.bitmap, null, ghost)
-                is AlbumBadge.Vector -> androidx.compose.material3.Icon(badge.icon, null, tint = Color.White, modifier = ghost.padding(10.dp))
-            }
-            // thin glass ring so it reads as frosted glass, not just a smudge
-            androidx.compose.foundation.layout.Box(
-                Modifier
-                    .size(58.dp)
-                    .graphicsLayer { alpha = appear }
-                    .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape),
-            )
-        }
+    androidx.compose.foundation.layout.Row(
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .axBarPill()
+            .padding(start = if (badge != null && album != null) 7.dp else 18.dp, end = 18.dp, top = 6.dp, bottom = 6.dp),
+    ) {
+        if (badge != null && album != null) AlbumAppBadge(album, Modifier.size(28.dp))
         Text(
             text = text,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .padding(start = if (badge != null) 8.dp else 0.dp)
-                .axBarPill()
-                .padding(horizontal = 18.dp, vertical = 9.dp),
+            modifier = Modifier.padding(vertical = 3.dp),
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.SemiBold,
