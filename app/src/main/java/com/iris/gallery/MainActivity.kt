@@ -1943,10 +1943,10 @@ private enum class GalleryTab(
     val labelRes: Int,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
 ) {
-    PHOTOS(0, R.string.tab_photos, Icons.Outlined.PhotoLibrary),
-    ALBUMS(1, R.string.tab_albums, Icons.Outlined.PhotoAlbum),
-    FAVORITES(2, R.string.tab_favorites, Icons.Outlined.FavoriteBorder),
-    LIBRARY(3, R.string.tab_library, Icons.Outlined.Dashboard),
+    PHOTOS(0, R.string.tab_photos, Icons.Filled.PhotoLibrary),
+    ALBUMS(1, R.string.tab_albums, Icons.Filled.PhotoAlbum),
+    FAVORITES(2, R.string.tab_favorites, Icons.Filled.Favorite),
+    LIBRARY(3, R.string.tab_library, Icons.Filled.Dashboard),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -3495,7 +3495,17 @@ private fun GalleryScaffold(
         ) { index, isSelected ->
             val tab = visibleTabs[index]
             val label = if (tab == GalleryTab.PHOTOS) photoTabLabel else stringResource(tab.labelRes)
-            AnimatedNavigationIcon(tab.icon, isSelected, label)
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                AnimatedNavigationIcon(tab.icon, isSelected, label)
+                Text(
+                    label,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 10.5.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = androidx.compose.material3.LocalContentColor.current,
+                )
+            }
         }
     }
 
