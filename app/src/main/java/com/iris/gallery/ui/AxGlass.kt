@@ -325,6 +325,12 @@ fun AxGlassNavBar(
     var dragging by remember { mutableStateOf(false) }
     var dragIndex by remember { mutableFloatStateOf(selectedIndex.toFloat()) }
     var pressedAny by remember { mutableStateOf(false) }
+    // light glint that sweeps across the glass whenever the tab changes
+    val glint = remember { Animatable(1f) }
+    LaunchedEffect(selectedIndex) {
+        glint.snapTo(0f)
+        glint.animateTo(1f, tween(750, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+    }
     LaunchedEffect(selectedIndex) {
         if (!dragging) lensAnim.animateTo(selectedIndex.toFloat(), spring(dampingRatio = 0.62f, stiffness = 380f))
     }
@@ -338,11 +344,11 @@ fun AxGlassNavBar(
         modifier = modifier.fillMaxWidth().padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
-        val fullW = if (maxWidth > 520.dp) 520.dp else maxWidth
+        val fullW = minOf(maxWidth, 12.dp + 80.dp * count)
         val itemFull = (fullW - 12.dp) / count
         val itemW = itemFull + (58.dp - itemFull) * c
         val barW = itemW * (1f + (count - 1) * (1f - c)) + 12.dp
-        val barH = 76.dp + (50.dp - 76.dp) * c
+        val barH = 66.dp + (50.dp - 66.dp) * c
         val shape = RoundedCornerShape(50)
         val itemWPx = with(density) { itemW.toPx() }
         val itemWPxState = rememberUpdatedState(itemWPx)
@@ -367,6 +373,21 @@ fun AxGlassNavBar(
                             endY = size.height * 0.5f,
                         )
                     )
+                }
+                .drawBehind {
+                    val g = glint.value
+                    if (g < 1f) {
+                        val h = size.height
+                        val x = -h + g * (size.width + h * 2f)
+                        val a = kotlin.math.sin(Math.PI.toFloat() * g) * 0.30f
+                        drawRect(
+                            Brush.linearGradient(
+                                listOf(Color.Transparent, Color.White.copy(alpha = a), Color.Transparent),
+                                start = Offset(x - h * 0.6f, 0f),
+                                end = Offset(x + h * 0.6f, h),
+                            )
+                        )
+                    }
                 }
                 .drawBehind {
                     // inner soft rim: gives the thick-glass look of the reference
@@ -430,6 +451,7 @@ fun AxGlassNavBar(
                     }
                     .clip(RoundedCornerShape(50))
                     .background(Color.Black.copy(alpha = 0.40f))
+                    .background(accent.copy(alpha = 0.16f))
                     .border(
                         1.dp,
                         Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.08f))),
