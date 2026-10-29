@@ -61,7 +61,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -69,8 +68,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Replay10
-import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -190,7 +187,6 @@ fun VideoPage(
     var offset by remember(media.id) { mutableStateOf(Offset.Zero) }
     var size by remember { mutableStateOf(IntSize.Zero) }
     var gestureFeedback by remember { mutableStateOf<String?>(null) }
-    var playSpeed by remember(media.id) { mutableStateOf(engine.player.playbackParameters.speed) }
     var showRemaining by remember(media.id) { mutableStateOf(false) }
     var playbackError by remember(media.id) { mutableStateOf<String?>(null) }
     val hudActive = brightnessHudVisible || volumeHudVisible
@@ -850,17 +846,17 @@ fun VideoPage(
         ) {
         val compactLandscape = maxHeight < 500.dp
         Column(
-            modifier = Modifier.widthIn(max = if (compactLandscape) 560.dp else 520.dp).fillMaxWidth()
+            modifier = Modifier.widthIn(max = if (compactLandscape) 460.dp else 420.dp).fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(start = 12.dp, end = 12.dp, top = if (compactLandscape) 4.dp else 128.dp,
-                    bottom = if (compactLandscape) 10.dp else 140.dp)
-                .clip(RoundedCornerShape(30.dp))
+                    bottom = if (compactLandscape) 10.dp else 146.dp)
+                .clip(RoundedCornerShape(24.dp))
                 .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
                 .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
                 .border(1.2.dp, Brush.linearGradient(listOf(
                     Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.50f))),
-                    RoundedCornerShape(30.dp))
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                    RoundedCornerShape(24.dp))
+                .padding(horizontal = 10.dp, vertical = 2.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             AnimatedVisibility(scrubbing && preview != null) {
@@ -905,9 +901,9 @@ fun VideoPage(
             )
             }
             }
-            val bs = 32.dp
+            val bs = 28.dp
             val controlButtons: @Composable () -> Unit = {
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) {
                 AxVideoGlassButton(size = bs, plain = true, onClick = {
                     val next = engine.toggleMute()
                     isMuted = next
@@ -948,7 +944,7 @@ fun VideoPage(
                         tint = if (isLooping) Color(0xFFB9D4FF) else Color.White
                     )
                 }
-                AxVideoGlassButton(size = 40.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
+                AxVideoGlassButton(size = 34.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
                     AnimatedContent(
                         targetState = playing,
                         transitionSpec = {
@@ -986,45 +982,10 @@ fun VideoPage(
                 }
             }
             }
-            Row(
-                Modifier.fillMaxWidth().padding(bottom = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                AxVideoGlassButton(size = 34.dp, plain = true, onClick = {
-                    engine.player.seekTo((engine.player.currentPosition - 10_000L).coerceAtLeast(0L))
-                    gestureFeedback = "−10"
-                }) { Icon(Icons.Filled.Replay10, contentDescription = null, tint = Color.White) }
-                Spacer(Modifier.size(14.dp))
-                val speedLabel = (if (playSpeed % 1f == 0f) playSpeed.toInt().toString() else playSpeed.toString().trimEnd('0')) + "×"
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = if (playSpeed == 1f) 0.14f else 0.30f))
-                        .border(1.dp, Color.White.copy(alpha = 0.40f), RoundedCornerShape(50))
-                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                            val steps = floatArrayOf(0.5f, 1f, 1.25f, 1.5f, 2f)
-                            val idx = steps.indexOfFirst { it == playSpeed }
-                            val next = steps[(idx + 1).mod(steps.size)]
-                            playSpeed = next
-                            engine.player.setPlaybackSpeed(next)
-                            gestureFeedback = "Speed " + (if (next % 1f == 0f) next.toInt().toString() else next.toString()) + "×"
-                        }
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(speedLabel, color = if (playSpeed == 1f) Color.White else Color(0xFFB9D4FF), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.size(14.dp))
-                AxVideoGlassButton(size = 34.dp, plain = true, onClick = {
-                    engine.player.seekTo((engine.player.currentPosition + 10_000L).coerceAtMost(duration()))
-                    gestureFeedback = "+10"
-                }) { Icon(Icons.Filled.Forward10, contentDescription = null, tint = Color.White) }
-            }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelSmall)
-                seekBar(Modifier.weight(1f).height(26.dp))
+                seekBar(Modifier.weight(1f).height(22.dp))
                 Text(
                     if (showRemaining) "-" + formatTime((duration() - (progress * duration()).toLong()).coerceAtLeast(0L)) else formatTime(duration()),
                     color = Color.White.copy(alpha = 0.85f),
