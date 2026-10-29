@@ -1,6 +1,9 @@
 package com.iris.gallery.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -84,13 +87,30 @@ fun LibraryScreen(
 
 @Composable
 private fun LibraryCard(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    val glassShape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+    Card(
+        onClick = onClick,
+        shape = glassShape,
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f),
+        ),
+        modifier = Modifier.fillMaxWidth().axGlassBorder(glassShape),
+    ) {
         Row(
-            Modifier.fillMaxWidth().padding(18.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+            androidx.compose.foundation.layout.Box(
+                Modifier
+                    .size(46.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+                    .axGlassBorder(androidx.compose.foundation.shape.CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+            }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(

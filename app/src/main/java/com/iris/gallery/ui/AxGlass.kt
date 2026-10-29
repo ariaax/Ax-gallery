@@ -122,6 +122,18 @@ object AxHaptics {
 }
 
 /** Global switch for the Liquid Glass look (a settings toggle can drive this later). */
+/** Weak-phone detection: low-RAM / old Android -> no endless animations, no sensor parallax. Computed once. */
+object AxPerf {
+    private var cached: Boolean? = null
+    fun lite(ctx: android.content.Context): Boolean {
+        cached?.let { return it }
+        val am = ctx.getSystemService(android.content.Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+        val v = Build.VERSION.SDK_INT < 31 || am?.isLowRamDevice == true || (am?.memoryClass ?: 256) <= 128
+        cached = v
+        return v
+    }
+}
+
 object AxGlass {
     /** Compose state, so flipping the setting updates the UI immediately. */
     var enabled: Boolean by mutableStateOf(true)

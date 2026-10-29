@@ -218,13 +218,14 @@ fun AlbumAppBadge(album: MediaAlbum, modifier: Modifier = Modifier) {
         spin.animateTo(0f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessLow))
     }
 
+    val lite = AxPerf.lite(androidx.compose.ui.platform.LocalContext.current)
     val inf = androidx.compose.animation.core.rememberInfiniteTransition(label = "badge life")
-    val pulse = inf.animateFloat(
+    val pulse = if (lite) remember { androidx.compose.runtime.mutableStateOf(1f) } else inf.animateFloat(
         0f, 1f,
         androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(2400, easing = androidx.compose.animation.core.LinearEasing)),
         label = "badge pulse",
     )
-    val bob = inf.animateFloat(
+    val bob = if (lite) remember { androidx.compose.runtime.mutableStateOf(0f) } else inf.animateFloat(
         -1f, 1f,
         androidx.compose.animation.core.infiniteRepeatable(
             androidx.compose.animation.core.tween(1700, easing = androidx.compose.animation.core.FastOutSlowInEasing),
