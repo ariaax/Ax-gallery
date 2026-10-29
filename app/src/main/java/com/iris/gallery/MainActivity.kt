@@ -2384,11 +2384,11 @@ private fun GalleryScaffold(
                                 }
                             },
                             singleLine = true,
-                            shape = RoundedCornerShape(24.dp),
+                            shape = RoundedCornerShape(50),
                             colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                unfocusedBorderColor = Color.Transparent,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+                                focusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
+                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f),
                                 focusedBorderColor = MaterialTheme.colorScheme.primary
                             )
                         )
@@ -5059,7 +5059,7 @@ private fun PhotoViewer(
             }
             override fun onAccuracyChanged(s: android.hardware.Sensor?, accuracy: Int) {}
         }
-        if (sensor != null) sm?.registerListener(listener, sensor, android.hardware.SensorManager.SENSOR_DELAY_GAME)
+        if (sensor != null && !com.iris.gallery.ui.AxPerf.lite(context)) sm?.registerListener(listener, sensor, android.hardware.SensorManager.SENSOR_DELAY_UI)
         onDispose { sm?.unregisterListener(listener) }
     }
     var currentPhotoHasGainmap by remember(current.id) { mutableStateOf(false) }
