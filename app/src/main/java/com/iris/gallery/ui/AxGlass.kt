@@ -218,7 +218,9 @@ private var navCacheEffect: androidx.compose.ui.graphics.RenderEffect? = null
 
 /** Light blur + real edge refraction (Android 13+); older phones keep the plain blur. Cached: rebuilt only when the bar's size changes. */
 private fun navGlassEffect(w: Float, h: Float, radius: Float): androidx.compose.ui.graphics.RenderEffect {
-    if (Build.VERSION.SDK_INT < 33) return NavBlurEffect
+    // The AGSL refraction chain did not render on some phones (MIUI/Adreno): the bar then showed the sharp photo.
+    // A plain blur always renders, so it is used everywhere; the rim/glint give the glass look.
+    if (true) return NavBlurPlain
     val key = "${w.toInt()}x${h.toInt()}r${radius.toInt()}"
     val cached = navCacheEffect
     if (cached != null && key == navCacheKey) return cached
@@ -237,6 +239,8 @@ private fun navGlassEffect(w: Float, h: Float, radius: Float): androidx.compose.
         NavBlurEffect
     }
 }
+
+private val NavBlurPlain = BlurEffect(26f, 26f, TileMode.Clamp)
 
 private val PanelBlurEffect = BlurEffect(18f, 18f, TileMode.Clamp)
 
@@ -325,7 +329,7 @@ fun AxGlassNavBar(
         spring(dampingRatio = 0.82f, stiffness = 420f),
         label = "nav collapse",
     )
-    val tint = Color.White.copy(alpha = if (blurSupported) 0.12f else 0.22f).compositeOver(Color.Black.copy(alpha = if (blurSupported) 0.34f else 0.80f))
+    val tint = Color.White.copy(alpha = if (blurSupported) 0.14f else 0.22f).compositeOver(Color.Black.copy(alpha = if (blurSupported) 0.22f else 0.80f))
     val edge = Brush.linearGradient(
         listOf(
             Color.White.copy(alpha = 0.95f),
