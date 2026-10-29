@@ -47,6 +47,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.luminance
@@ -241,6 +243,7 @@ private fun navGlassEffect(w: Float, h: Float, radius: Float): androidx.compose.
 }
 
 private val NavBlurPlain = BlurEffect(26f, 26f, TileMode.Clamp)
+private val NavBlurSmall = BlurEffect(3f, 3f, TileMode.Clamp)
 
 private val PanelBlurEffect = BlurEffect(18f, 18f, TileMode.Clamp)
 
@@ -258,16 +261,34 @@ fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
         if (AxGlass.enabled && blurSupported && barSize.width > 1f && barSize.height > 1f) {
             val local = state.barOrigin - state.sourceOrigin
             val blur = state.blurLayer
-            blur.renderEffect = navGlassEffect(barSize.width, barSize.height, state.cornerRadiusPx)
-            blur.clip = true
+            // Blur that does not depend on RenderEffect: render the area under the bar into a small
+            // offscreen texture (1/k size) and stretch it back with smooth filtering. A light RenderEffect
+            // blur is added on top where the phone supports it.
+            val k = 6f
+            val bw = (barSize.width / k).toInt().coerceAtLeast(1)
+            val bh = (barSize.height / k).toInt().coerceAtLeast(1)
+            blur.renderEffect = NavBlurSmall
+            blur.clip = false
             blur.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
-            blur.setRoundRectOutline(Offset.Zero, barSize, state.cornerRadiusPx)
-            blur.record(this, layoutDirection, IntSize(barSize.width.toInt(), barSize.height.toInt())) {
-                translate(-local.x, -local.y) { drawLayer(src) }
+            // TEMP DIAGNOSTIC: green tint = "this layer really draws". Removed after the test.
+            blur.colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color(0xFFB9F6CA), androidx.compose.ui.graphics.BlendMode.Modulate)
+            blur.record(this, layoutDirection, IntSize(bw, bh)) {
+                scale(1f / k, 1f / k, pivot = Offset.Zero) {
+                    translate(-local.x, -local.y) { drawLayer(src) }
+                }
+            }
+            val barPath = androidx.compose.ui.graphics.Path().apply {
+                addRoundRect(
+                    androidx.compose.ui.geometry.RoundRect(
+                        0f, 0f, barSize.width, barSize.height,
+                        androidx.compose.ui.geometry.CornerRadius(state.cornerRadiusPx),
+                    )
+                )
             }
             translate(local.x, local.y) {
-                drawLayer(blur)
-                // TEMP DIAGNOSTIC: thin green outline = "the blur block ran here". Removed after the test.
+                clipPath(barPath) {
+                    scale(k, k, pivot = Offset.Zero) { drawLayer(blur) }
+                }
                 drawRect(Color(0xFF00E676), size = barSize, style = androidx.compose.ui.graphics.drawscope.Stroke(2f))
             }
         }
