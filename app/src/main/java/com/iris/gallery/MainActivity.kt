@@ -2353,7 +2353,7 @@ private fun GalleryScaffold(
         topBar = {
           if (!(destination == 3 && librarySection == "folder_view")) {
             val canSearchOnScreen = destination == 0 || destination == 2 || (destination == 1 && selectedAlbum != null) || (destination == 3 && librarySection == "videos")
-            CenterAlignedTopAppBar(
+            TopAppBar(
                 title = {
                     if (isFileSearching && canSearchOnScreen) {
                         OutlinedTextField(
@@ -3495,16 +3495,19 @@ private fun GalleryScaffold(
         ) { index, isSelected ->
             val tab = visibleTabs[index]
             val label = if (tab == GalleryTab.PHOTOS) photoTabLabel else stringResource(tab.labelRes)
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 AnimatedNavigationIcon(tab.icon, isSelected, label)
-                Text(
-                    label,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    fontSize = 10.5.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = androidx.compose.material3.LocalContentColor.current,
-                )
+                if (isSelected) {
+                    Text(
+                        label,
+                        modifier = Modifier.padding(start = 7.dp),
+                        maxLines = 1,
+                        softWrap = false,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = androidx.compose.material3.LocalContentColor.current,
+                    )
+                }
             }
         }
     }
@@ -4665,7 +4668,7 @@ private fun PhotoGrid(
                 val heroCell = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
                 Box(Modifier.animateItem(fadeInSpec = null).aspectRatio(1f)
                     .onGloballyPositioned { heroCell[0] = it }
-                    .clip(RoundedCornerShape(if (selected) 14.dp else cornerStyle.dp.dp))
+                    .clip(RoundedCornerShape(if (selected) 20.dp else maxOf(cornerStyle.dp, 18).dp))
                     .combinedClickable(onClick = {
                         if (suppressReleaseClickId == image.id) suppressReleaseClickId = null
                         else { AxHero.mark(heroCell[0], image.id); onOpen(image) }
@@ -4682,6 +4685,19 @@ private fun PhotoGrid(
                         showFormatBadge = showFormatBadge,
                         isFavorite = showFavoriteBadge && (image.id in favorites),
                         onInvalidMedia = onInvalidMedia,
+                    )
+                    // thin glass rim around every tile; a glowing accent ring when selected
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .border(
+                                if (selected) 2.5.dp else 0.8.dp,
+                                if (selected) androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary)
+                                else androidx.compose.ui.graphics.Brush.linearGradient(
+                                    listOf(Color.White.copy(alpha = 0.30f), Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.16f))
+                                ),
+                                RoundedCornerShape(if (selected) 20.dp else maxOf(cornerStyle.dp, 18).dp),
+                            )
                     )
                     AnimatedVisibility(selected, enter = fadeIn(tween(120)) + scaleIn(tween(160)),
                         exit = fadeOut(tween(100)) + scaleOut(tween(120)),
