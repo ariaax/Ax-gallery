@@ -114,6 +114,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.PhotoAlbum
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.Sort
@@ -1940,10 +1943,10 @@ private enum class GalleryTab(
     val labelRes: Int,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
 ) {
-    PHOTOS(0, R.string.tab_photos, androidx.compose.material.icons.Icons.Filled.PhotoLibrary),
-    ALBUMS(1, R.string.tab_albums, androidx.compose.material.icons.Icons.Filled.PhotoAlbum),
-    FAVORITES(2, R.string.tab_favorites, androidx.compose.material.icons.Icons.Filled.Favorite),
-    LIBRARY(3, R.string.tab_library, androidx.compose.material.icons.Icons.Filled.Dashboard),
+    PHOTOS(0, R.string.tab_photos, Icons.Filled.PhotoLibrary),
+    ALBUMS(1, R.string.tab_albums, Icons.Filled.PhotoAlbum),
+    FAVORITES(2, R.string.tab_favorites, Icons.Filled.Favorite),
+    LIBRARY(3, R.string.tab_library, Icons.Filled.Dashboard),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
