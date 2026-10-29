@@ -61,6 +61,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -68,6 +69,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -187,6 +190,8 @@ fun VideoPage(
     var offset by remember(media.id) { mutableStateOf(Offset.Zero) }
     var size by remember { mutableStateOf(IntSize.Zero) }
     var gestureFeedback by remember { mutableStateOf<String?>(null) }
+    var playSpeed by remember(media.id) { mutableStateOf(engine.player.playbackParameters.speed) }
+    var showRemaining by remember(media.id) { mutableStateOf(false) }
     var playbackError by remember(media.id) { mutableStateOf<String?>(null) }
     val hudActive = brightnessHudVisible || volumeHudVisible
     LaunchedEffect(hudActive, active) { if (active) onHudActive(hudActive) }
@@ -981,11 +986,51 @@ fun VideoPage(
                 }
             }
             }
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                AxVideoGlassButton(size = 34.dp, plain = true, onClick = {
+                    engine.player.seekTo((engine.player.currentPosition - 10_000L).coerceAtLeast(0L))
+                    gestureFeedback = "−10"
+                }) { Icon(Icons.Filled.Replay10, contentDescription = null, tint = Color.White) }
+                Spacer(Modifier.size(14.dp))
+                val speedLabel = (if (playSpeed % 1f == 0f) playSpeed.toInt().toString() else playSpeed.toString().trimEnd('0')) + "×"
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = if (playSpeed == 1f) 0.14f else 0.30f))
+                        .border(1.dp, Color.White.copy(alpha = 0.40f), RoundedCornerShape(50))
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                            val steps = floatArrayOf(0.5f, 1f, 1.25f, 1.5f, 2f)
+                            val idx = steps.indexOfFirst { it == playSpeed }
+                            val next = steps[(idx + 1).mod(steps.size)]
+                            playSpeed = next
+                            engine.player.setPlaybackSpeed(next)
+                            gestureFeedback = "Speed " + (if (next % 1f == 0f) next.toInt().toString() else next.toString()) + "×"
+                        }
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(speedLabel, color = if (playSpeed == 1f) Color.White else Color(0xFFB9D4FF), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.size(14.dp))
+                AxVideoGlassButton(size = 34.dp, plain = true, onClick = {
+                    engine.player.seekTo((engine.player.currentPosition + 10_000L).coerceAtMost(duration()))
+                    gestureFeedback = "+10"
+                }) { Icon(Icons.Filled.Forward10, contentDescription = null, tint = Color.White) }
+            }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelSmall)
                 seekBar(Modifier.weight(1f).height(26.dp))
-                Text(formatTime(duration()), color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelSmall)
+                Text(
+                    if (showRemaining) "-" + formatTime((duration() - (progress * duration()).toLong()).coerceAtLeast(0L)) else formatTime(duration()),
+                    color = Color.White.copy(alpha = 0.85f),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { showRemaining = !showRemaining },
+                )
                 controlButtons()
             }
         }
