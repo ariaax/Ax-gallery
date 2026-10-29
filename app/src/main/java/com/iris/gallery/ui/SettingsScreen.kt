@@ -264,14 +264,6 @@ fun SettingsScreen(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-                    SettingsSwitchRow(
-                        title = "Live blur",
-                        subtitle = "Real-time blur behind the glass. Turn off if scrolling feels slow: the glass keeps its frosted look but your phone does much less work.",
-                        checked = settings.liveBlur,
-                        onCheckedChange = { preferences.setLiveBlur(it) }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
                     SettingsSwitchRow(
                         title = "Read photo dates in background",
