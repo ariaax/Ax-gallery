@@ -217,38 +217,12 @@ fun AxBarActions(content: @Composable androidx.compose.foundation.layout.RowScop
         androidx.compose.foundation.layout.Row(content = content)
         return
     }
-    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val fill = if (dark) Color.White.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.80f)
-    val base = if (dark) Color.Black.copy(alpha = 0.40f) else Color.Black.copy(alpha = 0.06f)
-    val rim = Brush.linearGradient(
-        listOf(
-            Color.White.copy(alpha = if (dark) 0.50f else 0.90f),
-            Color.White.copy(alpha = if (dark) 0.08f else 0.25f),
-            Color.White.copy(alpha = if (dark) 0.30f else 0.70f),
-        )
+    // Every action is its own round glass bubble (no shared pill).
+    androidx.compose.foundation.layout.Row(
+        modifier = Modifier.padding(end = 6.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        content = content,
     )
-    androidx.compose.runtime.CompositionLocalProvider(LocalAxInBarGroup provides true) {
-        androidx.compose.foundation.layout.Row(
-            modifier = Modifier
-                .padding(end = 8.dp)
-                .height(40.dp)
-                .drawWithContent {
-                    if (size.width > 4f) {
-                        val r = androidx.compose.ui.geometry.CornerRadius(size.height / 2f)
-                        drawRoundRect(base, cornerRadius = r)
-                        drawRoundRect(fill, cornerRadius = r)
-                        drawRoundRect(
-                            Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) 0.10f else 0.28f), Color.Transparent), endY = size.height * 0.55f),
-                            cornerRadius = r,
-                        )
-                        drawRoundRect(rim, cornerRadius = r, style = Stroke(width = 1.dp.toPx()))
-                    }
-                    drawContent()
-                },
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            content = content,
-        )
-    }
 }
 
 /** Top-bar icon button: a small frosted glass circle when liquid glass is on, a normal icon button otherwise. */
@@ -307,21 +281,17 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
     )
     androidx.compose.foundation.layout.Row(
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-        modifier = Modifier
-            .axBarPill()
-            .padding(start = if (badge != null && album != null) 7.dp else 18.dp, end = 18.dp, top = 6.dp, bottom = 6.dp),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
     ) {
-        if (badge != null && album != null) AlbumAppBadge(album, Modifier.size(28.dp))
+        if (badge != null && album != null) AlbumAppBadge(album, Modifier.size(30.dp))
         Text(
             text = text,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(vertical = 3.dp),
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                fontSize = 26.sp,
                 color = c,
             ),
         )
