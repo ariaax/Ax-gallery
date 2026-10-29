@@ -3495,13 +3495,13 @@ private fun GalleryScaffold(
         ) { index, isSelected ->
             val tab = visibleTabs[index]
             val label = if (tab == GalleryTab.PHOTOS) photoTabLabel else stringResource(tab.labelRes)
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 AnimatedNavigationIcon(tab.icon, isSelected, label)
                 Text(
                     label,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    fontSize = 11.sp,
+                    fontSize = 10.5.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                     color = androidx.compose.material3.LocalContentColor.current,
                 )
