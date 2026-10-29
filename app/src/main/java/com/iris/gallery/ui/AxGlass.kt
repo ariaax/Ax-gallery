@@ -525,12 +525,14 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
         onDispose { state.regions.remove(region) }
     }
     val shape = RoundedCornerShape(corner)
-    val tint = if (blurSupported && state.blurEnabled) Color.White.copy(alpha = 0.07f).compositeOver(Color.Black.copy(alpha = 0.22f)) else Color.Black.copy(alpha = 0.58f)
+    // One look for every viewer panel (top buttons, filmstrip, info, action bar): icy light glass.
+    // It no longer turns black when blur is off (videos), so everything stays uniform.
+    val tint = Color(0xFFCFE0FF).copy(alpha = 0.20f).compositeOver(Color.Black.copy(alpha = 0.30f))
     val edge = Brush.linearGradient(
         listOf(
+            Color.White.copy(alpha = 0.75f),
+            Color.White.copy(alpha = 0.10f),
             Color.White.copy(alpha = 0.45f),
-            Color.White.copy(alpha = 0.06f),
-            Color.White.copy(alpha = 0.26f),
         )
     )
     return this
@@ -544,12 +546,12 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
         .drawBehind {
             drawRect(
                 brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.13f), Color.Transparent),
+                    listOf(Color.White.copy(alpha = 0.24f), Color.Transparent),
                     endY = size.height * 0.55f,
                 )
             )
         }
-        .border(1.dp, edge, shape)
+        .border(1.2.dp, edge, shape)
 }
 
 private val HeartPink = Color(0xFFFF3B6B)
