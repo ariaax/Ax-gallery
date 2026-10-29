@@ -47,6 +47,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.luminance
@@ -218,7 +220,9 @@ private var navCacheEffect: androidx.compose.ui.graphics.RenderEffect? = null
 
 /** Light blur + real edge refraction (Android 13+); older phones keep the plain blur. Cached: rebuilt only when the bar's size changes. */
 private fun navGlassEffect(w: Float, h: Float, radius: Float): androidx.compose.ui.graphics.RenderEffect {
-    if (Build.VERSION.SDK_INT < 33) return NavBlurEffect
+    // The AGSL refraction chain did not render on some phones (MIUI/Adreno): the bar then showed the sharp photo.
+    // A plain blur always renders, so it is used everywhere; the rim/glint give the glass look.
+    if (true) return NavBlurPlain
     val key = "${w.toInt()}x${h.toInt()}r${radius.toInt()}"
     val cached = navCacheEffect
     if (cached != null && key == navCacheKey) return cached
@@ -227,7 +231,7 @@ private fun navGlassEffect(w: Float, h: Float, radius: Float): androidx.compose.
         sh.setFloatUniform("size", w, h)
         sh.setFloatUniform("radius", radius)
         sh.setFloatUniform("depth", minOf(h * 0.55f, 46f))
-        val blur = android.graphics.RenderEffect.createBlurEffect(14f, 14f, android.graphics.Shader.TileMode.CLAMP)
+        val blur = android.graphics.RenderEffect.createBlurEffect(24f, 24f, android.graphics.Shader.TileMode.CLAMP)
         val refr = android.graphics.RenderEffect.createRuntimeShaderEffect(sh, "content")
         val eff = android.graphics.RenderEffect.createChainEffect(refr, blur).asComposeRenderEffect()
         navCacheKey = key
@@ -237,6 +241,9 @@ private fun navGlassEffect(w: Float, h: Float, radius: Float): androidx.compose.
         NavBlurEffect
     }
 }
+
+private val NavBlurPlain = BlurEffect(26f, 26f, TileMode.Clamp)
+private val NavBlurSmall = BlurEffect(3f, 3f, TileMode.Clamp)
 
 private val PanelBlurEffect = BlurEffect(18f, 18f, TileMode.Clamp)
 
@@ -325,19 +332,24 @@ fun AxGlassNavBar(
         spring(dampingRatio = 0.82f, stiffness = 420f),
         label = "nav collapse",
     )
-    val tint = if (dark) Color.White.copy(alpha = if (blurSupported) 0.07f else 0.20f).compositeOver(Color.Black.copy(alpha = if (blurSupported) 0.18f else 0.70f))
-    else Color.White.copy(alpha = if (blurSupported) 0.30f else 0.88f)
+    val tint = Color.White.copy(alpha = if (blurSupported) 0.14f else 0.22f).compositeOver(Color.Black.copy(alpha = if (blurSupported) 0.22f else 0.80f))
     val edge = Brush.linearGradient(
         listOf(
-            Color.White.copy(alpha = if (dark) 0.50f else 0.90f),
-            Color.White.copy(alpha = if (dark) 0.08f else 0.25f),
-            Color.White.copy(alpha = if (dark) 0.30f else 0.70f),
+            Color.White.copy(alpha = 0.95f),
+            Color.White.copy(alpha = 0.10f),
+            Color.White.copy(alpha = 0.80f),
         )
     )
     val lensAnim = remember { Animatable(selectedIndex.toFloat()) }
     var dragging by remember { mutableStateOf(false) }
     var dragIndex by remember { mutableFloatStateOf(selectedIndex.toFloat()) }
     var pressedAny by remember { mutableStateOf(false) }
+    // light glint that sweeps across the glass whenever the tab changes
+    val glint = remember { Animatable(1f) }
+    LaunchedEffect(selectedIndex) {
+        glint.snapTo(0f)
+        glint.animateTo(1f, tween(750, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+    }
     LaunchedEffect(selectedIndex) {
         if (!dragging) lensAnim.animateTo(selectedIndex.toFloat(), spring(dampingRatio = 0.62f, stiffness = 380f))
     }
@@ -351,11 +363,11 @@ fun AxGlassNavBar(
         modifier = modifier.fillMaxWidth().padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
-        val fullW = if (maxWidth > 520.dp) 520.dp else maxWidth
+        val fullW = minOf(maxWidth, 12.dp + 80.dp * count)
         val itemFull = (fullW - 12.dp) / count
         val itemW = itemFull + (58.dp - itemFull) * c
         val barW = itemW * (1f + (count - 1) * (1f - c)) + 12.dp
-        val barH = 64.dp + (50.dp - 64.dp) * c
+        val barH = 66.dp + (50.dp - 66.dp) * c
         val shape = RoundedCornerShape(50)
         val itemWPx = with(density) { itemW.toPx() }
         val itemWPxState = rememberUpdatedState(itemWPx)
@@ -370,7 +382,7 @@ fun AxGlassNavBar(
                     state.barSize = Size(it.size.width.toFloat(), it.size.height.toFloat())
                     state.cornerRadiusPx = it.size.height / 2f
                 }
-                .shadow(14.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.24f))
+                .shadow(14.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.30f), spotColor = Color.Black.copy(alpha = 0.40f))
                 .clip(shape)
                 .background(tint)
                 .drawBehind {
@@ -381,7 +393,33 @@ fun AxGlassNavBar(
                         )
                     )
                 }
-                .border(1.dp, edge, shape)
+                .drawBehind {
+                    val g = glint.value
+                    if (g < 1f) {
+                        val h = size.height
+                        val x = -h + g * (size.width + h * 2f)
+                        val a = kotlin.math.sin(Math.PI.toFloat() * g) * 0.30f
+                        drawRect(
+                            Brush.linearGradient(
+                                listOf(Color.Transparent, Color.White.copy(alpha = a), Color.Transparent),
+                                start = Offset(x - h * 0.6f, 0f),
+                                end = Offset(x + h * 0.6f, h),
+                            )
+                        )
+                    }
+                }
+                .drawBehind {
+                    // inner soft rim: gives the thick-glass look of the reference
+                    val inset = 3.dp.toPx()
+                    drawRoundRect(
+                        Color.White.copy(alpha = 0.20f),
+                        topLeft = Offset(inset, inset),
+                        size = Size(size.width - inset * 2, size.height - inset * 2),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius((size.height - inset * 2) / 2f),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()),
+                    )
+                }
+                .border(1.5.dp, edge, shape)
                 .pointerInput(count) {
                     detectHorizontalDragGestures(
                         onDragStart = {
@@ -431,11 +469,11 @@ fun AxGlassNavBar(
                         scaleY = 1f + (lensScale - 1f) * 0.55f
                     }
                     .clip(RoundedCornerShape(50))
-                    .background(if (dark) Color.White.copy(alpha = 0.16f) else Color.Black.copy(alpha = 0.07f))
-                    .background(accent.copy(alpha = 0.10f))
+                    .background(Color.Black.copy(alpha = 0.40f))
+                    .background(accent.copy(alpha = 0.16f))
                     .border(
                         1.dp,
-                        Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) 0.45f else 0.85f), Color.White.copy(alpha = 0.06f))),
+                        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.08f))),
                         RoundedCornerShape(50),
                     )
             )
@@ -462,7 +500,7 @@ fun AxGlassNavBar(
                             },
                         contentAlignment = Alignment.Center,
                     ) {
-                        val iconColor = (if (dark) Color.White else Color.Black).copy(alpha = if (i == selectedIndex) 1f else 0.70f)
+                        val iconColor = Color.White.copy(alpha = if (i == selectedIndex) 1f else 0.82f)
                         CompositionLocalProvider(LocalContentColor provides iconColor) {
                             icon(i, i == selectedIndex)
                         }
