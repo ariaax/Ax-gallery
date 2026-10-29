@@ -215,7 +215,7 @@ private fun navGlassEffect(w: Float, h: Float, radius: Float): androidx.compose.
         sh.setFloatUniform("size", w, h)
         sh.setFloatUniform("radius", radius)
         sh.setFloatUniform("depth", minOf(h * 0.55f, 46f))
-        val blur = android.graphics.RenderEffect.createBlurEffect(14f, 14f, android.graphics.Shader.TileMode.CLAMP)
+        val blur = android.graphics.RenderEffect.createBlurEffect(24f, 24f, android.graphics.Shader.TileMode.CLAMP)
         val refr = android.graphics.RenderEffect.createRuntimeShaderEffect(sh, "content")
         val eff = android.graphics.RenderEffect.createChainEffect(refr, blur).asComposeRenderEffect()
         navCacheKey = key
@@ -313,13 +313,12 @@ fun AxGlassNavBar(
         spring(dampingRatio = 0.82f, stiffness = 420f),
         label = "nav collapse",
     )
-    val tint = if (dark) Color.White.copy(alpha = if (blurSupported) 0.16f else 0.24f).compositeOver(Color.Black.copy(alpha = if (blurSupported) 0.45f else 0.78f))
-    else Color.White.copy(alpha = if (blurSupported) 0.82f else 0.95f)
+    val tint = Color.White.copy(alpha = if (blurSupported) 0.12f else 0.22f).compositeOver(Color.Black.copy(alpha = if (blurSupported) 0.34f else 0.80f))
     val edge = Brush.linearGradient(
         listOf(
-            Color.White.copy(alpha = if (dark) 0.50f else 0.90f),
-            Color.White.copy(alpha = if (dark) 0.08f else 0.25f),
-            Color.White.copy(alpha = if (dark) 0.30f else 0.70f),
+            Color.White.copy(alpha = 0.95f),
+            Color.White.copy(alpha = 0.10f),
+            Color.White.copy(alpha = 0.80f),
         )
     )
     val lensAnim = remember { Animatable(selectedIndex.toFloat()) }
@@ -343,7 +342,7 @@ fun AxGlassNavBar(
         val itemFull = (fullW - 12.dp) / count
         val itemW = itemFull + (58.dp - itemFull) * c
         val barW = itemW * (1f + (count - 1) * (1f - c)) + 12.dp
-        val barH = 64.dp + (50.dp - 64.dp) * c
+        val barH = 76.dp + (50.dp - 76.dp) * c
         val shape = RoundedCornerShape(50)
         val itemWPx = with(density) { itemW.toPx() }
         val itemWPxState = rememberUpdatedState(itemWPx)
@@ -369,7 +368,18 @@ fun AxGlassNavBar(
                         )
                     )
                 }
-                .border(1.dp, edge, shape)
+                .drawBehind {
+                    // inner soft rim: gives the thick-glass look of the reference
+                    val inset = 3.dp.toPx()
+                    drawRoundRect(
+                        Color.White.copy(alpha = 0.20f),
+                        topLeft = Offset(inset, inset),
+                        size = Size(size.width - inset * 2, size.height - inset * 2),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius((size.height - inset * 2) / 2f),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()),
+                    )
+                }
+                .border(1.5.dp, edge, shape)
                 .pointerInput(count) {
                     detectHorizontalDragGestures(
                         onDragStart = {
@@ -419,10 +429,10 @@ fun AxGlassNavBar(
                         scaleY = 1f + (lensScale - 1f) * 0.55f
                     }
                     .clip(RoundedCornerShape(50))
-                    .background(if (dark) Color.White.copy(alpha = 0.26f) else Color.Black.copy(alpha = 0.11f))
+                    .background(Color.Black.copy(alpha = 0.40f))
                     .border(
                         1.dp,
-                        Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) 0.45f else 0.85f), Color.White.copy(alpha = 0.06f))),
+                        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.08f))),
                         RoundedCornerShape(50),
                     )
             )
@@ -449,7 +459,7 @@ fun AxGlassNavBar(
                             },
                         contentAlignment = Alignment.Center,
                     ) {
-                        val iconColor = (if (dark) Color.White else Color.Black).copy(alpha = if (i == selectedIndex) 1f else 0.85f)
+                        val iconColor = Color.White.copy(alpha = if (i == selectedIndex) 1f else 0.82f)
                         CompositionLocalProvider(LocalContentColor provides iconColor) {
                             icon(i, i == selectedIndex)
                         }
