@@ -204,9 +204,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
+                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text("Timeline order", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -265,6 +265,15 @@ fun SettingsScreen(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
                     SettingsSwitchRow(
+                        title = "Live blur",
+                        subtitle = "Real-time blur behind the glass. Turn off if scrolling feels slow: the glass keeps its frosted look but your phone does much less work.",
+                        checked = settings.liveBlur,
+                        onCheckedChange = { preferences.setLiveBlur(it) }
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                    SettingsSwitchRow(
                         title = "Read photo dates in background",
                         subtitle = "Quietly finds the real date of photos with a wrong date, so they sit in the right place.",
                         checked = settings.backgroundExifDates,
@@ -281,10 +290,10 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(24.dp),
                 onClick = { showLanguageDialog = true },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
+                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
             ) {
                 Row(
                     modifier = Modifier
@@ -332,9 +341,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
+                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(stringResource(R.string.settings_theme_mode), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -436,9 +445,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
+                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(stringResource(R.string.settings_corner_style), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -874,9 +883,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
+                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     SettingsSwitchRow(
@@ -1013,9 +1022,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
+                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(
@@ -1148,9 +1157,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
+                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     SettingsSwitchRow(
@@ -1230,9 +1239,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
+                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(stringResource(R.string.settings_navigation_tabs_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -1652,9 +1661,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
+                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(
@@ -1703,10 +1712,10 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(24.dp),
                 onClick = onOpenAbout,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
+                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
             ) {
                 Row(
                     modifier = Modifier
