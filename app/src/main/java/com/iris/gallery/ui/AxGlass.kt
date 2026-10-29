@@ -251,11 +251,10 @@ private val PanelBlurEffect = BlurEffect(18f, 18f, TileMode.Clamp)
 fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
     .onGloballyPositioned { state.sourceOrigin = it.positionInRoot() }
     .drawWithContent {
-        val src = state.layer
-        src.record(this, layoutDirection, IntSize(size.width.toInt(), size.height.toInt())) {
-            this@drawWithContent.drawContent()
-        }
-        drawLayer(src)
+        // The content is drawn normally (no capture layer in between). For every glass area we play the same
+        // content once more into a small layer, shifted so that exactly the part under the glass lands in it,
+        // and blur that layer. Drawing a layer inside another layer did not render on some phones, this does.
+        drawContent()
 
         val barSize = state.barSize
         if (AxGlass.enabled && blurSupported && barSize.width > 1f && barSize.height > 1f) {
@@ -265,7 +264,7 @@ fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
             blur.clip = true
             blur.setRoundRectOutline(Offset.Zero, barSize, state.cornerRadiusPx)
             blur.record(this, layoutDirection, IntSize(barSize.width.toInt(), barSize.height.toInt())) {
-                translate(-local.x, -local.y) { drawLayer(src) }
+                translate(-local.x, -local.y) { this@drawWithContent.drawContent() }
             }
             translate(local.x, local.y) { drawLayer(blur) }
         }
@@ -280,7 +279,7 @@ fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
                     blur.clip = true
                     blur.setRoundRectOutline(Offset.Zero, rs, r.cornerPx)
                     blur.record(this, layoutDirection, IntSize(rs.width.toInt(), rs.height.toInt())) {
-                        translate(-local.x, -local.y) { drawLayer(src) }
+                        translate(-local.x, -local.y) { this@drawWithContent.drawContent() }
                     }
                     translate(local.x, local.y) { drawLayer(blur) }
                 }
