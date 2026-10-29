@@ -260,11 +260,16 @@ fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
             val blur = state.blurLayer
             blur.renderEffect = navGlassEffect(barSize.width, barSize.height, state.cornerRadiusPx)
             blur.clip = true
+            blur.compositingStrategy = androidx.compose.ui.graphics.layer.CompositingStrategy.Offscreen
             blur.setRoundRectOutline(Offset.Zero, barSize, state.cornerRadiusPx)
             blur.record(this, layoutDirection, IntSize(barSize.width.toInt(), barSize.height.toInt())) {
                 translate(-local.x, -local.y) { drawLayer(src) }
             }
-            translate(local.x, local.y) { drawLayer(blur) }
+            translate(local.x, local.y) {
+                drawLayer(blur)
+                // TEMP DIAGNOSTIC: thin green outline = "the blur block ran here". Removed after the test.
+                drawRect(Color(0xFF00E676), size = barSize, style = androidx.compose.ui.graphics.drawscope.Stroke(2f))
+            }
         }
 
         if (AxGlass.enabled && blurSupported && state.blurEnabled) {
