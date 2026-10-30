@@ -4686,6 +4686,21 @@ private fun PhotoGrid(
                         isFavorite = showFavoriteBadge && (image.id in favorites),
                         onInvalidMedia = onInvalidMedia,
                     )
+                    // zoomed far out: show the day of the month on each small tile (like a calendar)
+                    if (currentCellSize < 92.dp && !selected) {
+                        val dayLabel = remember(image.dateTaken) {
+                            Instant.ofEpochMilli(image.dateTaken).atZone(ZoneId.systemDefault()).dayOfMonth.toString()
+                        }
+                        Text(
+                            dayLabel,
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 3.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.85f), blurRadius = 6f),
+                            ),
+                        )
+                    }
                     // thin glass rim around every tile; a glowing accent ring when selected
                     Box(
                         Modifier
@@ -5998,7 +6013,7 @@ private fun PhotoViewer(
           modifier = Modifier
               .align(Alignment.BottomCenter)
               .navigationBarsPadding()
-              .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+              .padding(start = 16.dp, end = 16.dp, bottom = 0.dp)
               .graphicsLayer { alpha = controlsAlphaNow() },
           enter = fadeIn(tween(220, easing = FastOutSlowInEasing)) +
                   slideInVertically(
