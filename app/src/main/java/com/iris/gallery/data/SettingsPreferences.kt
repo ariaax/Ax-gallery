@@ -190,6 +190,9 @@ data class SettingsState(
     val hasPin: Boolean get() = appLockPinHash.isNotEmpty()
 }
 
+private const val PBKDF2_PREFIX = "pbkdf2\$"
+private const val PBKDF2_ITERATIONS = 60_000
+
 class SettingsPreferences(context: Context) {
     companion object {
         @Volatile private var instance: SettingsPreferences? = null
@@ -306,15 +309,35 @@ class SettingsPreferences(context: Context) {
     fun verifyPin(pin: String): Boolean {
         val current = _state.value
         if (current.appLockPinHash.isEmpty()) return false
-        val computed = hashPin(pin, current.appLockPinSalt)
-        return computed == current.appLockPinHash
+        val stored = current.appLockPinHash
+        val ok = if (stored.startsWith(PBKDF2_PREFIX)) {
+            constantTimeEquals(hashPin(pin, current.appLockPinSalt), stored)
+        } else {
+            // old SHA-256 hash from earlier versions: still accepted, then upgraded below
+            constantTimeEquals(legacyHashPin(pin, current.appLockPinSalt), stored)
+        }
+        if (ok && !stored.startsWith(PBKDF2_PREFIX)) {
+            val newSalt = java.util.UUID.randomUUID().toString()
+            val newHash = hashPin(pin, newSalt)
+            update { copy(appLockPinHash = newHash, appLockPinSalt = newSalt) }
+        }
+        return ok
     }
+
+    private fun constantTimeEquals(a: String, b: String): Boolean =
+        java.security.MessageDigest.isEqual(a.toByteArray(Charsets.UTF_8), b.toByteArray(Charsets.UTF_8))
 
     fun removePin() {
         update { copy(appLockPinHash = "", appLockPinSalt = "", appLockEnabled = false) }
     }
 
     private fun hashPin(pin: String, salt: String): String {
+        val spec = javax.crypto.spec.PBEKeySpec(pin.toCharArray(), salt.toByteArray(Charsets.UTF_8), PBKDF2_ITERATIONS, 256)
+        val bytes = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
+        return PBKDF2_PREFIX + bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun legacyHashPin(pin: String, salt: String): String {
         val digest = java.security.MessageDigest.getInstance("SHA-256")
         val bytes = digest.digest("$salt:$pin".toByteArray(Charsets.UTF_8))
         return bytes.joinToString("") { "%02x".format(it) }
