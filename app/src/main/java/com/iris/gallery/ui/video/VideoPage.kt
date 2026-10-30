@@ -863,12 +863,32 @@ fun VideoPage(
                 preview?.let { Image(it.asImageBitmap(), null, Modifier.size(160.dp, 90.dp)
                     .background(Color.Black, RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop) }
             }
+            AnimatedVisibility(scrubbing) {
+                Text(
+                    formatTime((progress * duration()).toLong()) + " / " + formatTime(duration()),
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 2.dp),
+                )
+            }
+            val liveSeek = remember { longArrayOf(0L) }
             val seekBar: @Composable (Modifier) -> Unit = { seekModifier ->
+            // iOS-style scrubbing: the track swells under the finger, the thumb grows, the video follows live
+            val trackH by animateDpAsState(if (scrubbing) 12.dp else 4.dp, spring(dampingRatio = 0.7f, stiffness = 500f), label = "trackH")
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
             Slider(
                 modifier = seekModifier,
                 value = progress.coerceIn(0f, 1f),
-                onValueChange = { scrubbing = true; progress = it },
+                onValueChange = {
+                    scrubbing = true
+                    progress = it
+                    val now = SystemClock.uptimeMillis()
+                    if (now - liveSeek[0] > 140L) {
+                        liveSeek[0] = now
+                        engine.player.seekTo((it * duration()).toLong())
+                    }
+                },
                 onValueChangeFinished = {
                     engine.player.seekTo((progress * duration()).toLong()); scrubbing = false; preview = null
                 },
@@ -878,16 +898,17 @@ fun VideoPage(
                     inactiveTrackColor = Color.White.copy(alpha = 0.28f),
                 ),
                 thumb = {
-                    Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
-                        val core by animateDpAsState(if (scrubbing) 18.dp else 12.dp, spring(dampingRatio = 0.55f), label = "thumb")
-                        Box(Modifier.size(22.dp).background(Color.White.copy(alpha = if (scrubbing) 0.34f else 0.22f), CircleShape))
+                    Box(Modifier.size(34.dp), contentAlignment = Alignment.Center) {
+                        val core by animateDpAsState(if (scrubbing) 24.dp else 13.dp, spring(dampingRatio = 0.55f, stiffness = 600f), label = "thumb")
+                        val halo by animateDpAsState(if (scrubbing) 34.dp else 22.dp, spring(dampingRatio = 0.6f, stiffness = 500f), label = "thumbHalo")
+                        Box(Modifier.size(halo).background(Color.White.copy(alpha = if (scrubbing) 0.30f else 0.18f), CircleShape))
                         Box(Modifier.size(core).background(Color.White, CircleShape))
                     }
                 },
                 track = { sliderState ->
                     val fraction = sliderState.value.coerceIn(0f, 1f)
                     Box(
-                        Modifier.fillMaxWidth().height(4.dp)
+                        Modifier.fillMaxWidth().height(trackH)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.30f))
                     ) {
@@ -985,7 +1006,7 @@ fun VideoPage(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(formatTime((progress * duration()).toLong()), color = Color.White, style = MaterialTheme.typography.labelSmall)
-                seekBar(Modifier.weight(1f).height(22.dp))
+                seekBar(Modifier.weight(1f).height(40.dp))
                 Text(
                     if (showRemaining) "-" + formatTime((duration() - (progress * duration()).toLong()).coerceAtLeast(0L)) else formatTime(duration()),
                     color = Color.White.copy(alpha = 0.85f),
