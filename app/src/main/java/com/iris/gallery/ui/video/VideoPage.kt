@@ -846,10 +846,10 @@ fun VideoPage(
         ) {
         val compactLandscape = maxHeight < 500.dp
         Column(
-            modifier = Modifier.widthIn(max = if (compactLandscape) 460.dp else 420.dp).fillMaxWidth()
+            modifier = Modifier.widthIn(max = if (compactLandscape) 500.dp else 460.dp).fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(start = 12.dp, end = 12.dp, top = if (compactLandscape) 4.dp else 128.dp,
-                    bottom = if (compactLandscape) 10.dp else 146.dp)
+                    bottom = if (compactLandscape) 10.dp else 138.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
                 .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
@@ -901,9 +901,9 @@ fun VideoPage(
             )
             }
             }
-            val bs = 28.dp
+            val bs = 36.dp
             val controlButtons: @Composable () -> Unit = {
-            Row(horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 AxVideoGlassButton(size = bs, plain = true, onClick = {
                     val next = engine.toggleMute()
                     isMuted = next
@@ -944,7 +944,7 @@ fun VideoPage(
                         tint = if (isLooping) Color(0xFFB9D4FF) else Color.White
                     )
                 }
-                AxVideoGlassButton(size = 34.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
+                AxVideoGlassButton(size = 42.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
                     AnimatedContent(
                         targetState = playing,
                         transitionSpec = {
