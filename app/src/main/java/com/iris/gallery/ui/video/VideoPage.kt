@@ -886,10 +886,15 @@ fun VideoPage(
                     val now = SystemClock.uptimeMillis()
                     if (now - liveSeek[0] > 140L) {
                         liveSeek[0] = now
+                        // while dragging, jump to the nearest keyframe (fast); the final seek below is exact
+                        (engine.player as? androidx.media3.exoplayer.ExoPlayer)
+                            ?.setSeekParameters(androidx.media3.exoplayer.SeekParameters.CLOSEST_SYNC)
                         engine.player.seekTo((it * duration()).toLong())
                     }
                 },
                 onValueChangeFinished = {
+                    (engine.player as? androidx.media3.exoplayer.ExoPlayer)
+                        ?.setSeekParameters(androidx.media3.exoplayer.SeekParameters.EXACT)
                     engine.player.seekTo((progress * duration()).toLong()); scrubbing = false; preview = null
                 },
                 colors = SliderDefaults.colors(
