@@ -4693,7 +4693,7 @@ private fun PhotoGrid(
                         }
                         Text(
                             dayLabel,
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 3.dp),
+                            modifier = Modifier.align(Alignment.TopEnd).padding(top = 3.dp, end = 5.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,

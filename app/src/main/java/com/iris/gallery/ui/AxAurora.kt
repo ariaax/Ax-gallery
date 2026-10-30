@@ -17,11 +17,13 @@ import androidx.compose.ui.graphics.luminance
 @Composable
 fun Modifier.axAurora(): Modifier {
     val cs = MaterialTheme.colorScheme
-    val bg = cs.background
+    val themeBg = cs.background
+    val dark = themeBg.luminance() < 0.5f
+    // dark mode: near-black base (like an OLED wallpaper) so photos pop; light mode keeps the theme colour
+    val bg = if (dark && AxGlass.enabled) androidx.compose.ui.graphics.Color(0xFF040405) else themeBg
     if (!AxGlass.enabled) return this.background(bg)
-    val dark = bg.luminance() < 0.5f
-    val top = lerp(bg, cs.primary, if (dark) 0.10f else 0.07f)
-    val mid = lerp(bg, cs.primary, if (dark) 0.03f else 0.02f)
+    val top = lerp(bg, cs.primary, if (dark) 0.035f else 0.07f)
+    val mid = lerp(bg, cs.primary, if (dark) 0.01f else 0.02f)
     return this
         .background(Brush.verticalGradient(listOf(top, mid, bg)))
         .graphicsLayer { }
