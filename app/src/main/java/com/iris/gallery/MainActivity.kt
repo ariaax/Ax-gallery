@@ -6258,12 +6258,25 @@ private fun PhotoViewer(
                 shape = RoundedCornerShape(32.dp),
                 tonalElevation = 0.dp,
             ) {
-              Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
-              ) {
-                actionButtons(false)
+              // reel-style: the whole button row rolls up/down whenever you move to another photo or video
+              AnimatedContent(
+                targetState = current.id,
+                transitionSpec = {
+                  val forward = (images.indexOfFirst { it.id == targetState }) >= (images.indexOfFirst { it.id == initialState })
+                  val dir = if (forward) 1 else -1
+                  (slideInVertically(spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)) { (it * 0.6f).toInt() * dir } +
+                      fadeIn(tween(200)) + scaleIn(spring(dampingRatio = 0.8f), initialScale = 0.88f)) togetherWith
+                  (slideOutVertically(tween(160, easing = FastOutSlowInEasing)) { -(it * 0.6f).toInt() * dir } + fadeOut(tween(110)))
+                },
+                label = "viewer actions reel",
+              ) { _ ->
+                Row(
+                  modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                  horizontalArrangement = Arrangement.SpaceEvenly,
+                  verticalAlignment = Alignment.CenterVertically,
+                ) {
+                  actionButtons(false)
+                }
               }
             }
         }
