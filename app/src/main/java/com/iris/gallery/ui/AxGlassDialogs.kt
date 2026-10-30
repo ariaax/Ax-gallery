@@ -243,9 +243,10 @@ fun AxBarButton(
     androidx.compose.foundation.layout.Box(
         modifier = modifier
             .padding(horizontal = if (grouped) 0.dp else 4.dp)
-            .size(40.dp)
+            .size(42.dp)
             .axPressScale(src, 0.86f)
-            .then(if (grouped) Modifier.clip(CircleShape) else Modifier.axGlassSurface(CircleShape, strong = true))
+            // flat dark-grey disc, no rim (clean, like a modern gallery header)
+            .then(if (grouped) Modifier.clip(CircleShape) else Modifier.clip(CircleShape).background(c.copy(alpha = 0.12f), CircleShape))
             .clickable(
                 interactionSource = src,
                 indication = androidx.compose.foundation.LocalIndication.current,

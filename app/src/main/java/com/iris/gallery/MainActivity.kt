@@ -2353,7 +2353,7 @@ private fun GalleryScaffold(
         topBar = {
           if (!(destination == 3 && librarySection == "folder_view")) {
             val canSearchOnScreen = destination == 0 || destination == 2 || (destination == 1 && selectedAlbum != null) || (destination == 3 && librarySection == "videos")
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     if (isFileSearching && canSearchOnScreen) {
                         OutlinedTextField(
