@@ -1939,6 +1939,9 @@ private fun BoxScope.IrisPullToRefreshIndicator(
     }
 }
 
+/** iOS-style ease (fast start, long soft landing) shared by all bar/dock animations. */
+val AxIosEase = androidx.compose.animation.core.CubicBezierEasing(0.32f, 0.72f, 0f, 1f)
+
 private enum class GalleryTab(
     val destination: Int,
     val labelRes: Int,
@@ -5632,8 +5635,8 @@ private fun PhotoViewer(
           modifier = Modifier
               .align(Alignment.TopCenter)
               .graphicsLayer { alpha = controlsAlphaNow() },
-          enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { -it / 5 },
-          exit = fadeOut(tween(140)) + slideOutVertically(tween(180)) { -it / 5 },
+          enter = fadeIn(tween(240, easing = AxIosEase)) + slideInVertically(tween(340, easing = AxIosEase)) { -it / 3 },
+          exit = fadeOut(tween(140)) + slideOutVertically(tween(220, easing = AxIosEase)) { -it / 3 },
         ) {
           Box(Modifier.fillMaxWidth().height(156.dp)) {
           Box(
@@ -5805,13 +5808,8 @@ private fun PhotoViewer(
                     .navigationBarsPadding()
                     .padding(start = 16.dp, end = 16.dp, bottom = bottomOffset)
                     .graphicsLayer { alpha = controlsAlphaNow() },
-                enter = fadeIn(tween(220)) + slideInVertically(
-                    animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow),
-                    initialOffsetY = { it }
-                ),
-                exit = fadeOut(tween(160)) + slideOutVertically(
-                    animationSpec = tween(180), targetOffsetY = { it / 2 }
-                ),
+                enter = fadeIn(tween(240, easing = AxIosEase)) + slideInVertically(tween(340, easing = AxIosEase)) { it / 2 },
+                exit = fadeOut(tween(140)) + slideOutVertically(tween(220, easing = AxIosEase)) { it / 2 },
             ) {
                 Surface(
                     color = Color.Transparent,
@@ -6016,24 +6014,8 @@ private fun PhotoViewer(
               .navigationBarsPadding()
               .padding(start = 16.dp, end = 16.dp, bottom = 0.dp)
               .graphicsLayer { alpha = controlsAlphaNow() },
-          enter = fadeIn(tween(220, easing = FastOutSlowInEasing)) +
-                  slideInVertically(
-                      animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow),
-                      initialOffsetY = { it }
-                  ) +
-                  scaleIn(
-                      animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow),
-                      initialScale = 0.90f
-                  ),
-          exit = fadeOut(tween(160, easing = FastOutSlowInEasing)) +
-                 slideOutVertically(
-                     animationSpec = tween(180, easing = FastOutSlowInEasing),
-                     targetOffsetY = { it / 2 }
-                  ) +
-                 scaleOut(
-                     animationSpec = tween(160, easing = FastOutSlowInEasing),
-                     targetScale = 0.92f
-                  ),
+          enter = fadeIn(tween(240, easing = AxIosEase)) + slideInVertically(tween(340, easing = AxIosEase)) { it / 2 },
+          exit = fadeOut(tween(140)) + slideOutVertically(tween(220, easing = AxIosEase)) { it / 2 },
         ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -6265,9 +6247,8 @@ private fun PhotoViewer(
                 transitionSpec = {
                   val forward = (images.indexOfFirst { it.id == targetState }) >= (images.indexOfFirst { it.id == initialState })
                   val dir = if (forward) 1 else -1
-                  (slideInVertically(spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)) { (it * 0.6f).toInt() * dir } +
-                      fadeIn(tween(200)) + scaleIn(spring(dampingRatio = 0.8f), initialScale = 0.88f)) togetherWith
-                  (slideOutVertically(tween(160, easing = FastOutSlowInEasing)) { -(it * 0.6f).toInt() * dir } + fadeOut(tween(110)))
+                  (slideInVertically(tween(300, easing = AxIosEase)) { (it * 0.5f).toInt() * dir } + fadeIn(tween(220, easing = AxIosEase))) togetherWith
+                  (slideOutVertically(tween(200, easing = AxIosEase)) { -(it * 0.5f).toInt() * dir } + fadeOut(tween(120)))
                 },
                 label = "viewer actions reel",
               ) { _ ->
@@ -6310,14 +6291,13 @@ private fun PhotoViewer(
                     .align(Alignment.CenterStart)
                     .padding(start = 14.dp, top = 84.dp, bottom = 12.dp)
                     .graphicsLayer { alpha = controlsAlphaNow() },
-                enter = fadeIn(tween(260)) + slideInHorizontally(spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)) { -it },
-                exit = fadeOut(tween(160)) + slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { -it },
+                enter = fadeIn(tween(240, easing = AxIosEase)) + slideInHorizontally(tween(340, easing = AxIosEase)) { -it / 2 },
+                exit = fadeOut(tween(140)) + slideOutHorizontally(tween(220, easing = AxIosEase)) { -it / 2 },
             ) {
                 AnimatedContent(
                     targetState = docksExpanded,
                     transitionSpec = {
-                        (fadeIn(tween(200)) + scaleIn(spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow), initialScale = 0.55f, transformOrigin = TransformOrigin(0f, 0.5f)))
-                            .togetherWith(fadeOut(tween(120)) + scaleOut(tween(140), targetScale = 0.55f, transformOrigin = TransformOrigin(0f, 0.5f)))
+                        fadeIn(tween(180, easing = AxIosEase)).togetherWith(fadeOut(tween(100)))
                     },
                     label = "left_dock",
                 ) { expanded ->
@@ -6364,14 +6344,13 @@ private fun PhotoViewer(
                     .align(Alignment.CenterEnd)
                     .padding(end = 14.dp, top = 84.dp, bottom = 12.dp)
                     .graphicsLayer { alpha = controlsAlphaNow() },
-                enter = fadeIn(tween(260)) + slideInHorizontally(spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow)) { it },
-                exit = fadeOut(tween(160)) + slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { it },
+                enter = fadeIn(tween(240, easing = AxIosEase)) + slideInHorizontally(tween(340, easing = AxIosEase)) { it / 2 },
+                exit = fadeOut(tween(140)) + slideOutHorizontally(tween(220, easing = AxIosEase)) { it / 2 },
             ) {
                 AnimatedContent(
                     targetState = docksExpanded,
                     transitionSpec = {
-                        (fadeIn(tween(200)) + scaleIn(spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow), initialScale = 0.55f, transformOrigin = TransformOrigin(1f, 0.5f)))
-                            .togetherWith(fadeOut(tween(120)) + scaleOut(tween(140), targetScale = 0.55f, transformOrigin = TransformOrigin(1f, 0.5f)))
+                        fadeIn(tween(180, easing = AxIosEase)).togetherWith(fadeOut(tween(100)))
                     },
                     label = "right_dock",
                 ) { expanded ->

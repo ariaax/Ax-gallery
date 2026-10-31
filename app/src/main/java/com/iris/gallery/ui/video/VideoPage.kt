@@ -833,10 +833,9 @@ fun VideoPage(
         AnimatedVisibility(
           visible = controlsVisible,
           modifier = Modifier.align(Alignment.BottomCenter),
-          enter = fadeIn(tween(220)) +
-              scaleIn(spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow), initialScale = 0.88f) +
-              slideInVertically(tween(280, easing = FastOutSlowInEasing)) { it / 4 },
-          exit = fadeOut(tween(150)) + scaleOut(tween(170), targetScale = 0.94f) + slideOutVertically(tween(180)) { it / 6 },
+          enter = fadeIn(tween(240, easing = com.iris.gallery.AxIosEase)) +
+              slideInVertically(tween(340, easing = com.iris.gallery.AxIosEase)) { it / 3 },
+          exit = fadeOut(tween(140)) + slideOutVertically(tween(220, easing = com.iris.gallery.AxIosEase)) { it / 4 },
         ) {
         BoxWithConstraints(
             modifier = Modifier
@@ -849,7 +848,7 @@ fun VideoPage(
             modifier = Modifier.widthIn(max = if (compactLandscape) 500.dp else 460.dp).fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(start = 12.dp, end = 12.dp, top = if (compactLandscape) 4.dp else 128.dp,
-                    bottom = if (compactLandscape) 10.dp else 138.dp)
+                    bottom = if (compactLandscape) 10.dp else 122.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
                 .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
