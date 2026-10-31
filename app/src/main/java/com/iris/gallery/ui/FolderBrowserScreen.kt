@@ -167,13 +167,13 @@ fun FolderBrowserScreen(
                             onBack()
                         }
                     }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                        Icon(AxIcons.Back, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { isListView = !isListView }) {
                         Icon(
-                            if (isListView) Icons.Outlined.GridView else Icons.AutoMirrored.Outlined.ViewList,
+                            if (isListView) AxIcons.GridSmall else AxIcons.List,
                             contentDescription = stringResource(if (isListView) R.string.view_grid else R.string.view_list)
                         )
                     }
@@ -204,7 +204,7 @@ fun FolderBrowserScreen(
                             onClick = { currentDirectory = root },
                             leadingIcon = {
                                 Icon(
-                                    if (isSd) Icons.Outlined.SdCard else Icons.Outlined.Storage,
+                                    if (isSd) Icons.Outlined.SdCard else AxIcons.Storage,
                                     contentDescription = null,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -261,7 +261,7 @@ fun FolderBrowserScreen(
                         modifier = Modifier.padding(32.dp)
                     ) {
                         Icon(
-                            Icons.Outlined.FolderOpen,
+                            AxIcons.FolderOpen,
                             contentDescription = null,
                             modifier = Modifier.size(56.dp),
                             tint = MaterialTheme.colorScheme.outline
@@ -331,7 +331,7 @@ fun FolderBrowserScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            Icons.Outlined.Folder,
+                                            AxIcons.Folder,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                             modifier = Modifier.size(24.dp)
@@ -355,7 +355,7 @@ fun FolderBrowserScreen(
                                         )
                                     }
                                     Icon(
-                                        Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                                        AxIcons.ChevronRight,
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp),
                                         tint = MaterialTheme.colorScheme.outline
@@ -491,7 +491,7 @@ fun FolderBrowserScreen(
                                     verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Icon(
-                                        Icons.Outlined.Folder,
+                                        AxIcons.Folder,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(28.dp)

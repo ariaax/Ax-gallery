@@ -183,7 +183,7 @@ fun SettingsScreen(
                 title = { Text(stringResource(R.string.section_settings)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.action_back))
+                        Icon(AxIcons.Back, stringResource(R.string.action_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -199,7 +199,7 @@ fun SettingsScreen(
         ) {
         // Section: Ax Gallery (timeline order, liquid glass, background dates)
         item {
-            SettingsSectionHeader(Icons.Outlined.Palette, "Ax Gallery")
+            SettingsSectionHeader(AxIcons.Palette, "Ax Gallery")
         }
 
         item {
@@ -277,7 +277,7 @@ fun SettingsScreen(
 
         // Section: Language & Region
         item {
-            SettingsSectionHeader(Icons.Outlined.Language, stringResource(R.string.settings_section_language))
+            SettingsSectionHeader(AxIcons.Globe, stringResource(R.string.settings_section_language))
         }
 
         item {
@@ -317,7 +317,7 @@ fun SettingsScreen(
                         )
                     }
                     Icon(
-                        Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                        AxIcons.ChevronRight,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
@@ -328,7 +328,7 @@ fun SettingsScreen(
 
         // Section 1: Appearance & Theme
         item {
-            SettingsSectionHeader(Icons.Outlined.Palette, stringResource(R.string.settings_section_appearance))
+            SettingsSectionHeader(AxIcons.Palette, stringResource(R.string.settings_section_appearance))
         }
 
         item {
@@ -417,7 +417,7 @@ fun SettingsScreen(
                             ) {
                                 if (isSelected) {
                                     Icon(
-                                        Icons.Outlined.Check,
+                                        AxIcons.Check,
                                         contentDescription = null,
                                         tint = Color.White,
                                         modifier = Modifier.size(20.dp)
@@ -432,7 +432,7 @@ fun SettingsScreen(
 
         // Section 2: Layout & Grid Customization
         item {
-            SettingsSectionHeader(Icons.Outlined.GridView, stringResource(R.string.settings_section_layout))
+            SettingsSectionHeader(AxIcons.GridSmall, stringResource(R.string.settings_section_layout))
         }
 
         item {
@@ -542,42 +542,42 @@ fun SettingsScreen(
                         Triple(
                             listOf(colorScheme.primaryContainer, colorScheme.primary.copy(alpha = 0.35f)),
                             colorScheme.onPrimaryContainer,
-                            Icons.Outlined.PhotoCamera
+                            AxIcons.Camera
                         ),
                         Triple(
                             listOf(colorScheme.secondaryContainer, colorScheme.secondary.copy(alpha = 0.3f)),
                             colorScheme.onSecondaryContainer,
-                            Icons.Outlined.Landscape
+                            AxIcons.Photos
                         ),
                         Triple(
                             listOf(colorScheme.tertiaryContainer, colorScheme.tertiary.copy(alpha = 0.35f)),
                             colorScheme.onTertiaryContainer,
-                            Icons.Outlined.Videocam
+                            AxIcons.Video
                         ),
                         Triple(
                             listOf(colorScheme.surfaceVariant, colorScheme.surfaceVariant.copy(alpha = 0.6f)),
                             colorScheme.onSurfaceVariant,
-                            Icons.Outlined.AutoAwesome
+                            AxIcons.Sparkle
                         ),
                         Triple(
                             listOf(colorScheme.inversePrimary.copy(alpha = 0.45f), colorScheme.primaryContainer),
                             colorScheme.primary,
-                            Icons.Outlined.WbSunny
+                            AxIcons.Sun
                         ),
                         Triple(
                             listOf(colorScheme.secondary.copy(alpha = 0.25f), colorScheme.tertiaryContainer),
                             colorScheme.onSecondaryContainer,
-                            Icons.Outlined.Folder
+                            AxIcons.Folder
                         ),
                         Triple(
                             listOf(colorScheme.tertiary.copy(alpha = 0.25f), colorScheme.primaryContainer),
                             colorScheme.onTertiaryContainer,
-                            Icons.Outlined.Image
+                            AxIcons.Photos
                         ),
                         Triple(
                             listOf(colorScheme.primary.copy(alpha = 0.2f), colorScheme.secondaryContainer),
                             colorScheme.onPrimaryContainer,
-                            Icons.Outlined.PhotoAlbum
+                            AxIcons.Albums
                         ),
                     )
 
@@ -647,7 +647,7 @@ fun SettingsScreen(
                                                             modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp),
                                                         ) {
                                                             Icon(
-                                                                Icons.Outlined.PlayArrow,
+                                                                AxIcons.Play,
                                                                 contentDescription = null,
                                                                 tint = Color.White,
                                                                 modifier = Modifier.size(if (photoColumns <= 2) 10.dp else 6.5.dp),
@@ -786,7 +786,7 @@ fun SettingsScreen(
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Icon(
-                                                Icons.Outlined.Folder,
+                                                AxIcons.Folder,
                                                 contentDescription = null,
                                                 tint = albumTint.copy(alpha = 0.5f),
                                                 modifier = Modifier.size(if (albumColumns >= 3) 14.dp else 20.dp),
@@ -924,7 +924,7 @@ fun SettingsScreen(
                                     )
                                 }
                                 Icon(
-                                    Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                                    AxIcons.ChevronRight,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(16.dp)
@@ -1009,7 +1009,7 @@ fun SettingsScreen(
 
         // Section 4: Viewer & Playback
         item {
-            SettingsSectionHeader(Icons.Outlined.PlayCircle, stringResource(R.string.settings_section_viewer))
+            SettingsSectionHeader(AxIcons.PlayCircle, stringResource(R.string.settings_section_viewer))
         }
 
         item {
@@ -1043,7 +1043,7 @@ fun SettingsScreen(
                             )
                         }
                         Icon(
-                            Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                            AxIcons.ChevronRight,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
@@ -1144,7 +1144,7 @@ fun SettingsScreen(
 
         // Section: Memories & Notifications
         item {
-            SettingsSectionHeader(Icons.Outlined.Notifications, stringResource(R.string.settings_section_memories))
+            SettingsSectionHeader(AxIcons.Bell, stringResource(R.string.settings_section_memories))
         }
 
         item {
@@ -1226,7 +1226,7 @@ fun SettingsScreen(
 
         // Section 5: Startup & Security
         item {
-            SettingsSectionHeader(Icons.Outlined.Dashboard, stringResource(R.string.settings_section_behavior))
+            SettingsSectionHeader(AxIcons.GridBig, stringResource(R.string.settings_section_behavior))
         }
 
         item {
@@ -1450,7 +1450,7 @@ fun SettingsScreen(
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
-                                            Icons.Outlined.Check,
+                                            AxIcons.Check,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(18.dp)
@@ -1612,7 +1612,7 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Icon(
-                                    Icons.Outlined.Security,
+                                    AxIcons.Shield,
                                     contentDescription = null,
                                     tint = if (settings.secureSharingMode != SecureSharingMode.OFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp)
@@ -1636,7 +1636,7 @@ fun SettingsScreen(
                             )
                         }
                         Icon(
-                            Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                            AxIcons.ChevronRight,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
@@ -1648,7 +1648,7 @@ fun SettingsScreen(
 
         // Section 6: Cache & Reset
         item {
-            SettingsSectionHeader(Icons.Outlined.CleaningServices, stringResource(R.string.settings_section_storage))
+            SettingsSectionHeader(AxIcons.Sparkle, stringResource(R.string.settings_section_storage))
         }
 
         item {
@@ -1662,7 +1662,7 @@ fun SettingsScreen(
                         onClick = onRescanMedia,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Outlined.Refresh, contentDescription = null)
+                        Icon(AxIcons.Refresh, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.settings_rescan_media))
                     }
@@ -1671,7 +1671,7 @@ fun SettingsScreen(
                         onClick = { showExcludedFoldersDialog = true },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Outlined.FolderOff, contentDescription = null)
+                        Icon(AxIcons.FolderOff, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.excluded_folders_title))
                     }
@@ -1680,7 +1680,7 @@ fun SettingsScreen(
                         onClick = ::clearCache,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Outlined.CleaningServices, contentDescription = null)
+                        Icon(AxIcons.Sparkle, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.settings_clear_cache))
                     }
@@ -1689,7 +1689,7 @@ fun SettingsScreen(
                         onClick = { showResetDialog = true },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Outlined.RestartAlt, contentDescription = null)
+                        Icon(AxIcons.Refresh, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.settings_reset_all))
                     }
@@ -1699,7 +1699,7 @@ fun SettingsScreen(
 
         // Section 7: About Iris Gallery
         item {
-            SettingsSectionHeader(Icons.Outlined.Info, stringResource(R.string.library_about_title))
+            SettingsSectionHeader(AxIcons.Info, stringResource(R.string.library_about_title))
         }
 
         item {
@@ -1729,7 +1729,7 @@ fun SettingsScreen(
                         )
                     }
                     Icon(
-                        Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                        AxIcons.ChevronRight,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
@@ -1887,7 +1887,7 @@ fun SettingsScreen(
             onDismissRequest = { showSecureSharingDialog = false },
             icon = {
                 Icon(
-                    Icons.Outlined.Security,
+                    AxIcons.Shield,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(28.dp)
@@ -1905,9 +1905,9 @@ fun SettingsScreen(
                     SecureSharingMode.values().forEach { mode ->
                         val isSelected = settings.secureSharingMode == mode
                         val modeIcon = when (mode) {
-                            SecureSharingMode.OFF -> Icons.Outlined.Share
-                            SecureSharingMode.STRIP_LOCATION -> Icons.Outlined.LocationOff
-                            SecureSharingMode.STRIP_ALL -> Icons.Outlined.Security
+                            SecureSharingMode.OFF -> AxIcons.Share
+                            SecureSharingMode.STRIP_LOCATION -> AxIcons.LocationOff
+                            SecureSharingMode.STRIP_ALL -> AxIcons.Shield
                         }
                         Surface(
                             shape = RoundedCornerShape(12.dp),
@@ -2067,7 +2067,7 @@ fun ExcludedFoldersDialog(
                                 onRemoveExcludedFolder(folderPath)
                                 Toast.makeText(context, R.string.toast_folder_unexcluded, Toast.LENGTH_SHORT).show()
                             }) {
-                                Icon(Icons.Outlined.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                Icon(AxIcons.Trash, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -2076,7 +2076,7 @@ fun ExcludedFoldersDialog(
         },
         dismissButton = {
             TextButton(onClick = { showChooserDialog = true }) {
-                Icon(Icons.Outlined.Add, null, modifier = Modifier.size(18.dp))
+                Icon(AxIcons.Plus, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(stringResource(R.string.action_add_excluded_folder))
             }
@@ -2110,7 +2110,7 @@ fun ExcludedFoldersDialog(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Icon(
-                                Icons.Outlined.PhotoAlbum,
+                                AxIcons.Albums,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp)
@@ -2146,7 +2146,7 @@ fun ExcludedFoldersDialog(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Icon(
-                                Icons.Outlined.FolderOpen,
+                                AxIcons.FolderOpen,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp)

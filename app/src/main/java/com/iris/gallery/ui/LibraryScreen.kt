@@ -71,17 +71,17 @@ fun LibraryScreen(
                 modifier = Modifier.padding(vertical = 8.dp)
             )
         }
-        item { LibraryCard(Icons.Outlined.Videocam, stringResource(R.string.section_videos), stringResource(R.string.section_videos_desc, videoCount)) { onOpen("videos") } }
-        item { LibraryCard(Icons.Outlined.AutoAwesome, stringResource(R.string.library_memories_title), stringResource(R.string.library_memories_subtitle)) { onOpen("memories") } }
-        item { LibraryCard(Icons.Outlined.ContentCopy, stringResource(R.string.library_duplicates_title), stringResource(R.string.library_duplicates_subtitle)) { onOpen("duplicates") } }
-        item { LibraryCard(Icons.Outlined.Lock, stringResource(R.string.library_locked_title), stringResource(R.string.library_locked_subtitle, lockedCount)) { onOpen("locked") } }
-        item { LibraryCard(Icons.Outlined.DeleteOutline, stringResource(R.string.library_trash_title), stringResource(R.string.library_trash_subtitle, trashCount)) { onOpen("trash") } }
-        item { LibraryCard(Icons.Outlined.Edit, stringResource(R.string.library_editor_title), stringResource(R.string.library_editor_subtitle)) { onOpen("editor") } }
-        item { LibraryCard(Icons.Outlined.Category, stringResource(R.string.library_smart_title), stringResource(R.string.library_smart_subtitle)) { onOpen("smart") } }
-        item { LibraryCard(Icons.Outlined.PhotoLibrary, stringResource(R.string.library_formats_title), stringResource(R.string.library_formats_subtitle)) { onOpen("formats") } }
-        item { LibraryCard(Icons.Outlined.Folder, stringResource(R.string.section_folder_view), stringResource(R.string.section_folder_view_desc)) { onOpen("folder_view") } }
-        item { LibraryCard(Icons.Outlined.FolderOff, stringResource(R.string.excluded_folders_title), stringResource(R.string.excluded_folders_desc)) { onOpen("excluded_folders") } }
-        item { LibraryCard(Icons.Outlined.Refresh, stringResource(R.string.rescan_media_title), stringResource(R.string.rescan_media_subtitle)) { onOpen("rescan") } }
+        item { LibraryCard(AxIcons.Video, stringResource(R.string.section_videos), stringResource(R.string.section_videos_desc, videoCount)) { onOpen("videos") } }
+        item { LibraryCard(AxIcons.Sparkle, stringResource(R.string.library_memories_title), stringResource(R.string.library_memories_subtitle)) { onOpen("memories") } }
+        item { LibraryCard(AxIcons.Copy, stringResource(R.string.library_duplicates_title), stringResource(R.string.library_duplicates_subtitle)) { onOpen("duplicates") } }
+        item { LibraryCard(AxIcons.Lock, stringResource(R.string.library_locked_title), stringResource(R.string.library_locked_subtitle, lockedCount)) { onOpen("locked") } }
+        item { LibraryCard(AxIcons.Trash, stringResource(R.string.library_trash_title), stringResource(R.string.library_trash_subtitle, trashCount)) { onOpen("trash") } }
+        item { LibraryCard(AxIcons.Edit, stringResource(R.string.library_editor_title), stringResource(R.string.library_editor_subtitle)) { onOpen("editor") } }
+        item { LibraryCard(AxIcons.GridSmall, stringResource(R.string.library_smart_title), stringResource(R.string.library_smart_subtitle)) { onOpen("smart") } }
+        item { LibraryCard(AxIcons.Photos, stringResource(R.string.library_formats_title), stringResource(R.string.library_formats_subtitle)) { onOpen("formats") } }
+        item { LibraryCard(AxIcons.Folder, stringResource(R.string.section_folder_view), stringResource(R.string.section_folder_view_desc)) { onOpen("folder_view") } }
+        item { LibraryCard(AxIcons.FolderOff, stringResource(R.string.excluded_folders_title), stringResource(R.string.excluded_folders_desc)) { onOpen("excluded_folders") } }
+        item { LibraryCard(AxIcons.Refresh, stringResource(R.string.rescan_media_title), stringResource(R.string.rescan_media_subtitle)) { onOpen("rescan") } }
     }
 }
 

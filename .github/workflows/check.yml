@@ -1,0 +1,41 @@
+name: Check build (work branches)
+
+# Runs on every branch except main. A change is pushed to a work branch first; only when this check
+# is green is it merged into main (which then builds and publishes the signed APK).
+on:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Compile and package (unsigned)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Prepare Gradle
+        run: |
+          chmod +x gradlew
+          if [ -f gradle.properties ]; then
+            sed -i '/android.aapt2FromMavenOverride/d' gradle.properties
+          fi
+
+      - name: Build release APK (no signing)
+        run: |
+          set -o pipefail
+          ./gradlew assembleRelease 2>&1 | tee build.log
+
+      - name: Show compile errors
+        if: failure()
+        run: |
+          grep -E '^e: ' build.log | sed 's#file:///home/runner/work/[^/]*/[^/]*/##' | head -10 | while IFS= read -r line; do echo "::error::$line"; done

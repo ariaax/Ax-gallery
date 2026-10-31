@@ -303,11 +303,11 @@ fun AlbumsGrid(
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text(stringResource(com.iris.gallery.R.string.search_albums_placeholder, categorizedAlbums.size)) },
-                        leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                        leadingIcon = { Icon(AxIcons.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Filled.Clear, contentDescription = stringResource(com.iris.gallery.R.string.clear_search))
+                                    Icon(AxIcons.Close, contentDescription = stringResource(com.iris.gallery.R.string.clear_search))
                                 }
                             }
                         },
@@ -371,7 +371,7 @@ fun AlbumsGrid(
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Outlined.Sort,
+                                        imageVector = AxIcons.Sort,
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp)
                                     )
@@ -399,7 +399,7 @@ fun AlbumsGrid(
                                         trailingIcon = if (sort == value) {
                                             {
                                                 Icon(
-                                                    Icons.Filled.Check,
+                                                    AxIcons.Check,
                                                     null,
                                                     modifier = Modifier.size(18.dp),
                                                     tint = MaterialTheme.colorScheme.primary
@@ -549,7 +549,7 @@ fun AlbumsGrid(
                                         }
                                     ) {
                                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                            Icon(Icons.Outlined.VerticalAlignTop, contentDescription = androidx.compose.ui.res.stringResource(com.iris.gallery.R.string.action_move_to_top), modifier = Modifier.size(15.dp))
+                                            Icon(AxIcons.ArrowUp, contentDescription = androidx.compose.ui.res.stringResource(com.iris.gallery.R.string.action_move_to_top), modifier = Modifier.size(15.dp))
                                         }
                                     }
                                     Surface(
@@ -564,7 +564,7 @@ fun AlbumsGrid(
                                         }
                                     ) {
                                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                            Icon(Icons.Outlined.ArrowUpward, null, modifier = Modifier.size(15.dp))
+                                            Icon(AxIcons.ArrowUp, null, modifier = Modifier.size(15.dp))
                                         }
                                     }
                                 }
@@ -581,7 +581,7 @@ fun AlbumsGrid(
                                         }
                                     ) {
                                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                            Icon(Icons.Outlined.ArrowDownward, null, modifier = Modifier.size(15.dp))
+                                            Icon(AxIcons.ArrowDown, null, modifier = Modifier.size(15.dp))
                                         }
                                     }
                                     Surface(
@@ -596,7 +596,7 @@ fun AlbumsGrid(
                                         }
                                     ) {
                                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                            Icon(Icons.Outlined.VerticalAlignBottom, contentDescription = androidx.compose.ui.res.stringResource(com.iris.gallery.R.string.action_move_to_bottom), modifier = Modifier.size(15.dp))
+                                            Icon(AxIcons.ArrowDown, contentDescription = androidx.compose.ui.res.stringResource(com.iris.gallery.R.string.action_move_to_bottom), modifier = Modifier.size(15.dp))
                                         }
                                     }
                                 }
@@ -729,7 +729,7 @@ fun AlbumsGrid(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    Icons.Outlined.Lock,
+                                    AxIcons.Lock,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(22.dp)
@@ -778,7 +778,7 @@ fun AlbumsGrid(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    Icons.Outlined.FolderOff,
+                                    AxIcons.FolderOff,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(22.dp)
@@ -827,7 +827,7 @@ fun AlbumsGrid(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                                    if (isPinned) Icons.Filled.PushPin else AxIcons.Pin,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                     modifier = Modifier.size(22.dp)

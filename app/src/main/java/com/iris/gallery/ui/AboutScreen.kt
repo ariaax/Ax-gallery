@@ -99,7 +99,7 @@ fun AboutScreen(
                 title = { Text(androidx.compose.ui.res.stringResource(R.string.section_about)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, androidx.compose.ui.res.stringResource(R.string.action_back))
+                        Icon(AxIcons.Back, androidx.compose.ui.res.stringResource(R.string.action_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -207,7 +207,7 @@ fun AboutScreen(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                     AboutLinkRow(
-                        icon = Icons.Outlined.Language,
+                        icon = AxIcons.Globe,
                         title = androidx.compose.ui.res.stringResource(R.string.about_website_label),
                         subtitle = "github.com/ariaax"
                     ) { openUrl("https://github.com/ariaax") }
@@ -215,7 +215,7 @@ fun AboutScreen(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                     AboutLinkRow(
-                        icon = Icons.Outlined.Code,
+                        icon = AxIcons.Code,
                         title = androidx.compose.ui.res.stringResource(R.string.about_source_label),
                         subtitle = androidx.compose.ui.res.stringResource(R.string.about_source_url)
                     ) { openUrl("https://github.com/ariaax/Ax-gallery") }
@@ -223,7 +223,7 @@ fun AboutScreen(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                     AboutLinkRow(
-                        icon = Icons.Outlined.VerifiedUser,
+                        icon = AxIcons.Shield,
                         title = androidx.compose.ui.res.stringResource(R.string.about_license_label),
                         subtitle = androidx.compose.ui.res.stringResource(R.string.about_license_name)
                     ) { openUrl("https://github.com/ariaax/Ax-gallery/blob/main/LICENSE") }
@@ -392,7 +392,7 @@ fun MesopotamiaOpticsSheet(onClose: () -> Unit) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(
-                        Icons.Outlined.Camera,
+                        AxIcons.Camera,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(28.dp)

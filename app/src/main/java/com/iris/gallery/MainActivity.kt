@@ -1498,7 +1498,7 @@ private fun GalleryApp(
                         shape = RoundedCornerShape(28.dp),
                         modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
                         onDismissRequest = { showAllFilesAccessPromptDialog = false; pendingVaultItems = null },
-                        icon = { Icon(Icons.Outlined.Lock, null, tint = MaterialTheme.colorScheme.primary) },
+                        icon = { Icon(AxIcons.Lock, null, tint = MaterialTheme.colorScheme.primary) },
                         title = { Text(stringResource(R.string.prompt_free_vault_title)) },
                         text = {
                             Text(stringResource(R.string.prompt_free_vault_desc))
@@ -1829,7 +1829,7 @@ private fun PermissionScreen(onGrant: () -> Unit) {
             verticalArrangement = Arrangement.Center,
         ) {
             Icon(
-                Icons.Outlined.PhotoLibrary,
+                AxIcons.Photos,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.primary,
@@ -2379,11 +2379,11 @@ private fun GalleryScaffold(
                                     overflow = TextOverflow.Ellipsis
                                 )
                             },
-                            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            leadingIcon = { Icon(AxIcons.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                             trailingIcon = {
                                 if (fileSearchQuery.isNotEmpty()) {
                                     IconButton(onClick = { fileSearchQuery = "" }) {
-                                        Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.clear_search))
+                                        Icon(AxIcons.Close, contentDescription = stringResource(R.string.clear_search))
                                     }
                                 }
                             },
@@ -2460,12 +2460,12 @@ private fun GalleryScaffold(
                     if (selectedIds.isNotEmpty()) {
                         if (destination == 3 && librarySection == "trash") {
                             AxBarButton(onClick = { val selected = activeMedia.filter { it.id in selectedIds }; clearSelection(); handleRestore(selected) }) {
-                                Icon(Icons.Outlined.RestoreFromTrash, stringResource(R.string.action_restore))
+                                Icon(AxIcons.Restore, stringResource(R.string.action_restore))
                             }
                         }
                         if (destination == 3 && librarySection == "locked") {
                             AxBarButton(onClick = { val selected = activeMedia.filter { it.id in selectedIds }; clearSelection(); onUnlockMedia(selected) }) {
-                                Icon(Icons.Outlined.LockOpen, stringResource(R.string.action_remove_from_locked))
+                                Icon(AxIcons.LockOpen, stringResource(R.string.action_remove_from_locked))
                             }
                         }
                         AxBarButton(onClick = ::shareSelection) { Icon(AxIcons.Share, stringResource(R.string.action_share)) }
@@ -2484,22 +2484,22 @@ private fun GalleryScaffold(
                                     handleTrash(selected)
                                 }
                             }
-                        }) { Icon(Icons.Outlined.DeleteOutline, stringResource(R.string.action_delete)) }
+                        }) { Icon(AxIcons.Trash, stringResource(R.string.action_delete)) }
                         Box {
                             AxBarButton(onClick = { selectionMenuExpanded = true }) {
                                 Icon(AxIcons.Flower, stringResource(R.string.action_more))
                             }
                             DropdownMenu(selectionMenuExpanded, onDismissRequest = { selectionMenuExpanded = false }) {
-                                DropdownMenuItem(text = { Text(stringResource(R.string.action_select_all)) }, leadingIcon = { Icon(Icons.Outlined.SelectAll, null) },
+                                DropdownMenuItem(text = { Text(stringResource(R.string.action_select_all)) }, leadingIcon = { Icon(AxIcons.SelectAll, null) },
                                     onClick = { selectionMenuExpanded = false; selectedIds = activeMedia.mapTo(mutableSetOf()) { it.id } })
                                 if (destination == 1 && selectedAlbum != null && selectedIds.size == 1) {
-                                    DropdownMenuItem(text = { Text(stringResource(R.string.action_set_album_cover)) }, leadingIcon = { Icon(Icons.Outlined.Wallpaper, null) },
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.action_set_album_cover)) }, leadingIcon = { Icon(AxIcons.Photos, null) },
                                         onClick = { selectionMenuExpanded = false; onSetAlbumCover(selectedAlbum!!.id, selectedIds.first()); clearSelection() })
                                 }
                                 if (!(destination == 3 && (librarySection == "trash" || librarySection == "locked"))) {
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.action_move_to_album)) },
-                                        leadingIcon = { Icon(Icons.Outlined.DriveFileMove, null) },
+                                        leadingIcon = { Icon(AxIcons.MoveTo, null) },
                                         onClick = {
                                             selectionMenuExpanded = false
                                             val selected = activeMedia.filter { it.id in selectedIds }
@@ -2509,7 +2509,7 @@ private fun GalleryScaffold(
                                     )
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.action_copy_to_album)) },
-                                        leadingIcon = { Icon(Icons.Outlined.ContentCopy, null) },
+                                        leadingIcon = { Icon(AxIcons.Copy, null) },
                                         onClick = {
                                             selectionMenuExpanded = false
                                             val selected = activeMedia.filter { it.id in selectedIds }
@@ -2519,7 +2519,7 @@ private fun GalleryScaffold(
                                     )
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.action_delete_permanently), color = MaterialTheme.colorScheme.error) },
-                                        leadingIcon = { Icon(Icons.Outlined.DeleteForever, null, tint = MaterialTheme.colorScheme.error) },
+                                        leadingIcon = { Icon(AxIcons.TrashX, null, tint = MaterialTheme.colorScheme.error) },
                                         onClick = {
                                             selectionMenuExpanded = false
                                             val selected = activeMedia.filter { it.id in selectedIds }
@@ -2530,7 +2530,7 @@ private fun GalleryScaffold(
                                     )
                                 }
                                 if (destination == 3 && librarySection == "locked") {
-                                    DropdownMenuItem(text = { Text(stringResource(R.string.action_remove_from_locked)) }, leadingIcon = { Icon(Icons.Outlined.LockOpen, null) },
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.action_remove_from_locked)) }, leadingIcon = { Icon(AxIcons.LockOpen, null) },
                                         onClick = {
                                             selectionMenuExpanded = false
                                             val selected = activeMedia.filter { it.id in selectedIds }
@@ -2538,7 +2538,7 @@ private fun GalleryScaffold(
                                             onUnlockMedia(selected)
                                         })
                                 } else if (!(destination == 3 && librarySection == "trash")) {
-                                    DropdownMenuItem(text = { Text(stringResource(R.string.action_move_to_locked)) }, leadingIcon = { Icon(Icons.Outlined.Lock, null) },
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.action_move_to_locked)) }, leadingIcon = { Icon(AxIcons.Lock, null) },
                                         onClick = {
                                             selectionMenuExpanded = false
                                             val selected = activeMedia.filter { it.id in selectedIds }
@@ -2654,7 +2654,7 @@ private fun GalleryScaffold(
                                     val isPinned = selectedAlbum!!.id in pinnedAlbums
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.action_lock_album)) },
-                                        leadingIcon = { Icon(Icons.Outlined.Lock, null) },
+                                        leadingIcon = { Icon(AxIcons.Lock, null) },
                                         onClick = {
                                             albumOptionsMenuExpanded = false
                                             onLockMedia(selectedAlbum!!.images)
@@ -2663,7 +2663,7 @@ private fun GalleryScaffold(
                                     )
                                     DropdownMenuItem(
                                         text = { Text(stringResource(R.string.action_exclude_folder)) },
-                                        leadingIcon = { Icon(Icons.Outlined.FolderOff, null) },
+                                        leadingIcon = { Icon(AxIcons.FolderOff, null) },
                                         onClick = {
                                             albumOptionsMenuExpanded = false
                                             val samplePath = selectedAlbum!!.images.firstOrNull { it.path.isNotBlank() }?.path.orEmpty()
@@ -2680,7 +2680,7 @@ private fun GalleryScaffold(
                                             Text(stringResource(if (isPinned) R.string.album_unpin else R.string.album_pin))
                                         },
                                         leadingIcon = {
-                                            Icon(if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin, null)
+                                            Icon(if (isPinned) Icons.Filled.PushPin else AxIcons.Pin, null)
                                         },
                                         onClick = {
                                             albumOptionsMenuExpanded = false
@@ -2692,7 +2692,7 @@ private fun GalleryScaffold(
                         }
                         if (destination == 3 && librarySection == "trash" && trashed.isNotEmpty()) {
                             TextButton(onClick = { confirmEmptyTrash = true }) {
-                                Icon(Icons.Outlined.DeleteForever, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                                Icon(AxIcons.TrashX, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
                                 Spacer(Modifier.width(4.dp))
                                 Text(stringResource(R.string.action_empty_trash), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                             }
@@ -2714,7 +2714,7 @@ private fun GalleryScaffold(
                         if (destination == 1 && selectedAlbum == null && albumSort == com.iris.gallery.data.AlbumSort.CUSTOM) {
                             AxBarButton(onClick = { isEditingAlbumOrder = !isEditingAlbumOrder }) {
                                 Icon(
-                                    if (isEditingAlbumOrder) Icons.Filled.Check else Icons.Outlined.Edit,
+                                    if (isEditingAlbumOrder) Icons.Filled.Check else AxIcons.Edit,
                                     contentDescription = stringResource(
                                         if (isEditingAlbumOrder) R.string.action_done_editing else R.string.action_edit_order
                                     ),
@@ -3160,7 +3160,7 @@ private fun GalleryScaffold(
                                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Outlined.Notifications,
+                                                imageVector = AxIcons.Bell,
                                                 contentDescription = null,
                                                 tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(24.dp)
@@ -3183,7 +3183,7 @@ private fun GalleryScaffold(
                                                 modifier = Modifier.size(32.dp)
                                             ) {
                                                 Icon(
-                                                    imageVector = Icons.Outlined.Close,
+                                                    imageVector = AxIcons.Close,
                                                     contentDescription = stringResource(R.string.action_close),
                                                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                                     modifier = Modifier.size(18.dp)
@@ -4035,11 +4035,11 @@ private fun GalleryScaffold(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         val icon = when (feedback.type) {
-                            TrashFeedbackType.MOVED_TO_TRASH -> Icons.Outlined.DeleteOutline
-                            TrashFeedbackType.RESTORED -> Icons.Outlined.RestoreFromTrash
-                            TrashFeedbackType.PERMANENTLY_DELETED -> Icons.Outlined.DeleteForever
-                            TrashFeedbackType.MOVED_TO_ALBUM -> Icons.Outlined.DriveFileMove
-                            TrashFeedbackType.COPIED_TO_ALBUM -> Icons.Outlined.ContentCopy
+                            TrashFeedbackType.MOVED_TO_TRASH -> AxIcons.Trash
+                            TrashFeedbackType.RESTORED -> AxIcons.Restore
+                            TrashFeedbackType.PERMANENTLY_DELETED -> AxIcons.TrashX
+                            TrashFeedbackType.MOVED_TO_ALBUM -> AxIcons.MoveTo
+                            TrashFeedbackType.COPIED_TO_ALBUM -> AxIcons.Copy
                         }
                         val tint = when (feedback.type) {
                             TrashFeedbackType.MOVED_TO_TRASH -> MaterialTheme.colorScheme.primary
@@ -4203,7 +4203,7 @@ private fun DuplicateReviewScreen(
                                     Surface(Modifier.align(Alignment.TopEnd).padding(6.dp),
                                         shape = RoundedCornerShape(50),
                                         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface.copy(alpha = .86f)) {
-                                        Icon(if (selected) Icons.Filled.CheckCircle else Icons.Outlined.Close,
+                                        Icon(if (selected) Icons.Filled.CheckCircle else AxIcons.Close,
                                             if (selected) stringResource(R.string.duplicates_remove) else stringResource(R.string.duplicates_keep), Modifier.padding(5.dp).size(18.dp),
                                             tint = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
                                     }
@@ -5647,7 +5647,7 @@ private fun PhotoViewer(
             modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
           ) {
-            IconButton(onClick = { triggerAnimatedDismiss() }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(Icons.Outlined.ArrowBack, stringResource(R.string.action_back), tint = Color.White) }
+            IconButton(onClick = { triggerAnimatedDismiss() }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(AxIcons.Back, stringResource(R.string.action_back), tint = Color.White) }
             val currentLocale = rememberAppLocale()
             val headerDate = remember(current.dateTaken, currentLocale, timelineDateFormat, smartYearHiding, customTimelineDateFormat, showViewerTime) {
                 val localDate = Instant.ofEpochMilli(current.dateTaken).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -5725,7 +5725,7 @@ private fun PhotoViewer(
                     ) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_move_to_album)) },
-                            leadingIcon = { Icon(Icons.Outlined.DriveFileMove, null) },
+                            leadingIcon = { Icon(AxIcons.MoveTo, null) },
                             onClick = {
                                 viewerMenuExpanded = false
                                 viewerAlbumAction = AlbumAction.MOVE
@@ -5733,7 +5733,7 @@ private fun PhotoViewer(
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_copy_to_album)) },
-                            leadingIcon = { Icon(Icons.Outlined.ContentCopy, null) },
+                            leadingIcon = { Icon(AxIcons.Copy, null) },
                             onClick = {
                                 viewerMenuExpanded = false
                                 viewerAlbumAction = AlbumAction.COPY
@@ -5741,7 +5741,7 @@ private fun PhotoViewer(
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_rename)) },
-                            leadingIcon = { Icon(Icons.Outlined.Edit, null) },
+                            leadingIcon = { Icon(AxIcons.Edit, null) },
                             onClick = {
                                 viewerMenuExpanded = false
                                 showRenameDialog = true
@@ -5750,7 +5750,7 @@ private fun PhotoViewer(
                         if (!current.isVideo) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_set_as_wallpaper)) },
-                                leadingIcon = { Icon(Icons.Outlined.Wallpaper, null) },
+                                leadingIcon = { Icon(AxIcons.Photos, null) },
                                 onClick = {
                                     viewerMenuExpanded = false
                                     showWallpaperSheet = true
@@ -5758,7 +5758,7 @@ private fun PhotoViewer(
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_edit_builtin)) },
-                                leadingIcon = { Icon(Icons.Outlined.AutoFixHigh, null) },
+                                leadingIcon = { Icon(AxIcons.Sparkle, null) },
                                 onClick = {
                                     viewerMenuExpanded = false
                                     onEdit(current)
@@ -5766,7 +5766,7 @@ private fun PhotoViewer(
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_edit_external)) },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, null) },
+                                leadingIcon = { Icon(AxIcons.External, null) },
                                 onClick = {
                                     viewerMenuExpanded = false
                                     launchExternalEditor(context, current)
@@ -5775,7 +5775,7 @@ private fun PhotoViewer(
                         } else {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_edit_external)) },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, null) },
+                                leadingIcon = { Icon(AxIcons.External, null) },
                                 onClick = {
                                     viewerMenuExpanded = false
                                     launchExternalEditor(context, current)
@@ -5784,7 +5784,7 @@ private fun PhotoViewer(
                         }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_delete_permanently), color = MaterialTheme.colorScheme.error) },
-                            leadingIcon = { Icon(Icons.Outlined.DeleteForever, null, tint = MaterialTheme.colorScheme.error) },
+                            leadingIcon = { Icon(AxIcons.TrashX, null, tint = MaterialTheme.colorScheme.error) },
                             onClick = {
                                 viewerMenuExpanded = false
                                 directPermanentDelete = true
@@ -5927,7 +5927,7 @@ private fun PhotoViewer(
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Icon(
-                                            Icons.Outlined.PlayArrow,
+                                            AxIcons.Play,
                                             contentDescription = null,
                                             tint = Color.White,
                                             modifier = Modifier.size(14.dp),
@@ -5940,14 +5940,14 @@ private fun PhotoViewer(
         val actionButtons: @Composable (Boolean) -> Unit = { compact ->
                 if (isInTrash) {
                     ViewerIconButton(compact = compact,
-                        icon = Icons.Outlined.RestoreFromTrash,
+                        icon = AxIcons.Restore,
                         label = stringResource(R.string.action_restore),
                     ) {
                         onRestore(current)
                         handleClose()
                     }
                     ViewerIconButton(compact = compact,
-                        icon = Icons.Outlined.DeleteForever,
+                        icon = AxIcons.TrashX,
                         label = stringResource(R.string.action_delete_permanently),
                         tint = MaterialTheme.colorScheme.error,
                     ) {
@@ -6042,7 +6042,7 @@ private fun PhotoViewer(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.Comment,
+                            imageVector = AxIcons.Comment,
                             contentDescription = null,
                             tint = viewerAccent,
                             modifier = Modifier.size(18.dp),
@@ -6078,7 +6078,7 @@ private fun PhotoViewer(
                             modifier = Modifier.weight(1f),
                         ) {
                             Icon(
-                                Icons.Outlined.Info,
+                                AxIcons.Info,
                                 contentDescription = null,
                                 tint = viewerAccent,
                                 modifier = Modifier.size(15.dp),
@@ -6098,7 +6098,7 @@ private fun PhotoViewer(
                             modifier = Modifier.size(24.dp),
                         ) {
                             Icon(
-                                Icons.Outlined.Close,
+                                AxIcons.Close,
                                 contentDescription = stringResource(R.string.action_close),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(14.dp),
@@ -6128,7 +6128,7 @@ private fun PhotoViewer(
                                 modifier = Modifier.weight(1f),
                             ) {
                                 Icon(
-                                    Icons.Outlined.Info,
+                                    AxIcons.Info,
                                     contentDescription = null,
                                     tint = viewerAccent,
                                     modifier = Modifier.size(15.dp),
@@ -6145,7 +6145,7 @@ private fun PhotoViewer(
                                 modifier = Modifier.size(24.dp),
                             ) {
                                 Icon(
-                                    Icons.Outlined.Close,
+                                    AxIcons.Close,
                                     contentDescription = stringResource(R.string.action_close),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(14.dp),
@@ -6201,7 +6201,7 @@ private fun PhotoViewer(
                                 .clickable { showSecureSharingModePicker = true },
                         ) {
                             Icon(
-                                Icons.Outlined.Security,
+                                AxIcons.Shield,
                                 contentDescription = null,
                                 tint = viewerAccent,
                                 modifier = Modifier.size(15.dp),
@@ -6224,7 +6224,7 @@ private fun PhotoViewer(
                             modifier = Modifier.size(24.dp),
                         ) {
                             Icon(
-                                Icons.Outlined.Close,
+                                AxIcons.Close,
                                 contentDescription = stringResource(R.string.action_close),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(14.dp),
@@ -6312,7 +6312,7 @@ private fun PhotoViewer(
                                     Modifier.fillMaxWidth().height(28.dp).clickable { docksExpanded = false },
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    Icon(Icons.Outlined.ChevronLeft, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
+                                    Icon(AxIcons.ChevronLeft, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
                                 }
                                 LazyColumn(
                                     state = sideFilmState,
@@ -6333,7 +6333,7 @@ private fun PhotoViewer(
                             }
                         }
                     } else {
-                        AxDockTab(viewerGlass, Icons.Outlined.PhotoLibrary, "Media") { docksExpanded = true; dockTick++ }
+                        AxDockTab(viewerGlass, AxIcons.Photos, "Media") { docksExpanded = true; dockTick++ }
                     }
                 }
             }
@@ -6370,13 +6370,13 @@ private fun PhotoViewer(
                                     Modifier.size(width = 36.dp, height = 28.dp).clickable { docksExpanded = false },
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
+                                    Icon(AxIcons.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
                                 }
                                 actionButtons(true)
                             }
                         }
                     } else {
-                        AxDockTab(viewerGlass, Icons.Outlined.Tune, "Actions") { docksExpanded = true; dockTick++ }
+                        AxDockTab(viewerGlass, AxIcons.Sliders, "Actions") { docksExpanded = true; dockTick++ }
                     }
                 }
             }
@@ -6484,7 +6484,7 @@ private fun PhotoViewer(
                                     .padding(12.dp),
                             ) {
                                 Icon(
-                                    Icons.Outlined.PlayArrow,
+                                    AxIcons.Play,
                                     contentDescription = null,
                                     tint = Color.White,
                                     modifier = Modifier.size(28.dp),
@@ -6706,7 +6706,7 @@ private fun PhotoViewer(
             onDismissRequest = { showSecureSharingHintDialog = false },
             icon = {
                 Icon(
-                    Icons.Outlined.Security,
+                    AxIcons.Shield,
                     contentDescription = null,
                     tint = viewerAccent,
                     modifier = Modifier.size(28.dp)
@@ -6786,7 +6786,7 @@ private fun PhotoViewer(
             onDismissRequest = { showSecureSharingModePicker = false },
             icon = {
                 Icon(
-                    Icons.Outlined.Security,
+                    AxIcons.Shield,
                     contentDescription = null,
                     tint = viewerAccent,
                     modifier = Modifier.size(28.dp)
@@ -6804,9 +6804,9 @@ private fun PhotoViewer(
                     SecureSharingMode.values().forEach { mode ->
                         val isSelected = secureSharingMode == mode
                         val modeIcon = when (mode) {
-                            SecureSharingMode.OFF -> Icons.Outlined.Share
-                            SecureSharingMode.STRIP_LOCATION -> Icons.Outlined.LocationOff
-                            SecureSharingMode.STRIP_ALL -> Icons.Outlined.Security
+                            SecureSharingMode.OFF -> AxIcons.Share
+                            SecureSharingMode.STRIP_LOCATION -> AxIcons.LocationOff
+                            SecureSharingMode.STRIP_ALL -> AxIcons.Shield
                         }
                         Surface(
                             shape = RoundedCornerShape(12.dp),
@@ -7442,7 +7442,7 @@ private fun ZoomablePhoto(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            Icons.Outlined.PlayArrow,
+                            AxIcons.Play,
                             contentDescription = stringResource(R.string.motion_play),
                             tint = Color.White,
                             modifier = Modifier.size(28.dp),
@@ -7600,7 +7600,7 @@ private fun PhotoDetailsSheet(
                             modifier = Modifier.size(36.dp),
                         ) {
                             Icon(
-                                Icons.AutoMirrored.Outlined.ArrowBack,
+                                AxIcons.Back,
                                 contentDescription = stringResource(R.string.action_previous),
                                 tint = if (canNavigatePrevious) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                 modifier = Modifier.size(20.dp),
@@ -7612,7 +7612,7 @@ private fun PhotoDetailsSheet(
                             modifier = Modifier.size(36.dp),
                         ) {
                             Icon(
-                                Icons.AutoMirrored.Outlined.ArrowBack,
+                                AxIcons.Back,
                                 contentDescription = stringResource(R.string.action_next),
                                 tint = if (canNavigateNext) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                 modifier = Modifier.size(20.dp).graphicsLayer(scaleX = -1f),
@@ -7649,7 +7649,7 @@ private fun PhotoDetailsSheet(
                 ) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.AutoMirrored.Outlined.Comment, stringResource(R.string.details_section_description), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Icon(AxIcons.Comment, stringResource(R.string.details_section_description), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                             Text(stringResource(R.string.details_section_description), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         }
                         if (resolvedTitle != null) {
@@ -7726,7 +7726,7 @@ private fun PhotoDetailsSheet(
                 ) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Outlined.LocationOn, stringResource(R.string.details_section_origin), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Icon(AxIcons.Location, stringResource(R.string.details_section_origin), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                             Text(stringResource(R.string.details_section_origin), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         }
                         if (!parsedCapturedDate.isNullOrBlank()) {
@@ -7782,7 +7782,7 @@ private fun PhotoDetailsSheet(
                     ) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Icon(Icons.Outlined.CameraAlt, stringResource(R.string.details_camera), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                Icon(AxIcons.Camera, stringResource(R.string.details_camera), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                 Text(stringResource(R.string.details_camera), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             }
                             if (data.cameraDisplayName != null) {
@@ -7832,7 +7832,7 @@ private fun PhotoDetailsSheet(
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(
-                            if (isVideo) Icons.Outlined.Videocam else Icons.Outlined.Image,
+                            if (isVideo) AxIcons.Video else AxIcons.Photos,
                             if (isVideo) stringResource(R.string.details_video_properties) else stringResource(R.string.details_image_properties),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
@@ -7877,7 +7877,7 @@ private fun PhotoDetailsSheet(
             ) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Outlined.Description, stringResource(R.string.details_file_info), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Icon(AxIcons.Doc, stringResource(R.string.details_file_info), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         Text(stringResource(R.string.details_file_info), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     }
                     Column(
@@ -7898,7 +7898,7 @@ private fun PhotoDetailsSheet(
                                 modifier = Modifier.size(28.dp)
                             ) {
                                 Icon(
-                                    Icons.Outlined.Edit,
+                                    AxIcons.Edit,
                                     contentDescription = stringResource(R.string.action_rename),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp),
@@ -7967,7 +7967,7 @@ private fun PhotoDetailsSheet(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                 ) {
-                    Icon(Icons.Outlined.Edit, null, modifier = Modifier.size(18.dp))
+                    Icon(AxIcons.Edit, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.details_edit_metadata))
                 }
