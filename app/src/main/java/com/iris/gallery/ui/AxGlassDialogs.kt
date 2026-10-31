@@ -280,11 +280,16 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
         animationSpec = androidx.compose.animation.core.tween(900),
         label = "titleBadge",
     )
+    // Telegram-style: the title sits in its own soft capsule
     androidx.compose.foundation.layout.Row(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(c.copy(alpha = 0.12f), CircleShape)
+            .padding(start = if (badge != null && album != null) 8.dp else 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
     ) {
-        if (badge != null && album != null) AlbumAppBadge(album, Modifier.size(30.dp))
+        if (badge != null && album != null) AlbumAppBadge(album, Modifier.size(28.dp))
         Text(
             text = text,
             maxLines = 1,
@@ -292,7 +297,7 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Bold,
-                fontSize = 26.sp,
+                fontSize = 20.sp,
                 color = c,
             ),
         )

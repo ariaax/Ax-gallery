@@ -489,6 +489,8 @@ class MainActivity : ComponentActivity() {
                 amoledBlack = settings.amoledBlack,
                 accentColor = settings.accentColor,
             ) {
+              var introDone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+              Box(Modifier.fillMaxSize()) {
                 GalleryApp(
                     settings = settings,
                     settingsPreferences = settingsPreferences,
@@ -508,6 +510,10 @@ class MainActivity : ComponentActivity() {
                         finish()
                     }} else null,
                 )
+                if (!introDone && !pickerMode && viewUri == null) {
+                    com.iris.gallery.ui.AxLiquidIntro { introDone = true }
+                }
+              }
             }
         }
     }

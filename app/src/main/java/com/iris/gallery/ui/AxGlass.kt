@@ -54,6 +54,9 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
@@ -409,11 +412,7 @@ fun AxGlassNavBar(
                                 if (sel) Modifier
                                     .background(Color.Black.copy(alpha = 0.40f))
                                     .background(accent.copy(alpha = 0.18f))
-                                    .border(
-                                        1.dp,
-                                        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.08f))),
-                                        itemShape,
-                                    )
+                                    .axSpinRing()
                                 else Modifier
                             )
                             .clickable(interactionSource = itemSource, indication = null) {
@@ -712,3 +711,53 @@ fun axPhotoColors(src: android.graphics.Bitmap): Pair<Color, Color?> {
 }
 
 fun axDominantDark(src: android.graphics.Bitmap): Color = axPhotoColors(src).first
+
+
+/**
+ * A thin iridescent ring (cyan, blue, warm orange, white) that keeps turning around the selected dock item.
+ * The angle is only read while drawing, so it costs a redraw of a tiny pill, never a recomposition.
+ * Static on low-end phones.
+ */
+@Composable
+fun Modifier.axSpinRing(): Modifier {
+    val lite = AxPerf.lite(androidx.compose.ui.platform.LocalContext.current)
+    val angle = if (lite) null else androidx.compose.animation.core.rememberInfiniteTransition(label = "dock ring").animateFloat(
+        0f, 360f,
+        androidx.compose.animation.core.infiniteRepeatable(tween(2800, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "dock ring angle",
+    )
+    return this.drawWithCache {
+        val w = size.width
+        val h = size.height
+        val stroke = 2.dp.toPx()
+        val outer = androidx.compose.ui.graphics.Path().apply {
+            addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, w, h, androidx.compose.ui.geometry.CornerRadius(h / 2f)))
+        }
+        val inner = androidx.compose.ui.graphics.Path().apply {
+            addRoundRect(
+                androidx.compose.ui.geometry.RoundRect(
+                    stroke, stroke, w - stroke, h - stroke,
+                    androidx.compose.ui.geometry.CornerRadius((h - 2f * stroke) / 2f),
+                )
+            )
+        }
+        val ring = androidx.compose.ui.graphics.Path.combine(
+            androidx.compose.ui.graphics.PathOperation.Difference, outer, inner,
+        )
+        val center = Offset(w / 2f, h / 2f)
+        val brush = Brush.sweepGradient(
+            listOf(
+                Color(0xFF5AD1FF), Color(0xFF3B6BFF), Color(0xFFFF9A3C), Color(0xFFFFFFFF), Color(0xFF5AD1FF),
+            ),
+            center = center,
+        )
+        onDrawWithContent {
+            drawContent()
+            clipPath(ring) {
+                rotate(angle?.value ?: 0f, center) {
+                    drawCircle(brush, radius = maxOf(w, h), center = center)
+                }
+            }
+        }
+    }
+}
