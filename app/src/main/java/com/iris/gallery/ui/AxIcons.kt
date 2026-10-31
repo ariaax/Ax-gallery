@@ -238,4 +238,87 @@ object AxIcons {
             moveTo(14f, 11f); lineTo(14f, 16f)
         }
     }
+
+    val Back: ImageVector by lazy {
+        line("AxBack") {
+            moveTo(19.5f, 12f); lineTo(5f, 12f)
+            moveTo(11f, 5.8f); lineTo(4.8f, 12f); lineTo(11f, 18.2f)
+        }
+    }
+
+    val Close: ImageVector by lazy {
+        line("AxClose") {
+            moveTo(6f, 6f); lineTo(18f, 18f)
+            moveTo(18f, 6f); lineTo(6f, 18f)
+        }
+    }
+
+    val Info: ImageVector by lazy {
+        line("AxInfo") {
+            circle(12f, 12f, 8.6f)
+            moveTo(12f, 11f); lineTo(12f, 16.4f)
+            moveTo(12f, 7.8f); lineTo(12f, 7.9f)
+        }
+    }
+
+    val Play: ImageVector by lazy {
+        line("AxPlay") {
+            moveTo(8.4f, 5.8f); lineTo(18.4f, 12f); lineTo(8.4f, 18.2f); close()
+        }
+    }
+
+    val Pause: ImageVector by lazy {
+        line("AxPause") {
+            box(6.6f, 5.6f, 3.8f, 12.8f, 1.6f); box(13.6f, 5.6f, 3.8f, 12.8f, 1.6f)
+        }
+    }
+
+    private fun PathBuilder.speaker() {
+        moveTo(3.8f, 9.6f); lineTo(7.4f, 9.6f); lineTo(11.8f, 5.8f); lineTo(11.8f, 18.2f)
+        lineTo(7.4f, 14.4f); lineTo(3.8f, 14.4f); close()
+    }
+
+    val Volume: ImageVector by lazy {
+        line("AxVolume") {
+            speaker()
+            moveTo(15.2f, 9.2f); curveTo(16.5f, 10.5f, 16.5f, 13.5f, 15.2f, 14.8f)
+            moveTo(17.9f, 6.7f); curveTo(20.6f, 9.6f, 20.6f, 14.4f, 17.9f, 17.3f)
+        }
+    }
+
+    val VolumeOff: ImageVector by lazy {
+        line("AxVolumeOff") {
+            speaker()
+            moveTo(15.6f, 9.6f); lineTo(20.4f, 14.4f)
+            moveTo(20.4f, 9.6f); lineTo(15.6f, 14.4f)
+        }
+    }
+
+    private fun PathBuilder.loopArrows() {
+        moveTo(17f, 3.6f); lineTo(20f, 6.6f); lineTo(17f, 9.6f)
+        moveTo(4f, 11.4f); lineTo(4f, 10.6f)
+        curveTo(4f, 8.4f, 5.8f, 6.6f, 8f, 6.6f); lineTo(20f, 6.6f)
+        moveTo(7f, 20.4f); lineTo(4f, 17.4f); lineTo(7f, 14.4f)
+        moveTo(20f, 12.6f); lineTo(20f, 13.4f)
+        curveTo(20f, 15.6f, 18.2f, 17.4f, 16f, 17.4f); lineTo(4f, 17.4f)
+    }
+
+    val Repeat: ImageVector by lazy { line("AxRepeat") { loopArrows() } }
+
+    val RepeatOne: ImageVector by lazy {
+        line("AxRepeatOne") {
+            loopArrows()
+            moveTo(10.9f, 10.9f); lineTo(12.3f, 9.9f); lineTo(12.3f, 14.2f)
+        }
+    }
+
+    val Rotate: ImageVector by lazy {
+        line("AxRotate") {
+            box(8f, 6.5f, 8f, 11f, 2f)
+            moveTo(15.5f, 3.4f); curveTo(18.6f, 4.2f, 20.6f, 6.9f, 20.6f, 10f)
+            moveTo(18.8f, 8.3f); lineTo(20.6f, 10.2f); lineTo(22.2f, 8.5f)
+            moveTo(8.5f, 20.6f); curveTo(5.4f, 19.8f, 3.4f, 17.1f, 3.4f, 14f)
+            moveTo(5.2f, 15.7f); lineTo(3.4f, 13.8f); lineTo(1.8f, 15.5f)
+        }
+    }
 }

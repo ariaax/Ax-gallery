@@ -927,9 +927,9 @@ fun VideoPage(
             )
             }
             }
-            val bs = 36.dp
+            val bs = 30.dp
             val controlButtons: @Composable () -> Unit = {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(1.dp), verticalAlignment = Alignment.CenterVertically) {
                 AxVideoGlassButton(size = bs, plain = true, onClick = {
                     val next = engine.toggleMute()
                     isMuted = next
@@ -950,7 +950,8 @@ fun VideoPage(
                         label = "mute_icon_anim"
                     ) { muted ->
                         Icon(
-                            imageVector = if (muted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                            modifier = Modifier.size(19.dp),
+                            imageVector = if (muted) com.iris.gallery.ui.AxIcons.VolumeOff else com.iris.gallery.ui.AxIcons.Volume,
                             contentDescription = stringResource(if (muted) R.string.action_unmute else R.string.action_mute),
                             tint = Color.White
                         )
@@ -964,13 +965,13 @@ fun VideoPage(
                 }) {
                     val loopSpin by animateFloatAsState(if (isLooping) 360f else 0f, tween(450, easing = FastOutSlowInEasing), label = "loopSpin")
                     Icon(
-                        modifier = Modifier.graphicsLayer { rotationZ = loopSpin },
-                        imageVector = if (isLooping) Icons.Filled.RepeatOne else Icons.Outlined.Repeat,
+                        modifier = Modifier.size(19.dp).graphicsLayer { rotationZ = loopSpin },
+                        imageVector = if (isLooping) com.iris.gallery.ui.AxIcons.RepeatOne else com.iris.gallery.ui.AxIcons.Repeat,
                         contentDescription = stringResource(R.string.action_repeat),
                         tint = if (isLooping) Color(0xFFB9D4FF) else Color.White
                     )
                 }
-                AxVideoGlassButton(size = 42.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
+                AxVideoGlassButton(size = 36.dp, active = true, onClick = { if (engine.player.isPlaying) engine.player.pause() else engine.player.play() }) {
                     AnimatedContent(
                         targetState = playing,
                         transitionSpec = {
@@ -984,7 +985,8 @@ fun VideoPage(
                         label = "play_pause_icon_anim"
                     ) { isPlaying ->
                         Icon(
-                            imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            modifier = Modifier.size(20.dp),
+                            imageVector = if (isPlaying) com.iris.gallery.ui.AxIcons.Pause else com.iris.gallery.ui.AxIcons.Play,
                             contentDescription = stringResource(if (isPlaying) R.string.action_pause else R.string.action_play),
                             tint = Color.White
                         )
@@ -1001,7 +1003,8 @@ fun VideoPage(
                     }
                 }) {
                     Icon(
-                        imageVector = Icons.Outlined.ScreenRotation,
+                        modifier = Modifier.size(19.dp),
+                        imageVector = com.iris.gallery.ui.AxIcons.Rotate,
                         contentDescription = stringResource(R.string.action_rotate_screen),
                         tint = Color.White
                     )

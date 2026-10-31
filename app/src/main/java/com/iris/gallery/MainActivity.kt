@@ -2426,23 +2426,23 @@ private fun GalleryScaffold(
 
                     if (isFileSearching && canSearchOnScreen) {
                         AxBarButton(onClick = { isFileSearching = false; fileSearchQuery = "" }) {
-                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.clear_search))
+                            Icon(AxIcons.Back, stringResource(R.string.clear_search))
                         }
                     } else if (selectedIds.isNotEmpty()) {
-                        AxBarButton(onClick = ::clearSelection) { Icon(Icons.Outlined.Close, stringResource(R.string.action_clear_selection)) }
+                        AxBarButton(onClick = ::clearSelection) { Icon(AxIcons.Close, stringResource(R.string.action_clear_selection)) }
                     } else if (destination == 1 && selectedAlbum != null) {
                         AxBarButton(onClick = {
                             selectedAlbumId = null
                             if (isFileSearching) { isFileSearching = false; fileSearchQuery = "" }
-                        }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, albumsTabLabel) }
+                        }) { Icon(AxIcons.Back, albumsTabLabel) }
                     } else if (destination == 3 && librarySection == "locked" && selectedLockedAlbum != null) {
-                        AxBarButton(onClick = { selectedLockedAlbum = null }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.section_locked)) }
+                        AxBarButton(onClick = { selectedLockedAlbum = null }) { Icon(AxIcons.Back, stringResource(R.string.section_locked)) }
                     } else if (destination == 3 && librarySection != null) {
                         AxBarButton(onClick = {
                             librarySection = null
                             selectedLockedAlbum = null
                             if (isFileSearching) { isFileSearching = false; fileSearchQuery = "" }
-                        }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, libraryTabLabel) }
+                        }) { Icon(AxIcons.Back, libraryTabLabel) }
                     }
                 
                         val canSearchLeft = destination == 0 || destination == 2 || (destination == 1 && selectedAlbum != null) || (destination == 3 && librarySection == "videos")
@@ -2465,7 +2465,7 @@ private fun GalleryScaffold(
                                 Icon(Icons.Outlined.LockOpen, stringResource(R.string.action_remove_from_locked))
                             }
                         }
-                        AxBarButton(onClick = ::shareSelection) { Icon(Icons.Outlined.Share, stringResource(R.string.action_share)) }
+                        AxBarButton(onClick = ::shareSelection) { Icon(AxIcons.Share, stringResource(R.string.action_share)) }
                         AxBarButton(onClick = {
                             val selected = activeMedia.filter { it.id in selectedIds }
                             if (selected.isNotEmpty()) {
@@ -5710,11 +5710,11 @@ private fun PhotoViewer(
                         style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            IconButton(onClick = { showInfo = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(Icons.Outlined.Info, stringResource(R.string.details_title), tint = Color.White) }
+            IconButton(onClick = { showInfo = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(AxIcons.Info, stringResource(R.string.details_title), tint = Color.White) }
             if (!isLocked && !isInTrash && current.id > 0) {
                 Box {
                     IconButton(onClick = { viewerMenuExpanded = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) {
-                        Icon(Icons.Outlined.MoreVert, stringResource(R.string.action_more), tint = Color.White)
+                        Icon(AxIcons.Flower, stringResource(R.string.action_more), tint = Color.White)
                     }
                     DropdownMenu(
                         expanded = viewerMenuExpanded,
