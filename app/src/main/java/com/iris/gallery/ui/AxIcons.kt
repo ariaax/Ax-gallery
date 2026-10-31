@@ -321,4 +321,42 @@ object AxIcons {
             moveTo(5.2f, 15.7f); lineTo(3.4f, 13.8f); lineTo(1.8f, 15.5f)
         }
     }
+
+    val Sun: ImageVector by lazy {
+        line("AxSun") {
+            circle(12f, 12f, 4.2f)
+            moveTo(19.4f, 12f); lineTo(21.8f, 12f)
+            moveTo(17.23f, 17.23f); lineTo(18.93f, 18.93f)
+            moveTo(12f, 19.4f); lineTo(12f, 21.8f)
+            moveTo(6.77f, 17.23f); lineTo(5.07f, 18.93f)
+            moveTo(4.6f, 12f); lineTo(2.2f, 12f)
+            moveTo(6.77f, 6.77f); lineTo(5.07f, 5.07f)
+            moveTo(12f, 4.6f); lineTo(12f, 2.2f)
+            moveTo(17.23f, 6.77f); lineTo(18.93f, 5.07f)
+        }
+    }
+
+    val SunDim: ImageVector by lazy {
+        line("AxSunDim") {
+            circle(12f, 12f, 3f)
+            moveTo(16.53f, 16.53f); lineTo(17.8f, 17.8f)
+            moveTo(7.47f, 16.53f); lineTo(6.2f, 17.8f)
+            moveTo(7.47f, 7.47f); lineTo(6.2f, 6.2f)
+            moveTo(16.53f, 7.47f); lineTo(17.8f, 6.2f)
+        }
+    }
+
+    val SkipBack: ImageVector by lazy {
+        line("AxSkipBack") {
+            moveTo(12.5f, 6.5f); lineTo(7f, 12f); lineTo(12.5f, 17.5f)
+            moveTo(19f, 6.5f); lineTo(13.5f, 12f); lineTo(19f, 17.5f)
+        }
+    }
+
+    val SkipForward: ImageVector by lazy {
+        line("AxSkipForward") {
+            moveTo(11.5f, 6.5f); lineTo(17f, 12f); lineTo(11.5f, 17.5f)
+            moveTo(5f, 6.5f); lineTo(10.5f, 12f); lineTo(5f, 17.5f)
+        }
+    }
 }

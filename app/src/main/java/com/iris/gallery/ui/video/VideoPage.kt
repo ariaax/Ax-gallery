@@ -115,6 +115,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
+import com.iris.gallery.ui.axIcyPanel
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -694,10 +695,18 @@ fun VideoPage(
                 .padding(horizontal = 34.dp),
             enter = fadeIn(tween(100)), exit = fadeOut(tween(160)),
         ) {
-            Text(gestureFeedback.orEmpty(), color = Color.White,
-                style = androidx.compose.material3.MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.background(Color.Black.copy(alpha = .55f), RoundedCornerShape(24.dp))
-                    .padding(horizontal = 18.dp, vertical = 10.dp))
+            val fb = gestureFeedback.orEmpty()
+            Row(
+                modifier = Modifier.axIcyPanel(26.dp).padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                if (fb.startsWith("−")) Icon(com.iris.gallery.ui.AxIcons.SkipBack, null, tint = Color.White, modifier = Modifier.size(26.dp))
+                Text(fb, color = Color.White,
+                    style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold)
+                if (fb.startsWith("+")) Icon(com.iris.gallery.ui.AxIcons.SkipForward, null, tint = Color.White, modifier = Modifier.size(26.dp))
+            }
         }
         AnimatedVisibility(
             visible = muteFeedbackEvent != null,
@@ -800,9 +809,8 @@ fun VideoPage(
 
         val brightnessPercent = (currentBrightness * 100).roundToInt().coerceIn(0, 100)
         val brightnessIcon = when {
-            currentBrightness < 0.33f -> Icons.Outlined.BrightnessLow
-            currentBrightness < 0.67f -> Icons.Outlined.BrightnessMedium
-            else -> Icons.Outlined.BrightnessHigh
+            currentBrightness < 0.4f -> com.iris.gallery.ui.AxIcons.SunDim
+            else -> com.iris.gallery.ui.AxIcons.Sun
         }
         VideoGestureHud(
             visible = brightnessHudVisible,
@@ -816,9 +824,8 @@ fun VideoPage(
 
         val volumePercent = ((currentVolume.toFloat() / maxVolume.coerceAtLeast(1)) * 100).roundToInt().coerceIn(0, 100)
         val volumeIcon = when {
-            currentVolume == 0 -> Icons.AutoMirrored.Filled.VolumeOff
-            currentVolume < maxVolume / 2 -> Icons.AutoMirrored.Filled.VolumeDown
-            else -> Icons.AutoMirrored.Filled.VolumeUp
+            currentVolume == 0 -> com.iris.gallery.ui.AxIcons.VolumeOff
+            else -> com.iris.gallery.ui.AxIcons.Volume
         }
         VideoGestureHud(
             visible = volumeHudVisible,
@@ -1078,14 +1085,16 @@ private fun VideoGestureHud(
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = fadeIn(tween(120)) + scaleIn(tween(140), initialScale = 0.9f),
-        exit = fadeOut(tween(220)),
+        enter = fadeIn(tween(160, easing = com.iris.gallery.AxIosEase)) + scaleIn(tween(220, easing = com.iris.gallery.AxIosEase), initialScale = 0.92f),
+        exit = fadeOut(tween(200)),
     ) {
+        // glass pill like the control bar; the fill follows the finger smoothly
+        val shown by animateFloatAsState(progress.coerceIn(0f, 1f), tween(90, easing = androidx.compose.animation.core.LinearEasing), label = "hudFill")
         Column(
             modifier = Modifier
-                .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(22.dp))
-                .padding(vertical = 14.dp, horizontal = 10.dp)
-                .width(44.dp),
+                .width(52.dp)
+                .axIcyPanel(26.dp)
+                .padding(vertical = 14.dp, horizontal = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -1093,26 +1102,26 @@ private fun VideoGestureHud(
                 imageVector = icon,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(24.dp),
             )
             Box(
                 modifier = Modifier
-                    .width(4.dp)
-                    .height(96.dp)
-                    .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(2.dp)),
+                    .width(8.dp)
+                    .height(112.dp)
+                    .background(Color.White.copy(alpha = 0.26f), CircleShape),
                 contentAlignment = Alignment.BottomCenter,
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(progress.coerceIn(0f, 1f))
-                        .background(Color.White, RoundedCornerShape(2.dp))
+                        .fillMaxHeight(shown)
+                        .background(Color.White, CircleShape)
                 )
             }
             Text(
                 text = "$percentage%",
                 color = Color.White,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
             )
         }
     }
