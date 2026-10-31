@@ -202,6 +202,7 @@ import com.iris.gallery.ui.AxEdgeHalo
 import com.iris.gallery.ui.axGlassBorder
 import com.iris.gallery.ui.AxWindowBlur
 import com.iris.gallery.ui.AxBarButton
+import com.iris.gallery.ui.AxIcons
 import com.iris.gallery.ui.AxBarTitle
 import com.iris.gallery.ui.axGlassSheetEdge
 import com.iris.gallery.ui.AxDockTab
@@ -1943,10 +1944,10 @@ private enum class GalleryTab(
     val labelRes: Int,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
 ) {
-    PHOTOS(0, R.string.tab_photos, Icons.Filled.PhotoLibrary),
-    ALBUMS(1, R.string.tab_albums, Icons.Filled.PhotoAlbum),
-    FAVORITES(2, R.string.tab_favorites, Icons.Filled.Favorite),
-    LIBRARY(3, R.string.tab_library, Icons.Filled.Dashboard),
+    PHOTOS(0, R.string.tab_photos, AxIcons.Photos),
+    ALBUMS(1, R.string.tab_albums, AxIcons.Albums),
+    FAVORITES(2, R.string.tab_favorites, AxIcons.Heart),
+    LIBRARY(3, R.string.tab_library, AxIcons.Sparkle),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -2447,7 +2448,7 @@ private fun GalleryScaffold(
                         val canSearchLeft = destination == 0 || destination == 2 || (destination == 1 && selectedAlbum != null) || (destination == 3 && librarySection == "videos")
                         if (canSearchLeft && !isFileSearching && selectedIds.isEmpty()) {
                             AxBarButton(onClick = { isFileSearching = true }) {
-                                Icon(Icons.Outlined.Search, stringResource(R.string.action_search))
+                                Icon(AxIcons.Search, stringResource(R.string.action_search))
                             }
                         }
                     }
@@ -2483,7 +2484,7 @@ private fun GalleryScaffold(
                         }) { Icon(Icons.Outlined.DeleteOutline, stringResource(R.string.action_delete)) }
                         Box {
                             AxBarButton(onClick = { selectionMenuExpanded = true }) {
-                                Icon(Icons.Outlined.MoreVert, stringResource(R.string.action_more))
+                                Icon(AxIcons.Flower, stringResource(R.string.action_more))
                             }
                             DropdownMenu(selectionMenuExpanded, onDismissRequest = { selectionMenuExpanded = false }) {
                                 DropdownMenuItem(text = { Text(stringResource(R.string.action_select_all)) }, leadingIcon = { Icon(Icons.Outlined.SelectAll, null) },
@@ -2580,7 +2581,7 @@ private fun GalleryScaffold(
                             }
                             Box {
                                 AxBarButton(onClick = { albumSortMenuExpanded = true }) {
-                                    Icon(Icons.AutoMirrored.Outlined.Sort, stringResource(R.string.action_sort))
+                                    Icon(AxIcons.Sort, stringResource(R.string.action_sort))
                                 }
                                 DropdownMenu(
                                     expanded = albumSortMenuExpanded,
@@ -2641,7 +2642,7 @@ private fun GalleryScaffold(
                             var albumOptionsMenuExpanded by remember { mutableStateOf(false) }
                             Box {
                                 AxBarButton(onClick = { albumOptionsMenuExpanded = true }) {
-                                    Icon(Icons.Outlined.MoreVert, stringResource(R.string.action_more_options))
+                                    Icon(AxIcons.Flower, stringResource(R.string.action_more_options))
                                 }
                                 DropdownMenu(
                                     expanded = albumOptionsMenuExpanded,
@@ -2701,7 +2702,7 @@ private fun GalleryScaffold(
                                 settingsPreferences.setPhotoGridSize(customCellSize.value)
                             }) {
                                 Icon(
-                                    if (compactGrid) Icons.Outlined.GridView else Icons.Outlined.Dashboard,
+                                    if (compactGrid) AxIcons.GridSmall else AxIcons.GridBig,
                                     if (compactGrid) stringResource(R.string.action_comfortable_grid) else stringResource(R.string.action_compact_grid)
                                 )
                             }
@@ -2722,7 +2723,7 @@ private fun GalleryScaffold(
                             AxBarButton(onClick = {
                                 activeOverlayScreen = "settings"
                             }) {
-                                Icon(Icons.Outlined.Settings, stringResource(R.string.section_settings))
+                                Icon(AxIcons.Settings, stringResource(R.string.section_settings))
                             }
                         }
                     }
@@ -5956,7 +5957,7 @@ private fun PhotoViewer(
                     }
                 } else {
                     ViewerIconButton(compact = compact,
-                        icon = Icons.Outlined.Share,
+                        icon = AxIcons.Share,
                         label = stringResource(R.string.action_share),
                         showBadge = secureSharingMode != SecureSharingMode.OFF,
                     ) {
@@ -5973,7 +5974,7 @@ private fun PhotoViewer(
                         ) { onToggleFavorite(current.id) }
                     }
                     ViewerIconButton(compact = compact,
-                        icon = Icons.Outlined.Edit,
+                        icon = AxIcons.Edit,
                         label = stringResource(R.string.action_edit),
                     ) {
                         if (current.isVideo) {
@@ -5984,17 +5985,17 @@ private fun PhotoViewer(
                     }
                     if (isLocked) {
                         ViewerIconButton(compact = compact,
-                            icon = Icons.Outlined.LockOpen,
+                            icon = AxIcons.LockOpen,
                             label = stringResource(R.string.action_unlock),
                         ) { onUnlock(current) }
                     } else if (current.id > 0) {
                         ViewerIconButton(compact = compact,
-                            icon = Icons.Outlined.Lock,
+                            icon = AxIcons.Lock,
                             label = stringResource(R.string.action_lock),
                         ) { onLock(current) }
                     }
                     ViewerIconButton(compact = compact,
-                        icon = Icons.Outlined.DeleteOutline,
+                        icon = AxIcons.Trash,
                         tint = Color(0xFFFF9A9A),
                         label = stringResource(R.string.action_delete),
                     ) {

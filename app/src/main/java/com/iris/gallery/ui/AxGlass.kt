@@ -174,7 +174,10 @@ fun rememberAxGlassState(): AxGlassState {
     return remember(layer, blurLayer) { AxGlassState(layer, blurLayer) }
 }
 
-private val blurSupported: Boolean get() = Build.VERSION.SDK_INT >= 31
+// Live backdrop blur is OFF: it did not show on the test phone, and it made the whole screen draw 2-6 times
+// per frame (the content is replayed into every glass area), which is what caused ~20 fps. Glass panels are
+// plain tinted frosted surfaces now. Set back to `Build.VERSION.SDK_INT >= 31` to try the blur again.
+private val blurSupported: Boolean get() = false
 
 // Immutable, so one shared instance avoids allocating a new effect on every frame.
 // Blur + strong saturation boost: the bar picks up (and intensifies) the colours of whatever is behind it.
