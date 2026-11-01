@@ -96,9 +96,11 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
         }
         // only judge the picture while the user actually wants to watch and the surface exists
         if (!playWhenReady || !surfaceReady) return
-        val hasVideoTrack = runCatching { mpv.getPropertyString("video-format") }.getOrNull() != null
-        val pictureShown = runCatching { mpv.getPropertyBoolean("vo-configured") }.getOrNull() == true
-        if (hasVideoTrack && !pictureShown) fail("mpv has sound but no picture for this video")
+        // A decoded picture always gives mpv a display size. Sound only = the video track has a codec but no size.
+        val hasVideoTrack = runCatching { mpv.getPropertyString("video-format") }.getOrNull() != null ||
+            runCatching { mpv.getPropertyString("video-codec") }.getOrNull() != null
+        val sizeKnown = videoW > 0 || (runCatching { mpv.getPropertyInt("dwidth") }.getOrNull() ?: 0) > 0
+        if (hasVideoTrack && !sizeKnown) fail("mpv has sound but no picture for this video")
     }
 
     private fun fail(message: String) {
@@ -159,6 +161,7 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
             runCatching {
                 mpv.setPropertyString("vo", "null")
                 mpv.setPropertyString("force-window", "no")
+                waitVoGone(200)
                 mpv.detachSurface()
             }
         }
@@ -269,6 +272,7 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
                 ContextCompat.RECEIVER_NOT_EXPORTED,
             )
             synchronized(live) { live.add(this) }
+            markInUse(true)
         } catch (t: Throwable) {
             initFailed = true
             released = true
@@ -336,18 +340,40 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
         runCatching { audioManager.abandonAudioFocusRequest(focusRequest) }
         runCatching { surfaceView?.holder?.removeCallback(surfaceCallback) }
         surfaceView = null
-        runCatching {
-            mpv.setPropertyString("vo", "null")
-            mpv.detachSurface()
-        }
         watchGen++
-        runCatching { mpv.removeObserver(observer) }
-        runCatching { mpv.removeLogObserver(logObserver) }
-        runCatching { mpv.destroy() }
-        if (openFd >= 0) closeFd(openFd)
-        if (pendingFd >= 0 && pendingFd != openFd) closeFd(pendingFd)
+        val fdA = openFd
+        val fdB = pendingFd
         openFd = -1
         pendingFd = -1
+        // Switching the picture off, detaching the surface and destroying mpv in one go on the main thread raced with
+        // mpv's render thread (native crash). Now: stop output, wait until it is really gone, then tear down in the background.
+        Thread({
+            runCatching { mpv.command("stop") }
+            runCatching { mpv.setPropertyString("vo", "null") }
+            waitVoGone(600)
+            runCatching { mpv.detachSurface() }
+            runCatching { mpv.removeObserver(observer) }
+            runCatching { mpv.removeLogObserver(logObserver) }
+            runCatching { mpv.destroy() }
+            if (fdA >= 0) closeFd(fdA)
+            if (fdB >= 0 && fdB != fdA) closeFd(fdB)
+            if (synchronized(live) { live.isEmpty() }) markInUse(false)
+        }, "mpv-shutdown").start()
+    }
+
+    /** Waits (bounded) until mpv's video output is really off, so the surface is never pulled away while it still draws. */
+    private fun waitVoGone(maxMs: Int) {
+        runCatching { Thread.sleep(40) }
+        var waited = 40
+        while (waited < maxMs && runCatching { mpv.getPropertyBoolean("vo-configured") }.getOrNull() == true) {
+            runCatching { Thread.sleep(20) }
+            waited += 20
+        }
+    }
+
+    /** Written to disk before anything risky: if the app dies while mpv is alive, the next start knows. */
+    private fun markInUse(inUse: Boolean) {
+        runCatching { appContext.getSharedPreferences("ax_diag", Context.MODE_PRIVATE).edit().putBoolean("mpv_in_use", inUse).commit() }
     }
 
     // ------------------------------------------------------------------ internals

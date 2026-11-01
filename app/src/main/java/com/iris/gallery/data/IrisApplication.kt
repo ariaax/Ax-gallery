@@ -57,6 +57,13 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
                         crashShown = true
                         prefs.edit().remove("crash").apply()
                         showReport(activity, "CRASH LAST TIME", crash)
+                    } else {
+                        // a native crash (e.g. inside libmpv) never reaches the handler above, so ask Android what killed us
+                        val nativeReport = nativeCrashReport(prefs)
+                        if (nativeReport != null) {
+                            crashShown = true
+                            showReport(activity, "NATIVE CRASH LAST TIME", nativeReport, offerMpvRetry = prefs.getBoolean("mpv_disabled", false))
+                        }
                     }
                 }
             }
@@ -73,7 +80,49 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
         })
     }
 
-    private fun showReport(activity: Activity, title: String, body: String) {
+    /** What Android recorded about the last native crash (signal, and the readable parts of the tombstone), or null. */
+    private fun nativeCrashReport(prefs: android.content.SharedPreferences): String? {
+        if (Build.VERSION.SDK_INT < 30) return null
+        return try {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val last = prefs.getLong("last_exit_ts", 0L)
+            val info = am.getHistoricalProcessExitReasons(packageName, 0, 6)
+                .firstOrNull { it.reason == android.app.ApplicationExitInfo.REASON_CRASH_NATIVE && it.timestamp > last }
+                ?: return null
+            prefs.edit().putLong("last_exit_ts", info.timestamp).apply()
+            val mpvWasAlive = prefs.getBoolean("mpv_in_use", false)
+            if (mpvWasAlive) {
+                // circuit breaker: until the user asks for mpv again, videos use ExoPlayer
+                prefs.edit().putBoolean("mpv_disabled", true).putBoolean("mpv_in_use", false).commit()
+            }
+            val sb = StringBuilder()
+            sb.append("Crash: ").append(info.description ?: "native crash").append('\n')
+            sb.append("mpv was running: ").append(mpvWasAlive).append('\n')
+            sb.append("Android ").append(Build.VERSION.RELEASE).append(" / ").append(Build.MODEL).append("\n\n")
+            info.traceInputStream?.use { stream ->
+                val bytes = stream.readBytes().let { if (it.size > 700_000) it.copyOf(700_000) else it }
+                val run = StringBuilder()
+                var kept = 0
+                fun flush() {
+                    if (run.length >= 6 && kept < 90 && run.any { it.isLetter() }) {
+                        sb.append(run).append('\n')
+                        kept++
+                    }
+                    run.setLength(0)
+                }
+                for (b in bytes) {
+                    val c = b.toInt() and 0xFF
+                    if (c in 0x20..0x7E) run.append(c.toChar()) else flush()
+                }
+                flush()
+            }
+            sb.toString().take(6000)
+        } catch (e: Throwable) {
+            null
+        }
+    }
+
+    private fun showReport(activity: Activity, title: String, body: String, offerMpvRetry: Boolean = false) {
         try {
             val tv = TextView(activity).apply {
                 text = body
@@ -91,6 +140,11 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
                     cm.setPrimaryClip(ClipData.newPlainText("ax-report", body))
                 }
                 .setNegativeButton("Close", null)
+                .apply {
+                    if (offerMpvRetry) setNeutralButton("Try mpv again") { _, _ ->
+                        getSharedPreferences("ax_diag", Context.MODE_PRIVATE).edit().putBoolean("mpv_disabled", false).apply()
+                    }
+                }
                 .show()
         } catch (e: Throwable) {
         }

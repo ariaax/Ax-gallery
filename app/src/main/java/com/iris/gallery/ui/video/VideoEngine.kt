@@ -27,12 +27,16 @@ interface VideoEngine {
 
 /** mpv engine: better scaling, subtitles and format support than ExoPlayer. Falls back to ExoPlayer if libmpv can't start. */
 fun createVideoEngine(context: Context, preferMpv: Boolean = true): VideoEngine =
-    if (!preferMpv) Media3VideoEngine(context) else try {
+    if (!preferMpv || mpvDisabledAfterCrash(context)) Media3VideoEngine(context) else try {
         MpvVideoEngine(context)
     } catch (t: Throwable) {
         android.util.Log.w("AxVideo", "mpv unavailable, using ExoPlayer", t)
         Media3VideoEngine(context)
     }
+
+/** Set automatically when a native crash happened while mpv was alive; the crash report offers a "try mpv again" button. */
+fun mpvDisabledAfterCrash(context: Context): Boolean =
+    runCatching { context.getSharedPreferences("ax_diag", Context.MODE_PRIVATE).getBoolean("mpv_disabled", false) }.getOrDefault(false)
 
 class MpvVideoEngine(context: Context) : VideoEngine {
     private val mpvPlayer = MpvPlayer(context)
