@@ -424,12 +424,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        if (!isInMultiWindowMode) com.iris.gallery.ui.video.Media3VideoEngine.pauseAll()
+        if (!isInMultiWindowMode) {
+            com.iris.gallery.ui.video.Media3VideoEngine.pauseAll()
+            com.iris.gallery.ui.video.MpvPlayer.pauseAll()
+        }
     }
 
     override fun onStop() {
         super.onStop()
-        com.iris.gallery.ui.video.Media3VideoEngine.pauseAll()
+        com.iris.gallery.ui.video.Media3VideoEngine.pauseAll(); com.iris.gallery.ui.video.MpvPlayer.pauseAll()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -5153,7 +5156,7 @@ private fun PhotoViewer(
         }
     }
     val videoEngine = remember {
-        Media3VideoEngine(context).apply {
+        com.iris.gallery.ui.video.createVideoEngine(context).apply {
             setMuted(videoMuted)
         }
     }

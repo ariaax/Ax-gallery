@@ -12,6 +12,9 @@
 -keep class androidx.exifinterface.media.ExifInterface { *; }
 -keep class androidx.exifinterface.media.ExifInterface$* { *; }
 
+# libmpv (JNI): native code finds these Kotlin members by name, so nothing may be renamed or removed.
+-keep class is.xyz.mpv.** { *; }
+
 # Native AVIF decoder (JNI)
 -keep class org.aomedia.avif.android.** { *; }
 

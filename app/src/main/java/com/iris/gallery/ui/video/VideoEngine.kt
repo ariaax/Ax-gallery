@@ -25,6 +25,22 @@ interface VideoEngine {
     fun release()
 }
 
+/** mpv engine: better scaling, subtitles and format support than ExoPlayer. Falls back to ExoPlayer if libmpv can't start. */
+fun createVideoEngine(context: Context): VideoEngine =
+    try {
+        MpvVideoEngine(context)
+    } catch (t: Throwable) {
+        android.util.Log.w("AxVideo", "mpv unavailable, using ExoPlayer", t)
+        Media3VideoEngine(context)
+    }
+
+class MpvVideoEngine(context: Context) : VideoEngine {
+    private val mpvPlayer = MpvPlayer(context)
+    override val player: Player = mpvPlayer
+    override fun load(uri: Uri) = mpvPlayer.load(uri)
+    override fun release() = mpvPlayer.shutdown()
+}
+
 @OptIn(UnstableApi::class)
 class Media3VideoEngine(context: Context) : VideoEngine {
     // Decoder fallback: if the first hardware decoder for a format fails, try the next one instead of giving up.
