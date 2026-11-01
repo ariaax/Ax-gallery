@@ -1,0 +1,22 @@
+name: Inspect mpv lib (temporary)
+on:
+  push:
+    branches: [wip/mpv-inspect]
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download and inspect AAR
+        run: |
+          set -x
+          V=0.1.12
+          curl -sfL -o lib.aar "https://repo1.maven.org/maven2/io/github/abdallahmehiz/mpv-android-lib/$V/mpv-android-lib-$V.aar" || echo "AAR DOWNLOAD FAILED"
+          ls -la lib.aar
+          mkdir x && cd x && unzip -q ../lib.aar
+          find . -type f | sed 's/^/FILE /' | head -80
+          ls -la jni/* || true
+          mkdir c && cd c && unzip -q ../classes.jar && cd ..
+          find c -name '*.class' | head -50
+          for k in $(find c -name 'MPVLib*.class' | sed 's/^c\///;s/\.class$//;s/\//./g'); do javap -p -cp c "$k"; done
+          cat AndroidManifest.xml | head -30
+          curl -sfL "https://repo1.maven.org/maven2/io/github/abdallahmehiz/mpv-android-lib/$V/mpv-android-lib-$V.pom" | head -60
