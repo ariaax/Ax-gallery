@@ -204,7 +204,8 @@ fun rememberAlbumBadge(album: MediaAlbum?): AlbumBadge? {
 
 /** Small round app icon in the corner of an album cover. Pops in with a springy little spin. */
 @Composable
-fun AlbumAppBadge(album: MediaAlbum, modifier: Modifier = Modifier) {
+/** [animated]: endless pulse + bobbing. Only worth it for the single badge in the title; album covers use the one-time pop-in only. */
+fun AlbumAppBadge(album: MediaAlbum, modifier: Modifier = Modifier, animated: Boolean = false) {
     val badge = rememberAlbumBadge(album) ?: return
 
     val scale = remember(album.id) { Animatable(0f) }
@@ -218,7 +219,7 @@ fun AlbumAppBadge(album: MediaAlbum, modifier: Modifier = Modifier) {
         spin.animateTo(0f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessLow))
     }
 
-    val lite = AxPerf.lite(androidx.compose.ui.platform.LocalContext.current)
+    val lite = !animated || AxPerf.lite(androidx.compose.ui.platform.LocalContext.current)
     val inf = androidx.compose.animation.core.rememberInfiniteTransition(label = "badge life")
     val pulse = if (lite) remember { androidx.compose.runtime.mutableStateOf(1f) } else inf.animateFloat(
         0f, 1f,

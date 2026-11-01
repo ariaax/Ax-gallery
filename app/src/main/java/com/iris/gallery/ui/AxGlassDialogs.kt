@@ -219,7 +219,7 @@ fun AxBarActions(content: @Composable androidx.compose.foundation.layout.RowScop
     }
     // Every action is its own round glass bubble (no shared pill).
     androidx.compose.foundation.layout.Row(
-        modifier = Modifier.padding(end = 6.dp),
+        modifier = Modifier.padding(end = 2.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         content = content,
     )
@@ -242,8 +242,8 @@ fun AxBarButton(
     val grouped = LocalAxInBarGroup.current
     androidx.compose.foundation.layout.Box(
         modifier = modifier
-            .padding(horizontal = if (grouped) 0.dp else 4.dp)
-            .size(42.dp)
+            .padding(horizontal = if (grouped) 0.dp else 2.dp)
+            .size(36.dp)
             .axPressScale(src, 0.86f)
             // flat dark-grey disc, no rim (clean, like a modern gallery header)
             .then(if (grouped) Modifier.clip(CircleShape) else Modifier.clip(CircleShape).background(c.copy(alpha = 0.12f), CircleShape))
@@ -256,8 +256,11 @@ fun AxBarButton(
             ),
         contentAlignment = androidx.compose.ui.Alignment.Center,
     ) {
+        // icons inside are drawn ~18% smaller (their dp sizes are scaled), so the glyphs stay in proportion to the disc
+        val d = androidx.compose.ui.platform.LocalDensity.current
         androidx.compose.runtime.CompositionLocalProvider(
             androidx.compose.material3.LocalContentColor provides c,
+            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density * 0.82f, d.fontScale),
         ) { content() }
     }
 }
@@ -285,11 +288,11 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
         modifier = Modifier
             .clip(CircleShape)
             .background(c.copy(alpha = 0.12f), CircleShape)
-            .padding(start = if (badge != null && album != null) 8.dp else 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp),
+            .padding(start = if (badge != null && album != null) 6.dp else 14.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(7.dp),
     ) {
-        if (badge != null && album != null) AlbumAppBadge(album, Modifier.size(28.dp))
+        if (badge != null && album != null) AlbumAppBadge(album, Modifier.size(26.dp), animated = true)
         Text(
             text = text,
             maxLines = 1,
@@ -297,7 +300,7 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
+                fontSize = 17.sp,
                 color = c,
             ),
         )
@@ -399,5 +402,24 @@ fun AxGlassSearchField(
             unfocusedBorderColor = Color.Transparent,
             focusedBorderColor = if (glass) Color.Transparent else MaterialTheme.colorScheme.primary,
         ),
+    )
+}
+
+
+/** Round check mark on a selected tile: pops in once. Only composed for selected tiles. */
+@Composable
+fun AxSelectCheck(modifier: Modifier = Modifier) {
+    val pop = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0.6f) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        pop.animateTo(1f, androidx.compose.animation.core.tween(160, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+    }
+    androidx.compose.material3.Icon(
+        androidx.compose.material.icons.Icons.Filled.CheckCircle,
+        contentDescription = "Selected",
+        tint = MaterialTheme.colorScheme.primary,
+        modifier = modifier
+            .graphicsLayer { scaleX = pop.value; scaleY = pop.value; alpha = pop.value }
+            .size(27.dp)
+            .background(MaterialTheme.colorScheme.surface, CircleShape),
     )
 }

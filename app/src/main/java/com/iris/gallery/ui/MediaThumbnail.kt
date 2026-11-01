@@ -47,6 +47,18 @@ import com.iris.gallery.data.livpJpegCacheFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Thumbnails used to be decoded on the unbounded IO pool: a fast fling started dozens of decodes at once, they fought
+ * each other (and the UI thread) for CPU/IO, and decodes for tiles that had already scrolled away still ran to the end.
+ * With a small fixed width, tiles that left the screen are still queued, so their work is cancelled before it starts.
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+private val thumbDispatcher = Dispatchers.IO.limitedParallelism(3)
+
+/** Badge detection (HDR/depth) is low priority: a single background lane so it never competes with thumbnails. */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+private val detectDispatcher = Dispatchers.IO.limitedParallelism(1)
+
 object ThumbnailCache {
     private val maxKilobytes = (Runtime.getRuntime().maxMemory() / 1024 / 4).toInt() // 25% heap
     private val cache = object : LruCache<Long, Bitmap>(maxKilobytes) {
@@ -288,30 +300,57 @@ private fun loadThumbnail(context: Context, image: MediaImage, targetSizePx: Int
     return finalBitmap
 }
 
+private val HDR_MARKERS = listOf(
+    "http://ns.adobe.com/hdr-gain-map/1.0/", "hdrgm:", "Item:Semantic=\"GainMap\"", "21496-1",
+).map { it.toByteArray(Charsets.ISO_8859_1) }
+private val GAINMAP_MARKER = "GainMap".toByteArray(Charsets.ISO_8859_1)
+private val CONTAINER_MARKER = "Container:Directory".toByteArray(Charsets.ISO_8859_1)
+private val DEPTH_MARKERS = listOf("GDepth:", "GCamera:SpecialTypeID=\"PORTRAIT_TYPE\"").map { it.toByteArray(Charsets.ISO_8859_1) }
+
+/** Plain byte search: no String is built from the file header any more (that was ~256 KB of garbage per photo). */
+private fun ByteArray.containsBytes(len: Int, pat: ByteArray): Boolean {
+    if (pat.isEmpty() || len < pat.size) return false
+    val first = pat[0]
+    var i = 0
+    val last = len - pat.size
+    while (i <= last) {
+        if (this[i] == first) {
+            var j = 1
+            while (j < pat.size && this[i + j] == pat[j]) j++
+            if (j == pat.size) return true
+        }
+        i++
+    }
+    return false
+}
+
+private val headerBuffer = ThreadLocal<ByteArray>()
+
+/** Reads the first 64 KB (XMP metadata lives at the very start of the file) into a reused per-thread buffer. */
+private inline fun <T> withHeader(context: Context, image: MediaImage, block: (ByteArray, Int) -> T): T? {
+    val buffer = headerBuffer.get() ?: ByteArray(65536).also { headerBuffer.set(it) }
+    val stream = if (image.path.isNotBlank() && java.io.File(image.path).canRead()) {
+        runCatching { java.io.FileInputStream(image.path) }.getOrNull()
+    } else null
+    val finalStream = stream ?: context.contentResolver.openInputStream(image.uri)
+    return finalStream?.use { input ->
+        var total = 0
+        while (total < buffer.size) {
+            val read = input.read(buffer, total, buffer.size - total)
+            if (read <= 0) break
+            total += read
+        }
+        if (total > 0) block(buffer, total) else null
+    }
+}
+
 private fun checkIsUltraHdrFast(context: Context, image: MediaImage): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
     if (image.isVideo || image.isRaw || image.isGif) return false
     return runCatching {
-        val stream = if (image.path.isNotBlank() && java.io.File(image.path).canRead()) {
-            runCatching { java.io.FileInputStream(image.path) }.getOrNull()
-        } else null
-        val finalStream = stream ?: context.contentResolver.openInputStream(image.uri)
-        finalStream?.use { input ->
-            val buffer = ByteArray(131072)
-            var totalRead = 0
-            while (totalRead < buffer.size) {
-                val read = input.read(buffer, totalRead, buffer.size - totalRead)
-                if (read <= 0) break
-                totalRead += read
-            }
-            if (totalRead > 0) {
-                val str = String(buffer, 0, totalRead, Charsets.ISO_8859_1)
-                str.contains("http://ns.adobe.com/hdr-gain-map/1.0/") ||
-                str.contains("hdrgm:") ||
-                str.contains("Item:Semantic=\"GainMap\"") ||
-                str.contains("21496-1") ||
-                (str.contains("Container:Directory") && str.contains("GainMap"))
-            } else false
+        withHeader(context, image) { buf, len ->
+            HDR_MARKERS.any { buf.containsBytes(len, it) } ||
+                (buf.containsBytes(len, CONTAINER_MARKER) && buf.containsBytes(len, GAINMAP_MARKER))
         } ?: false
     }.getOrDefault(false)
 }
@@ -319,23 +358,8 @@ private fun checkIsUltraHdrFast(context: Context, image: MediaImage): Boolean {
 private fun checkIsDepthPhotoFast(context: Context, image: MediaImage): Boolean {
     if (image.isVideo || image.isRaw || image.isGif || image.isSvg) return false
     return runCatching {
-        val stream = if (image.path.isNotBlank() && java.io.File(image.path).canRead()) {
-            runCatching { java.io.FileInputStream(image.path) }.getOrNull()
-        } else null
-        val finalStream = stream ?: context.contentResolver.openInputStream(image.uri)
-        finalStream?.use { input ->
-            val buffer = ByteArray(131072)
-            var totalRead = 0
-            while (totalRead < buffer.size) {
-                val read = input.read(buffer, totalRead, buffer.size - totalRead)
-                if (read <= 0) break
-                totalRead += read
-            }
-            if (totalRead > 0) {
-                val str = String(buffer, 0, totalRead, Charsets.ISO_8859_1)
-                str.contains("GDepth:") ||
-                str.contains("GCamera:SpecialTypeID=\"PORTRAIT_TYPE\"")
-            } else false
+        withHeader(context, image) { buf, len ->
+            DEPTH_MARKERS.any { buf.containsBytes(len, it) }
         } ?: false
     }.getOrDefault(false)
 }
@@ -361,7 +385,7 @@ fun MediaThumbnail(
 
     if (bitmap == null) {
         LaunchedEffect(cacheKey, image.uri) {
-            val loaded = withContext(Dispatchers.IO) { loadThumbnail(context, image, targetSizePx) }
+            val loaded = withContext(thumbDispatcher) { loadThumbnail(context, image, targetSizePx) }
             if (loaded != null) {
                 bitmap = loaded
             } else {
@@ -396,26 +420,23 @@ fun MediaThumbnail(
         }
     }
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !image.isVideo && !image.isRaw && !image.isGif) {
-        val knownHdr = ThumbnailCache.isHdr(image.id)
-        if (knownHdr != null) {
-            if (isHdr != knownHdr) isHdr = knownHdr
-        } else {
-            LaunchedEffect(image.id) {
-                val detected = withContext(Dispatchers.IO) { checkIsUltraHdrFast(context, image) }
+    // HDR / depth badges: looked up once per photo, on a single low-priority lane, and only after the thumbnail is
+    // already on screen. Skipped completely when badges are switched off.
+    val needHdr = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !image.isVideo && !image.isRaw && !image.isGif
+    val needDepth = !image.isVideo && !image.isRaw && !image.isGif && !image.isSvg && !image.isMotionPhoto
+    val knownHdr = if (needHdr) ThumbnailCache.isHdr(image.id) else null
+    val knownDepth = if (needDepth) ThumbnailCache.isDepth(image.id) else null
+    if (knownHdr != null && isHdr != knownHdr) isHdr = knownHdr
+    if (knownDepth != null && isDepth != knownDepth) isDepth = knownDepth
+    if (showFormatBadge && bitmap != null && ((needHdr && knownHdr == null) || (needDepth && knownDepth == null))) {
+        LaunchedEffect(image.id) {
+            if (needHdr && ThumbnailCache.isHdr(image.id) == null) {
+                val detected = withContext(detectDispatcher) { checkIsUltraHdrFast(context, image) }
                 ThumbnailCache.setHdr(image.id, detected)
                 isHdr = detected
             }
-        }
-    }
-
-    if (!image.isVideo && !image.isRaw && !image.isGif && !image.isSvg && !image.isMotionPhoto) {
-        val knownDepth = ThumbnailCache.isDepth(image.id)
-        if (knownDepth != null) {
-            if (isDepth != knownDepth) isDepth = knownDepth
-        } else {
-            LaunchedEffect(image.id) {
-                val detected = withContext(Dispatchers.IO) { checkIsDepthPhotoFast(context, image) }
+            if (needDepth && ThumbnailCache.isDepth(image.id) == null) {
+                val detected = withContext(detectDispatcher) { checkIsDepthPhotoFast(context, image) }
                 ThumbnailCache.setDepth(image.id, detected)
                 isDepth = detected
             }

@@ -2431,7 +2431,7 @@ private fun GalleryScaffold(
                     }
                 },
                 navigationIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(0.dp)) {
 
                     if (isFileSearching && canSearchOnScreen) {
                         AxBarButton(onClick = { isFileSearching = false; fileSearchQuery = "" }) {
@@ -4676,7 +4676,7 @@ private fun PhotoGrid(
               items(group.value, key = { it.id }, contentType = { "photo" }) { image ->
                 val selected = image.id in selectedIds
                 val heroCell = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
-                Box(Modifier.animateItem(fadeInSpec = null).aspectRatio(1f)
+                Box(Modifier.aspectRatio(1f)
                     .onGloballyPositioned { heroCell[0] = it }
                     .clip(RoundedCornerShape(if (selected) 20.dp else maxOf(cornerStyle.dp, 18).dp))
                     .combinedClickable(onClick = {
@@ -4701,13 +4701,15 @@ private fun PhotoGrid(
                         val dayLabel = remember(image.dateTaken) {
                             Instant.ofEpochMilli(image.dateTaken).atZone(ZoneId.systemDefault()).dayOfMonth.toString()
                         }
+                        // small dark pill instead of a blurred text shadow: much cheaper to draw on every tile
                         Text(
                             dayLabel,
-                            modifier = Modifier.align(Alignment.TopEnd).padding(top = 3.dp, end = 5.dp),
+                            modifier = Modifier.align(Alignment.TopEnd).padding(top = 3.dp, end = 4.dp)
+                                .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 4.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
-                                shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.85f), blurRadius = 6f),
                             ),
                         )
                     }
@@ -4718,18 +4720,13 @@ private fun PhotoGrid(
                             .border(
                                 if (selected) 2.5.dp else 0.8.dp,
                                 if (selected) androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary)
-                                else androidx.compose.ui.graphics.Brush.linearGradient(
-                                    listOf(Color.White.copy(alpha = 0.30f), Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.16f))
-                                ),
+                                else androidx.compose.ui.graphics.SolidColor(Color.White.copy(alpha = 0.14f)),
                                 RoundedCornerShape(if (selected) 20.dp else maxOf(cornerStyle.dp, 18).dp),
                             )
                     )
-                    AnimatedVisibility(selected, enter = fadeIn(tween(120)) + scaleIn(tween(160)),
-                        exit = fadeOut(tween(100)) + scaleOut(tween(120)),
-                        modifier = Modifier.align(Alignment.TopEnd).padding(7.dp)) {
-                        Icon(Icons.Filled.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(27.dp).background(MaterialTheme.colorScheme.surface,
-                                RoundedCornerShape(50)))
+                    // only selected tiles compose the check (an AnimatedVisibility on every tile was costly)
+                    if (selected) {
+                        com.iris.gallery.ui.AxSelectCheck(Modifier.align(Alignment.TopEnd).padding(7.dp))
                     }
                 }
               }

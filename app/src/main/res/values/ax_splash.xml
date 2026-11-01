@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ax_splash">#0A1CD6</color>
+    <color name="ax_splash">#040405</color>
 
-    <!-- Same as Theme.IrisGallery, but the system splash shows the animated collage AX logo instead of the app icon. -->
+    <!-- Same as Theme.IrisGallery, but the system splash is just a black screen (no logo), so the only launch animation is the liquid intro. -->
     <style name="Theme.AxGallery" parent="Theme.IrisGallery">
         <item name="android:windowBackground">@color/ax_splash</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ax_splash_avd</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ax_splash_empty</item>
         <item name="android:windowSplashScreenBackground">@color/ax_splash</item>
-        <item name="android:windowSplashScreenAnimationDuration">900</item>
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
     </style>
 </resources>
