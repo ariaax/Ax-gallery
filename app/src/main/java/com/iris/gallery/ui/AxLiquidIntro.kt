@@ -29,13 +29,16 @@ import kotlin.math.sin
  * the animation values are only read while drawing, so nothing recomposes per frame.
  */
 @Composable
-fun AxLiquidIntro(onFinished: () -> Unit) {
+fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
     val cover = remember { Animatable(0f) }
     val reveal = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
         cover.animateTo(1f, tween(520, easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)))
-        delay(70)
+        // The screen is fully covered now: this is the moment to build the gallery behind the liquid. Its first
+        // composition and first data load are heavy, so they must not happen while the liquid is still moving.
+        onCovered()
+        delay(450)
         reveal.animateTo(1f, tween(560, easing = CubicBezierEasing(0.5f, 0f, 0.3f, 1f)))
         onFinished()
     }

@@ -490,8 +490,11 @@ class MainActivity : ComponentActivity() {
                 accentColor = settings.accentColor,
             ) {
               var introDone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+              val showIntro = !introDone && !pickerMode && viewUri == null
+              // With the intro, the gallery is only built once the liquid has covered the screen (smooth animation).
+              var appShown by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!showIntro) }
               Box(Modifier.fillMaxSize()) {
-                GalleryApp(
+                if (appShown) GalleryApp(
                     settings = settings,
                     settingsPreferences = settingsPreferences,
                     requestedType = requestedType.takeIf { pickerMode },
@@ -510,8 +513,8 @@ class MainActivity : ComponentActivity() {
                         finish()
                     }} else null,
                 )
-                if (!introDone && !pickerMode && viewUri == null) {
-                    com.iris.gallery.ui.AxLiquidIntro { introDone = true }
+                if (showIntro) {
+                    com.iris.gallery.ui.AxLiquidIntro(onCovered = { appShown = true }, onFinished = { introDone = true })
                 }
               }
             }
