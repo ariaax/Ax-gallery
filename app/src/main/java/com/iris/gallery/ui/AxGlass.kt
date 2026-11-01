@@ -267,6 +267,8 @@ fun Modifier.axGlassSource(state: AxGlassState): Modifier = this
         // content once more into a small layer, shifted so that exactly the part under the glass lands in it,
         // and blur that layer. Drawing a layer inside another layer did not render on some phones, this does.
         drawContent()
+        // Blur is off: return before touching any state, so the content is never redrawn just because the dock moved/resized.
+        if (!blurSupported) return@drawWithContent
 
         val barSize = state.barSize
         if (AxGlass.enabled && blurSupported && barSize.width > 1f && barSize.height > 1f) {
