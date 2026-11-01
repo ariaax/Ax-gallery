@@ -8,15 +8,12 @@ jobs:
     steps:
       - name: Download and inspect AAR
         run: |
-          set -x
           V=0.1.12
-          curl -sfL -o lib.aar "https://repo1.maven.org/maven2/io/github/abdallahmehiz/mpv-android-lib/$V/mpv-android-lib-$V.aar" || echo "AAR DOWNLOAD FAILED"
-          ls -la lib.aar
-          mkdir x && cd x && unzip -q ../lib.aar
-          find . -type f | sed 's/^/FILE /' | head -80
-          ls -la jni/* || true
-          mkdir c && cd c && unzip -q ../classes.jar && cd ..
-          find c -name '*.class' | head -50
-          for k in $(find c -name 'MPVLib*.class' | sed 's/^c\///;s/\.class$//;s/\//./g'); do javap -p -cp c "$k"; done
-          cat AndroidManifest.xml | head -30
-          curl -sfL "https://repo1.maven.org/maven2/io/github/abdallahmehiz/mpv-android-lib/$V/mpv-android-lib-$V.pom" | head -60
+          curl -sfL -o lib.aar "https://repo1.maven.org/maven2/io/github/abdallahmehiz/mpv-android-lib/$V/mpv-android-lib-$V.aar"
+          mkdir x && cd x && unzip -q ../lib.aar && mkdir c && cd c && unzip -q ../classes.jar && cd ..
+          echo "=== TOP-LEVEL CLASSES ==="
+          find c -name '*.class' | grep -v '\$' | sed 's/^c\///;s/\.class$//;s/\//./g'
+          echo "=== NON-LAMBDA INNER CLASSES ==="
+          find c -name '*.class' | grep '\$' | grep -v 'lambda\|inlined\|\$[0-9]' | sed 's/^c\///;s/\.class$//;s/\//./g'
+          for k in is.xyz.mpv.MPV 'is.xyz.mpv.MPV$Companion' is.xyz.mpv.MPVNode 'is.xyz.mpv.MPV$PropertyAccessor' 'is.xyz.mpv.MPV$PropertyFlowAccessor' 'is.xyz.mpv.MPV$LogObserver' 'is.xyz.mpv.MPV$EventObserver' is.xyz.mpv.BaseMPVView; do echo "=== $k ==="; javap -p -cp c "$k" 2>&1 | head -150; done
+          cat AndroidManifest.xml
