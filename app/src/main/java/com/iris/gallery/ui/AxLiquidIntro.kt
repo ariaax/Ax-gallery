@@ -6,7 +6,16 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -97,12 +106,14 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
     val bodyPath = remember { Path() }
     val streak = remember { Path() }
 
-    Canvas(
+    Box(
         Modifier
             .fillMaxSize()
             // swallow touches while the intro is visible
             .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {},
+        contentAlignment = Alignment.Center,
     ) {
+    Canvas(Modifier.fillMaxSize()) {
         val p = cover.value
         val q = reveal.value
         val w = size.width
@@ -188,5 +199,28 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
         if (draining && q < 1f) {
             drawPath(topPath, Color(0xFFBFF1FF).copy(alpha = 0.75f), style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
+    }
+    // The name: rises out of the liquid once it covers the screen, melts away as the liquid drains.
+    // Alpha/scale are read only while drawing (graphicsLayer lambda), so this never recomposes.
+    Text(
+        text = "Ax",
+        modifier = Modifier.graphicsLayer {
+            val appear = smooth((cover.value - 0.70f) / 0.30f)
+            val leave = smooth(reveal.value / 0.35f)
+            alpha = appear * (1f - leave)
+            val sc = 0.88f + 0.12f * appear + 0.10f * leave
+            scaleX = sc
+            scaleY = sc
+            translationY = (1f - appear) * 24.dp.toPx() - leave * 18.dp.toPx()
+        },
+        style = TextStyle(
+            fontFamily = FontFamily.SansSerif,
+            fontWeight = FontWeight.Black,
+            fontSize = 88.sp,
+            letterSpacing = 4.sp,
+            color = Color.White,
+            shadow = Shadow(Color(0xFF59C8FF).copy(alpha = 0.85f), blurRadius = 28f),
+        ),
+    )
     }
 }
