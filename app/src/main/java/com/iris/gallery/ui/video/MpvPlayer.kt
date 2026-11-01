@@ -121,53 +121,6 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
         }
     }
 
-    init {
-        try {
-            mpv.create(appContext)
-            // phone-friendly defaults (same family of options the official mpv-android uses)
-            mpv.setOptionString("profile", "fast")
-            mpv.setOptionString("vo", "gpu")
-            mpv.setOptionString("gpu-context", "android")
-            mpv.setOptionString("opengl-es", "yes")
-            mpv.setOptionString("hwdec", "mediacodec,mediacodec-copy")
-            mpv.setOptionString("hwdec-codecs", "h264,hevc,mpeg4,mpeg2video,vp8,vp9,av1")
-            mpv.setOptionString("ao", "audiotrack,opensles")
-            mpv.setOptionString("audio-set-media-role", "yes")
-            // better scaling than the "fast" profile when a frame has to be resized
-            mpv.setOptionString("scale", "spline36")
-            mpv.setOptionString("dscale", "mitchell")
-            mpv.setOptionString("cscale", "spline36")
-            // keep the last frame at the end so the user can seek back / replay
-            mpv.setOptionString("keep-open", "yes")
-            mpv.setOptionString("pause", "yes")
-            mpv.setOptionString("input-default-bindings", "no")
-            mpv.setOptionString("osc", "no")
-            mpv.setOptionString("save-position-on-quit", "no")
-            mpv.setOptionString("demuxer-max-bytes", "${64 * 1024 * 1024}")
-            mpv.setOptionString("demuxer-max-back-bytes", "${64 * 1024 * 1024}")
-            mpv.init()
-            mpv.setOptionString("force-window", "no")
-            mpv.setOptionString("idle", "once")
-            mpv.addObserver(observer)
-            mpv.observeProperty("duration", 5)          // double
-            mpv.observeProperty("pause", 3)             // flag
-            mpv.observeProperty("eof-reached", 3)       // flag
-            mpv.observeProperty("paused-for-cache", 3)  // flag
-            mpv.observeProperty("seeking", 3)           // flag
-            mpv.observeProperty("dwidth", 4)            // int64
-            mpv.observeProperty("dheight", 4)           // int64
-            ContextCompat.registerReceiver(
-                appContext, noisyReceiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
-                ContextCompat.RECEIVER_NOT_EXPORTED,
-            )
-            synchronized(live) { live.add(this) }
-        } catch (t: Throwable) {
-            initFailed = true
-            released = true
-            throw t
-        }
-    }
-
     // ------------------------------------------------------------------ mpv -> state
 
     private val observer = object : MPV.EventObserver {
@@ -215,8 +168,8 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
 
         override fun eventProperty(property: String, value: MPVNode) {}
 
-        override fun event(eventId: Int, data: MPVNode?) {
-            val detail = runCatching { data?.toJson() }.getOrNull()
+        override fun event(eventId: Int, data: MPVNode) {
+            val detail = runCatching { data.toJson() }.getOrNull()
             main.post {
                 if (released) return@post
                 when (eventId) {
@@ -229,6 +182,53 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
                     }
                 }
             }
+        }
+    }
+
+    init {
+        try {
+            mpv.create(appContext)
+            // phone-friendly defaults (same family of options the official mpv-android uses)
+            mpv.setOptionString("profile", "fast")
+            mpv.setOptionString("vo", "gpu")
+            mpv.setOptionString("gpu-context", "android")
+            mpv.setOptionString("opengl-es", "yes")
+            mpv.setOptionString("hwdec", "mediacodec,mediacodec-copy")
+            mpv.setOptionString("hwdec-codecs", "h264,hevc,mpeg4,mpeg2video,vp8,vp9,av1")
+            mpv.setOptionString("ao", "audiotrack,opensles")
+            mpv.setOptionString("audio-set-media-role", "yes")
+            // better scaling than the "fast" profile when a frame has to be resized
+            mpv.setOptionString("scale", "spline36")
+            mpv.setOptionString("dscale", "mitchell")
+            mpv.setOptionString("cscale", "spline36")
+            // keep the last frame at the end so the user can seek back / replay
+            mpv.setOptionString("keep-open", "yes")
+            mpv.setOptionString("pause", "yes")
+            mpv.setOptionString("input-default-bindings", "no")
+            mpv.setOptionString("osc", "no")
+            mpv.setOptionString("save-position-on-quit", "no")
+            mpv.setOptionString("demuxer-max-bytes", "${64 * 1024 * 1024}")
+            mpv.setOptionString("demuxer-max-back-bytes", "${64 * 1024 * 1024}")
+            mpv.init()
+            mpv.setOptionString("force-window", "no")
+            mpv.setOptionString("idle", "once")
+            mpv.addObserver(observer)
+            mpv.observeProperty("duration", 5)          // double
+            mpv.observeProperty("pause", 3)             // flag
+            mpv.observeProperty("eof-reached", 3)       // flag
+            mpv.observeProperty("paused-for-cache", 3)  // flag
+            mpv.observeProperty("seeking", 3)           // flag
+            mpv.observeProperty("dwidth", 4)            // int64
+            mpv.observeProperty("dheight", 4)           // int64
+            ContextCompat.registerReceiver(
+                appContext, noisyReceiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+            synchronized(live) { live.add(this) }
+        } catch (t: Throwable) {
+            initFailed = true
+            released = true
+            throw t
         }
     }
 
