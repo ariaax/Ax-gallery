@@ -2,6 +2,11 @@ package com.iris.gallery.ui
 
 import android.os.Build
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.runtime.State
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -55,7 +60,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -721,9 +725,10 @@ fun axDominantDark(src: android.graphics.Bitmap): Color = axPhotoColors(src).fir
 @Composable
 fun Modifier.axSpinRing(): Modifier {
     val lite = AxPerf.lite(androidx.compose.ui.platform.LocalContext.current)
-    val angle = if (lite) null else androidx.compose.animation.core.rememberInfiniteTransition(label = "dock ring").animateFloat(
-        0f, 360f,
-        androidx.compose.animation.core.infiniteRepeatable(tween(2800, easing = androidx.compose.animation.core.LinearEasing)),
+    val angle: State<Float>? = if (lite) null else rememberInfiniteTransition(label = "dock ring").animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(2800, easing = LinearEasing)),
         label = "dock ring angle",
     )
     return this.drawWithCache {
