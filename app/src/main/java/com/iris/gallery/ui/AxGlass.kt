@@ -341,10 +341,9 @@ fun AxGlassNavBar(
         spring(dampingRatio = 0.82f, stiffness = 420f),
         label = "dock height",
     )
-    val tint = Color.White.copy(alpha = if (blurSupported) 0.14f else 0.22f)
-        .compositeOver(Color.Black.copy(alpha = if (blurSupported) 0.30f else 0.80f))
+    val tint = Color(0xFF0B0B0D).copy(alpha = 0.90f)
     val edge = Brush.linearGradient(
-        listOf(Color.White.copy(alpha = 0.95f), Color.White.copy(alpha = 0.10f), Color.White.copy(alpha = 0.80f))
+        listOf(Color.White.copy(alpha = 0.30f), Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.22f))
     )
     // a light glint sweeps over the glass whenever the tab changes
     val glint = remember { Animatable(1f) }
@@ -372,7 +371,7 @@ fun AxGlassNavBar(
                 .drawBehind {
                     drawRect(
                         brush = Brush.verticalGradient(
-                            listOf(Color.White.copy(alpha = 0.26f), Color.Transparent),
+                            listOf(Color.White.copy(alpha = 0.07f), Color.Transparent),
                             endY = size.height * 0.5f,
                         )
                     )
@@ -454,12 +453,12 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
     val shape = RoundedCornerShape(corner)
     // One look for every viewer panel (top buttons, filmstrip, info, action bar): icy light glass.
     // It no longer turns black when blur is off (videos), so everything stays uniform.
-    val tint = Color(0xFFCFE0FF).copy(alpha = 0.20f).compositeOver(Color.Black.copy(alpha = 0.30f))
+    val tint = Color(0xFF0B0B0D).copy(alpha = 0.90f)
     val edge = Brush.linearGradient(
         listOf(
-            Color.White.copy(alpha = 0.75f),
-            Color.White.copy(alpha = 0.10f),
-            Color.White.copy(alpha = 0.45f),
+            Color.White.copy(alpha = 0.26f),
+            Color.White.copy(alpha = 0.04f),
+            Color.White.copy(alpha = 0.18f),
         )
     )
     return this
@@ -473,7 +472,7 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
         .drawBehind {
             drawRect(
                 brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.24f), Color.Transparent),
+                    listOf(Color.White.copy(alpha = 0.06f), Color.Transparent),
                     endY = size.height * 0.55f,
                 )
             )

@@ -186,13 +186,13 @@ fun Modifier.axGlassSheetEdge(corner: androidx.compose.ui.unit.Dp = 28.dp): Modi
 @Composable
 fun Modifier.axBarPill(): Modifier {
     val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val fill = if (dark) Color.White.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.80f)
+    val fill = if (dark) Color(0xFF0B0B0D).copy(alpha = 0.55f) else Color.White.copy(alpha = 0.80f)
     val base = if (dark) Color.Black.copy(alpha = 0.40f) else Color.Black.copy(alpha = 0.06f)
     val rim = Brush.linearGradient(
         listOf(
-            Color.White.copy(alpha = if (dark) 0.50f else 0.90f),
-            Color.White.copy(alpha = if (dark) 0.08f else 0.25f),
-            Color.White.copy(alpha = if (dark) 0.30f else 0.70f),
+            Color.White.copy(alpha = if (dark) 0.22f else 0.90f),
+            Color.White.copy(alpha = if (dark) 0.04f else 0.25f),
+            Color.White.copy(alpha = if (dark) 0.15f else 0.70f),
         )
     )
     return this.drawWithContent {
@@ -200,7 +200,7 @@ fun Modifier.axBarPill(): Modifier {
         drawRoundRect(base, cornerRadius = r)
         drawRoundRect(fill, cornerRadius = r)
         drawRoundRect(
-            Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) 0.10f else 0.28f), Color.Transparent), endY = size.height * 0.55f),
+            Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) 0.04f else 0.28f), Color.Transparent), endY = size.height * 0.55f),
             cornerRadius = r,
         )
         drawRoundRect(rim, cornerRadius = r, style = Stroke(width = 1.dp.toPx()))
@@ -309,11 +309,11 @@ fun Modifier.axIcyPanel(corner: androidx.compose.ui.unit.Dp): Modifier {
     val shape = RoundedCornerShape(corner)
     return this
         .clip(shape)
-        .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
-        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
+        .background(Color(0xFF0B0B0D).copy(alpha = 0.88f))
+        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.06f), Color.Transparent)))
         .border(
             1.2.dp,
-            Brush.linearGradient(listOf(Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.50f))),
+            Brush.linearGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.18f))),
             shape,
         )
 }
