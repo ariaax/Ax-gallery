@@ -5155,12 +5155,33 @@ private fun PhotoViewer(
             PreferredEditor.ALWAYS_ASK -> showEditChoiceSheet = true
         }
     }
-    val videoEngine = remember {
-        com.iris.gallery.ui.video.createVideoEngine(context).apply {
+    // Videos mpv could not show (no picture / would not open) are played by ExoPlayer instead, one video at a time.
+    val mpvFailedIds = remember { androidx.compose.runtime.mutableStateListOf<Long>() }
+    val useMpv = current.id !in mpvFailedIds
+    val videoEngine = remember(useMpv) {
+        com.iris.gallery.ui.video.createVideoEngine(context, preferMpv = useMpv).apply {
             setMuted(videoMuted)
         }
     }
     DisposableEffect(videoEngine) { onDispose { videoEngine.release() } }
+    val latestCurrent by rememberUpdatedState(current)
+    DisposableEffect(videoEngine) {
+        val listener = object : Player.Listener {
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                val now = latestCurrent
+                if (videoEngine is com.iris.gallery.ui.video.MpvVideoEngine && now.isVideo && now.id !in mpvFailedIds) {
+                    mpvFailedIds.add(now.id)
+                    android.widget.Toast.makeText(
+                        context,
+                        "mpv could not show this video, using the standard player (" + (error.cause?.message ?: error.message ?: "").take(100) + ")",
+                        android.widget.Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
+        }
+        videoEngine.player.addListener(listener)
+        onDispose { videoEngine.player.removeListener(listener) }
+    }
     // Stop audio when the app leaves the foreground (video must not keep playing in the background).
     val videoLifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(videoLifecycleOwner, videoEngine) {
@@ -5177,7 +5198,7 @@ private fun PhotoViewer(
             videoEngine.setMuted(videoMuted)
         }
     }
-    LaunchedEffect(current.id) {
+    LaunchedEffect(current.id, videoEngine) {
         if (current.isVideo) videoEngine.load(current.uri) else videoEngine.player.pause()
     }
 

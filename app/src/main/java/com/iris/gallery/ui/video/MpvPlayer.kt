@@ -65,6 +65,49 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
     /** While the seek bar is being dragged: jump to the nearest keyframe (fast). Off = frame-exact. */
     @Volatile var fastSeek = false
 
+    // ---- health check: a file that never opens, or opens with sound but no picture, is reported as an error
+    // so the app can hand that one video to the ExoPlayer instead of leaving a black screen ----
+    private var watchGen = 0
+    private val logTailLines = java.util.ArrayDeque<String>()
+    private val logObserver = object : MPV.LogObserver {
+        override fun logMessage(prefix: String, level: Int, text: String) {
+            if (level > 30) return // keep only warnings and errors
+            synchronized(logTailLines) {
+                logTailLines.addLast("$prefix: ${text.trim()}")
+                while (logTailLines.size > 8) logTailLines.removeFirst()
+            }
+        }
+    }
+
+    private fun logTail(): String = synchronized(logTailLines) {
+        logTailLines.toList().takeLast(3).joinToString(" | ").ifBlank { "no details from mpv" }
+    }
+
+    private fun armWatchdog(delayMs: Long) {
+        val gen = ++watchGen
+        main.postDelayed({ if (gen == watchGen) checkHealth() }, delayMs)
+    }
+
+    private fun checkHealth() {
+        if (released || error != null) return
+        if (!fileLoaded) {
+            if (loading) fail("mpv took too long to open this file")
+            return
+        }
+        // only judge the picture while the user actually wants to watch and the surface exists
+        if (!playWhenReady || !surfaceReady) return
+        val hasVideoTrack = runCatching { mpv.getPropertyString("video-format") }.getOrNull() != null
+        val pictureShown = runCatching { mpv.getPropertyBoolean("vo-configured") }.getOrNull() == true
+        if (hasVideoTrack && !pictureShown) fail("mpv has sound but no picture for this video")
+    }
+
+    private fun fail(message: String) {
+        error = PlaybackException(message, RuntimeException(logTail()), PlaybackException.ERROR_CODE_DECODING_FAILED)
+        loading = false
+        runCatching { mpv.setPropertyBoolean("pause", true) }
+        invalidateState()
+    }
+
     // ---- surface / file hand-over ----
     private var surfaceView: SurfaceView? = null
     private var surfaceReady = false
@@ -213,6 +256,7 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
             mpv.setOptionString("force-window", "no")
             mpv.setOptionString("idle", "once")
             mpv.addObserver(observer)
+            mpv.addLogObserver(logObserver)
             mpv.observeProperty("duration", 5)          // double
             mpv.observeProperty("pause", 3)             // flag
             mpv.observeProperty("eof-reached", 3)       // flag
@@ -246,6 +290,7 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
         // the previous file's descriptor is no longer needed
         if (openFd >= 0 && openFd != pendingFd) closeFd(openFd)
         openFd = pendingFd
+        if (playWhenReady) armWatchdog(3000)
         invalidateState()
     }
 
@@ -279,6 +324,7 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
         videoH = 0
         pendingTarget = resolveTarget(uri)
         if (surfaceReady) startPending()
+        armWatchdog(7000)
         invalidateState()
     }
 
@@ -294,7 +340,9 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
             mpv.setPropertyString("vo", "null")
             mpv.detachSurface()
         }
+        watchGen++
         runCatching { mpv.removeObserver(observer) }
+        runCatching { mpv.removeLogObserver(logObserver) }
         runCatching { mpv.destroy() }
         if (openFd >= 0) closeFd(openFd)
         if (pendingFd >= 0 && pendingFd != openFd) closeFd(pendingFd)
@@ -388,6 +436,7 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
             runCatching { audioManager.abandonAudioFocusRequest(focusRequest) }
         }
         if (fileLoaded) runCatching { mpv.setPropertyBoolean("pause", !playWhenReady) }
+        if (playWhenReady && fileLoaded) armWatchdog(3000)
         return Futures.immediateVoidFuture()
     }
 

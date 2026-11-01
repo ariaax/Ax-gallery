@@ -1140,6 +1140,6 @@ private fun describePlaybackError(e: androidx.media3.common.PlaybackException): 
             if (format != null) append(" · ").append(format.sampleMimeType ?: "?")
         }
         val cause = e.cause
-        if (cause != null) append('\n').append(cause.javaClass.simpleName).append(": ").append((cause.message ?: "").take(90))
+        if (cause != null) append('\n').append(cause.javaClass.simpleName).append(": ").append((cause.message ?: "").take(220))
     }
 }
