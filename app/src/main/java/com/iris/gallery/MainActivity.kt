@@ -5157,9 +5157,12 @@ private fun PhotoViewer(
     }
     // Videos mpv could not show (no picture / would not open) are played by ExoPlayer instead, one video at a time.
     val mpvFailedIds = remember { androidx.compose.runtime.mutableStateListOf<Long>() }
+    // Videos the user explicitly chose to play with mpv from the viewer menu (works even if the Settings switch is off).
+    val mpvForcedIds = remember { androidx.compose.runtime.mutableStateListOf<Long>() }
     val useMpv = current.id !in mpvFailedIds
-    val videoEngine = remember(useMpv) {
-        com.iris.gallery.ui.video.createVideoEngine(context, preferMpv = useMpv).apply {
+    val forceMpv = current.id in mpvForcedIds
+    val videoEngine = remember(useMpv, forceMpv) {
+        com.iris.gallery.ui.video.createVideoEngine(context, preferMpv = useMpv, force = forceMpv).apply {
             setMuted(videoMuted)
         }
     }
@@ -5809,6 +5812,24 @@ private fun PhotoViewer(
                                 onClick = {
                                     viewerMenuExpanded = false
                                     launchExternalEditor(context, current)
+                                }
+                            )
+                        }
+                        if (current.isVideo) {
+                            val mpvNow = videoEngine is com.iris.gallery.ui.video.MpvVideoEngine
+                            DropdownMenuItem(
+                                text = { Text(if (mpvNow) "Play with standard player" else "Play with mpv") },
+                                leadingIcon = { Icon(AxIcons.Video, null) },
+                                onClick = {
+                                    viewerMenuExpanded = false
+                                    val id = current.id
+                                    if (mpvNow) {
+                                        mpvForcedIds.remove(id)
+                                        if (id !in mpvFailedIds) mpvFailedIds.add(id)
+                                    } else {
+                                        mpvFailedIds.remove(id)
+                                        if (id !in mpvForcedIds) mpvForcedIds.add(id)
+                                    }
                                 }
                             )
                         }
