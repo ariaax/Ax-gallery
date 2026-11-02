@@ -142,7 +142,7 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
                 .setNegativeButton("Close", null)
                 .apply {
                     if (offerMpvRetry) setNeutralButton("Try mpv again") { _, _ ->
-                        getSharedPreferences("ax_diag", Context.MODE_PRIVATE).edit().putBoolean("mpv_disabled", false).apply()
+                        getSharedPreferences("ax_diag", Context.MODE_PRIVATE).edit().putBoolean("mpv_disabled", false).putBoolean("mpv_enabled", true).apply()
                     }
                 }
                 .show()
