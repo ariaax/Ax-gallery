@@ -13,7 +13,7 @@ android {
         targetSdk = 35
         versionCode = 18
         versionName = "0.9.5"
-        // Phones are 64-bit: shipping only arm64 keeps the app small now that libmpv (4 CPU builds, ~67 MB) is inside.
+        // Phones are 64-bit: shipping only arm64 keeps the app small (no libmpv any more).
         ndk { abiFilters += "arm64-v8a" }
     }
 
@@ -65,8 +65,6 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-svg:3.1.0")
     implementation("androidx.media3:media3-exoplayer:1.5.1")
     implementation("androidx.media3:media3-ui:1.5.1")
-    // mpv video engine (same library family mpvKt / MpvRx use) + Guava for the Player adapter's futures
-    implementation("io.github.abdallahmehiz:mpv-android-lib:0.1.12")
     implementation("com.google.guava:guava:33.4.0-android")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("org.aomedia.avif.android:avif:1.1.1.14d8e3c4")

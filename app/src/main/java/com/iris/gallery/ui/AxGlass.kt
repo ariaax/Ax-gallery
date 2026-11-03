@@ -356,21 +356,25 @@ fun AxGlassNavBar(
     }
     val shape = RoundedCornerShape(50)
 
-    // One highlight pill that GLIDES between tabs (instead of every tab popping its own in and out).
+    // One highlight pill that GLIDES between tabs. It is driven by a single 0..1 progress and the tabs' live bounds, and
+    // everything is read only while drawing, so a tab change costs no recomposition (that was the stutter).
     val lefts = remember(count) { FloatArray(count) }
     val rights = remember(count) { FloatArray(count) }
     var rowRootX by remember { mutableStateOf(0f) }
-    var measureTick by remember { mutableStateOf(0) }
-    // measureTick is read here so the targets are re-read whenever the selected tab's bounds change
-    val tick = measureTick
-    val targetL = remember(tick, selectedIndex) { lefts.getOrElse(selectedIndex) { 0f } }
-    val targetR = remember(tick, selectedIndex) { rights.getOrElse(selectedIndex) { 0f } }
-    var prevIndex by remember { mutableStateOf(selectedIndex) }
-    val movingRight = selectedIndex >= prevIndex
-    SideEffect { prevIndex = selectedIndex }
-    // the edge that leads the move is quick, the trailing one lags a little: the pill stretches like liquid
-    val indL by animateFloatAsState(targetL, spring(dampingRatio = 0.78f, stiffness = if (movingRight) 300f else 620f), label = "ind left")
-    val indR by animateFloatAsState(targetR, spring(dampingRatio = 0.78f, stiffness = if (movingRight) 620f else 300f), label = "ind right")
+    val boundsTick = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val move = remember { Animatable(1f) }
+    val from = remember { FloatArray(2) }   // where the pill was when the tab changed
+    val cur = remember { FloatArray(2) }    // where the pill was drawn last
+    val dir = remember { intArrayOf(selectedIndex, 1) } // previous index, direction
+    LaunchedEffect(selectedIndex) {
+        if (dir[0] != selectedIndex) {
+            dir[1] = if (selectedIndex >= dir[0]) 1 else -1
+            dir[0] = selectedIndex
+            from[0] = cur[0]; from[1] = cur[1]
+            move.snapTo(0f)
+            move.animateTo(1f, tween(340, easing = FastOutSlowInEasing))
+        }
+    }
     val spinLite = AxPerf.lite(axCtx)
     val spin = rememberInfiniteTransition(label = "dock ring")
     val spinAngle: State<Float> = spin.animateFloat(
@@ -410,7 +414,22 @@ fun AxGlassNavBar(
                         )
                     )
                     // gliding selection pill with its turning ring
-                    val l = indL; val r = indR
+                    boundsTick.intValue // redraw when a tab's bounds change (read in draw only)
+                    val liveL = lefts.getOrElse(selectedIndex) { 0f }
+                    val liveR = rights.getOrElse(selectedIndex) { 0f }
+                    val t = move.value
+                    var l = liveL
+                    var r = liveR
+                    if (t < 1f && cur[1] - cur[0] > 1f) {
+                        // the edge that leads the move arrives first, the trailing one follows: the pill stretches like liquid
+                        val lead = 1f - (1f - t) * (1f - t) * (1f - t)
+                        val lag = t * t * (3f - 2f * t)
+                        val tl = if (dir[1] > 0) lag else lead
+                        val tr = if (dir[1] > 0) lead else lag
+                        l = from[0] + (liveL - from[0]) * tl
+                        r = from[1] + (liveR - from[1]) * tr
+                    }
+                    cur[0] = l; cur[1] = r
                     if (r - l > 8f) {
                         val pad = 5.dp.toPx()
                         val top = pad
@@ -465,13 +484,13 @@ fun AxGlassNavBar(
                         modifier = Modifier
                             .fillMaxHeight()
                             .graphicsLayer { scaleX = press; scaleY = press }
-                            .animateContentSize(spring(dampingRatio = 0.72f, stiffness = 420f))
+                            .animateContentSize(spring(dampingRatio = 1f, stiffness = 520f))
                             .clip(itemShape)
                             .onGloballyPositioned {
                                 val x = it.positionInRoot().x - rowRootX
                                 if (lefts[i] != x || rights[i] != x + it.size.width) {
                                     lefts[i] = x; rights[i] = x + it.size.width
-                                    if (i == selectedIndex) measureTick++
+                                    if (i == selectedIndex) boundsTick.intValue++
                                 }
                             }
                             .clickable(interactionSource = itemSource, indication = null) {

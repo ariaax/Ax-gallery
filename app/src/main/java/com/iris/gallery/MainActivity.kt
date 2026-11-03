@@ -426,13 +426,12 @@ class MainActivity : ComponentActivity() {
         super.onPause()
         if (!isInMultiWindowMode) {
             com.iris.gallery.ui.video.Media3VideoEngine.pauseAll()
-            com.iris.gallery.ui.video.MpvPlayer.pauseAll()
         }
     }
 
     override fun onStop() {
         super.onStop()
-        com.iris.gallery.ui.video.Media3VideoEngine.pauseAll(); com.iris.gallery.ui.video.MpvPlayer.pauseAll()
+        com.iris.gallery.ui.video.Media3VideoEngine.pauseAll()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -3513,7 +3512,14 @@ private fun GalleryScaffold(
             val label = if (tab == GalleryTab.PHOTOS) photoTabLabel else stringResource(tab.labelRes)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AnimatedNavigationIcon(tab.icon, isSelected, label)
-                if (isSelected) {
+                // the name slides open and fades in (instead of popping in), so the tab width grows smoothly
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isSelected,
+                    enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200, delayMillis = 70)) +
+                        androidx.compose.animation.expandHorizontally(androidx.compose.animation.core.tween(260, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
+                    exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(90)) +
+                        androidx.compose.animation.shrinkHorizontally(androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
+                ) {
                     Text(
                         label,
                         modifier = Modifier.padding(start = 7.dp),
@@ -5155,36 +5161,12 @@ private fun PhotoViewer(
             PreferredEditor.ALWAYS_ASK -> showEditChoiceSheet = true
         }
     }
-    // Videos mpv could not show (no picture / would not open) are played by ExoPlayer instead, one video at a time.
-    val mpvFailedIds = remember { androidx.compose.runtime.mutableStateListOf<Long>() }
-    // Videos the user explicitly chose to play with mpv from the viewer menu (works even if the Settings switch is off).
-    val mpvForcedIds = remember { androidx.compose.runtime.mutableStateListOf<Long>() }
-    val useMpv = current.id !in mpvFailedIds
-    val forceMpv = current.id in mpvForcedIds
-    val videoEngine = remember(useMpv, forceMpv) {
-        com.iris.gallery.ui.video.createVideoEngine(context, preferMpv = useMpv, force = forceMpv).apply {
+    val videoEngine = remember {
+        com.iris.gallery.ui.video.createVideoEngine(context).apply {
             setMuted(videoMuted)
         }
     }
     DisposableEffect(videoEngine) { onDispose { videoEngine.release() } }
-    val latestCurrent by rememberUpdatedState(current)
-    DisposableEffect(videoEngine) {
-        val listener = object : Player.Listener {
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                val now = latestCurrent
-                if (videoEngine is com.iris.gallery.ui.video.MpvVideoEngine && now.isVideo && now.id !in mpvFailedIds) {
-                    mpvFailedIds.add(now.id)
-                    android.widget.Toast.makeText(
-                        context,
-                        "mpv could not show this video, using the standard player (" + (error.cause?.message ?: error.message ?: "").take(100) + ")",
-                        android.widget.Toast.LENGTH_LONG,
-                    ).show()
-                }
-            }
-        }
-        videoEngine.player.addListener(listener)
-        onDispose { videoEngine.player.removeListener(listener) }
-    }
     // Stop audio when the app leaves the foreground (video must not keep playing in the background).
     val videoLifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(videoLifecycleOwner, videoEngine) {
@@ -5812,24 +5794,6 @@ private fun PhotoViewer(
                                 onClick = {
                                     viewerMenuExpanded = false
                                     launchExternalEditor(context, current)
-                                }
-                            )
-                        }
-                        if (current.isVideo) {
-                            val mpvNow = videoEngine is com.iris.gallery.ui.video.MpvVideoEngine
-                            DropdownMenuItem(
-                                text = { Text(if (mpvNow) "Play with standard player" else "Play with mpv") },
-                                leadingIcon = { Icon(AxIcons.Video, null) },
-                                onClick = {
-                                    viewerMenuExpanded = false
-                                    val id = current.id
-                                    if (mpvNow) {
-                                        mpvForcedIds.remove(id)
-                                        if (id !in mpvFailedIds) mpvFailedIds.add(id)
-                                    } else {
-                                        mpvFailedIds.remove(id)
-                                        if (id !in mpvForcedIds) mpvForcedIds.add(id)
-                                    }
                                 }
                             )
                         }

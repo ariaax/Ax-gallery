@@ -1070,17 +1070,6 @@ fun SettingsScreen(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-                    val mpvContext = androidx.compose.ui.platform.LocalContext.current
-                    var mpvOn by remember { mutableStateOf(com.iris.gallery.ui.video.mpvEnabled(mpvContext)) }
-                    SettingsSwitchRow(
-                        title = "mpv video player (experimental)",
-                        subtitle = "Sharper scaling and more formats. Takes effect the next time you open a video. If the app ever crashes while mpv is on, it switches itself off.",
-                        checked = mpvOn,
-                        onCheckedChange = { mpvOn = it; com.iris.gallery.ui.video.setMpvEnabled(mpvContext, it) }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                     SettingsSwitchRow(
                         title = stringResource(R.string.settings_video_double_tap_zoom_title),
                         subtitle = stringResource(R.string.settings_video_double_tap_zoom_desc),

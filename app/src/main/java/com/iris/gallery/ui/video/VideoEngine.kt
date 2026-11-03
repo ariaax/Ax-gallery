@@ -25,37 +25,7 @@ interface VideoEngine {
     fun release()
 }
 
-/** mpv engine: better scaling, subtitles and format support than ExoPlayer. Falls back to ExoPlayer if libmpv can't start. */
-fun createVideoEngine(context: Context, preferMpv: Boolean = true, force: Boolean = false): VideoEngine =
-    if (!preferMpv || (!force && (!mpvEnabled(context) || mpvDisabledAfterCrash(context)))) Media3VideoEngine(context) else try {
-        MpvVideoEngine(context)
-    } catch (t: Throwable) {
-        android.util.Log.w("AxVideo", "mpv unavailable, using ExoPlayer", t)
-        Media3VideoEngine(context)
-    }
-
-/** Settings switch "mpv video player (experimental)". Off by default: ExoPlayer is the stable engine. */
-fun mpvEnabled(context: Context): Boolean =
-    runCatching { context.getSharedPreferences("ax_diag", Context.MODE_PRIVATE).getBoolean("mpv_enabled", false) }.getOrDefault(false)
-
-fun setMpvEnabled(context: Context, enabled: Boolean) {
-    runCatching {
-        val e = context.getSharedPreferences("ax_diag", Context.MODE_PRIVATE).edit().putBoolean("mpv_enabled", enabled)
-        if (enabled) e.putBoolean("mpv_disabled", false) // turning it on by hand also clears the crash lock
-        e.apply()
-    }
-}
-
-/** Set automatically when a native crash happened while mpv was alive; the crash report offers a "try mpv again" button. */
-fun mpvDisabledAfterCrash(context: Context): Boolean =
-    runCatching { context.getSharedPreferences("ax_diag", Context.MODE_PRIVATE).getBoolean("mpv_disabled", false) }.getOrDefault(false)
-
-class MpvVideoEngine(context: Context) : VideoEngine {
-    private val mpvPlayer = MpvPlayer(context)
-    override val player: Player = mpvPlayer
-    override fun load(uri: Uri) = mpvPlayer.load(uri)
-    override fun release() = mpvPlayer.shutdown()
-}
+fun createVideoEngine(context: Context): VideoEngine = Media3VideoEngine(context)
 
 @OptIn(UnstableApi::class)
 class Media3VideoEngine(context: Context) : VideoEngine {
