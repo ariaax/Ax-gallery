@@ -162,8 +162,9 @@ def alive():
 
 
 def crash_lines():
-    t = adb("logcat", "-d", "-b", "crash") + adb("logcat", "-d", "-s", "ActivityManager:E", "AndroidRuntime:E")
-    hits = [l for l in t.splitlines() if re.search(r"FATAL EXCEPTION|ANR in|Process: " + re.escape(PKG), l)]
+    """Crashes / ANRs of OUR app only (the emulator's Google apps crash all the time and are not our business)."""
+    t = adb("logcat", "-d", "-b", "crash") + adb("logcat", "-d", "-s", "ActivityManager:E")
+    hits = [l for l in t.splitlines() if ("Process: " + PKG) in l or ("ANR in " + PKG) in l]
     return hits[:5]
 
 
@@ -265,7 +266,7 @@ def s01_startup():
 
 def s02_tabs():
     for round_ in range(3):
-        for label, fx in (("Albums", 0.40), ("Library", 0.62), ("Favorites", 0.50), ("Photos", 0.20)):
+        for label, fx in (("Albums", 0.40), ("Library", 0.62), ("Favorites", 0.50), ("Media", 0.20)):
             ok = tab_tap(label, fx)
             time.sleep(0.9)
             shot(f"02_tab_{label}_{round_}")
@@ -279,7 +280,7 @@ def s02_tabs():
 
 
 def s03_scroll_perf():
-    tab_tap("Photos", 0.20)
+    tab_tap("Media", 0.20)
     time.sleep(1.5)
     shot("03_grid_top")
     gfx_reset()
@@ -306,7 +307,7 @@ def s03_scroll_perf():
 
 
 def s04_photo_viewer():
-    tab_tap("Photos", 0.20)
+    tab_tap("Media", 0.20)
     time.sleep(1.2)
     # a tile near the top-left of the grid (below the header)
     touch.tap(W * 0.18, H * 0.30)
@@ -498,6 +499,15 @@ def main():
     lines += ["", "## Metrics", "```json", json.dumps(metrics, indent=1), "```"]
     (OUT / "results.md").write_text("\n".join(lines))
     save_log("final")
+    small = OUT / "shots_small"
+    small.mkdir(exist_ok=True)
+    for f in sorted((OUT / "shots").glob("*.png")):
+        try:
+            im = Image.open(f).convert("RGB")
+            im.thumbnail((540, 1200))
+            im.save(small / (f.stem + ".jpg"), quality=62)
+        except Exception:
+            pass
     fails = [r for r in results if r[1] == "FAIL"]
     log(f"{len(results) - len(fails)} passed, {len(fails)} failed")
     return 0  # the job reports through results.md; a failed check must not hide the artifacts
