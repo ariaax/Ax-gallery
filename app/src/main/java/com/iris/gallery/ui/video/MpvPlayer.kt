@@ -58,6 +58,8 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
     private var error: PlaybackException? = null
     private var firstFrameShown = false
     private var firstFramePending = false
+    /** true once mpv announced the start of the file we asked for (so an END_FILE of the PREVIOUS file is never an error) */
+    private var startSeen = false
     private var currentUri: Uri? = null
     private var seekTargetMs = -1L
     private var lastPosMs = 0L
@@ -219,6 +221,7 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
             main.post {
                 if (released) return@post
                 when (eventId) {
+                    6 -> startSeen = true                  // MPV_EVENT_START_FILE
                     8 -> onFileLoaded()                    // MPV_EVENT_FILE_LOADED
                     7 -> onEndFile(detail)                 // MPV_EVENT_END_FILE
                     21 -> {                                // MPV_EVENT_PLAYBACK_RESTART
@@ -299,7 +302,9 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
     }
 
     private fun onEndFile(detail: String?) {
-        if (!fileLoaded && loading) {
+        // Replacing a video makes mpv end the OLD file first; that must not be reported as a failure of the new one
+        // (it used to trigger the "mpv could not show this video" fallback on a healthy swipe).
+        if (!fileLoaded && loading && startSeen) {
             loading = false
             error = PlaybackException(
                 "mpv could not play this file" + (detail?.let { ": ${it.take(120)}" } ?: ""),
@@ -324,6 +329,7 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
         seekTargetMs = -1
         lastPosMs = 0
         firstFrameShown = false
+        startSeen = false
         videoW = 0
         videoH = 0
         pendingTarget = resolveTarget(uri)
@@ -379,6 +385,9 @@ class MpvPlayer(context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
     // ------------------------------------------------------------------ internals
 
     private fun resolveTarget(uri: Uri): String {
+        // a descriptor that was prepared for a video that never got opened would leak
+        if (pendingFd >= 0 && pendingFd != openFd) closeFd(pendingFd)
+        pendingFd = -1
         if (uri.scheme == "content") {
             val pfd = runCatching { appContext.contentResolver.openFileDescriptor(uri, "r") }.getOrNull()
             if (pfd != null) {

@@ -63,6 +63,12 @@ class Media3VideoEngine(context: Context) : VideoEngine {
     private val exoPlayer = ExoPlayer.Builder(
         context,
         DefaultRenderersFactory(context).setEnableDecoderFallback(true),
+    ).setLoadControl(
+        // Local files never need a 50 s read-ahead: a short buffer saves memory (big win on 4K / weak phones) and
+        // makes switching videos faster.
+        androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(2_500, 6_000, 250, 500)
+            .build()
     ).build().also { p ->
         p.setAudioAttributes(
             androidx.media3.common.AudioAttributes.Builder()

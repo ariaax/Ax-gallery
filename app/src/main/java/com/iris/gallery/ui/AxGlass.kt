@@ -37,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -355,6 +356,36 @@ fun AxGlassNavBar(
     }
     val shape = RoundedCornerShape(50)
 
+    // One highlight pill that GLIDES between tabs (instead of every tab popping its own in and out).
+    val lefts = remember(count) { FloatArray(count) }
+    val rights = remember(count) { FloatArray(count) }
+    var rowRootX by remember { mutableStateOf(0f) }
+    var measureTick by remember { mutableStateOf(0) }
+    // measureTick is read here so the targets are re-read whenever the selected tab's bounds change
+    val tick = measureTick
+    val targetL = remember(tick, selectedIndex) { lefts.getOrElse(selectedIndex) { 0f } }
+    val targetR = remember(tick, selectedIndex) { rights.getOrElse(selectedIndex) { 0f } }
+    var prevIndex by remember { mutableStateOf(selectedIndex) }
+    val movingRight = selectedIndex >= prevIndex
+    SideEffect { prevIndex = selectedIndex }
+    // the edge that leads the move is quick, the trailing one lags a little: the pill stretches like liquid
+    val indL by animateFloatAsState(targetL, spring(dampingRatio = 0.78f, stiffness = if (movingRight) 300f else 620f), label = "ind left")
+    val indR by animateFloatAsState(targetR, spring(dampingRatio = 0.78f, stiffness = if (movingRight) 620f else 300f), label = "ind right")
+    val spinLite = AxPerf.lite(axCtx)
+    val spin = rememberInfiniteTransition(label = "dock ring")
+    val spinAngle: State<Float> = spin.animateFloat(
+        0f, if (spinLite) 0f else 360f,
+        infiniteRepeatable(tween(2800, easing = LinearEasing)),
+        label = "dock ring angle",
+    )
+    val pillPath = remember { androidx.compose.ui.graphics.Path() }
+    val ringBrushColors = remember {
+        listOf(Color(0xFF5AD1FF), Color(0xFF3B6BFF), Color(0xFFFF9A3C), Color(0xFFFFFFFF), Color(0xFF5AD1FF))
+    }
+    val innerFill = remember(accent) {
+        accent.copy(alpha = 0.18f).compositeOver(Color.Black.copy(alpha = 0.40f).compositeOver(Color(0xFF0B0B0D)))
+    }
+
     Box(
         modifier = modifier.fillMaxWidth().padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center,
@@ -363,6 +394,7 @@ fun AxGlassNavBar(
             modifier = Modifier
                 .height(barH)
                 .onGloballyPositioned {
+                    rowRootX = it.positionInRoot().x
                     state.barOrigin = it.positionInRoot()
                     state.barSize = Size(it.size.width.toFloat(), it.size.height.toFloat())
                     state.cornerRadiusPx = it.size.height / 2f
@@ -377,6 +409,28 @@ fun AxGlassNavBar(
                             endY = size.height * 0.5f,
                         )
                     )
+                    // gliding selection pill with its turning ring
+                    val l = indL; val r = indR
+                    if (r - l > 8f) {
+                        val pad = 5.dp.toPx()
+                        val top = pad
+                        val hh = size.height - pad * 2f
+                        val ring = 2.dp.toPx()
+                        pillPath.reset()
+                        pillPath.addRoundRect(androidx.compose.ui.geometry.RoundRect(l, top, r, top + hh, androidx.compose.ui.geometry.CornerRadius(hh / 2f)))
+                        val c = Offset((l + r) / 2f, size.height / 2f)
+                        clipPath(pillPath) {
+                            rotate(spinAngle.value, c) {
+                                drawCircle(Brush.sweepGradient(ringBrushColors, center = c), radius = maxOf(r - l, hh), center = c)
+                            }
+                        }
+                        drawRoundRect(
+                            innerFill,
+                            topLeft = Offset(l + ring, top + ring),
+                            size = Size(r - l - ring * 2f, hh - ring * 2f),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius((hh - ring * 2f) / 2f),
+                        )
+                    }
                     val g = glint.value
                     if (g < 1f) {
                         val h = size.height
@@ -413,13 +467,13 @@ fun AxGlassNavBar(
                             .graphicsLayer { scaleX = press; scaleY = press }
                             .animateContentSize(spring(dampingRatio = 0.72f, stiffness = 420f))
                             .clip(itemShape)
-                            .then(
-                                if (sel) Modifier
-                                    .background(Color.Black.copy(alpha = 0.40f))
-                                    .background(accent.copy(alpha = 0.18f))
-                                    .axSpinRing()
-                                else Modifier
-                            )
+                            .onGloballyPositioned {
+                                val x = it.positionInRoot().x - rowRootX
+                                if (lefts[i] != x || rights[i] != x + it.size.width) {
+                                    lefts[i] = x; rights[i] = x + it.size.width
+                                    if (i == selectedIndex) measureTick++
+                                }
+                            }
                             .clickable(interactionSource = itemSource, indication = null) {
                                 AxHaptics.tick(axCtx)
                                 if (AxNavCollapse.collapsed) AxNavCollapse.collapsed = false else onSelect(i)

@@ -7,7 +7,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.graphicsLayer
@@ -200,27 +203,51 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
             drawPath(topPath, Color(0xFFBFF1FF).copy(alpha = 0.75f), style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
     }
-    // The name: rises out of the liquid once it covers the screen, melts away as the liquid drains.
-    // Alpha/scale are read only while drawing (graphicsLayer lambda), so this never recomposes.
-    Text(
-        text = "Ax",
+    // The mark: a frosted squircle with a geometric "A" whose crossbar is a camera-lens ring, and the name under it.
+    // Everything is read only while drawing (graphicsLayer / Canvas lambdas), so this never recomposes.
+    Column(
         modifier = Modifier.graphicsLayer {
             val appear = smooth((cover.value - 0.70f) / 0.30f)
             val leave = smooth(reveal.value / 0.35f)
             alpha = appear * (1f - leave)
-            val sc = 0.88f + 0.12f * appear + 0.10f * leave
+            val sc = 0.86f + 0.14f * appear + 0.10f * leave
             scaleX = sc
             scaleY = sc
             translationY = (1f - appear) * 24.dp.toPx() - leave * 18.dp.toPx()
         },
-        style = TextStyle(
-            fontFamily = FontFamily.SansSerif,
-            fontWeight = FontWeight.Black,
-            fontSize = 88.sp,
-            letterSpacing = 4.sp,
-            color = Color.White,
-            shadow = Shadow(Color(0xFF59C8FF).copy(alpha = 0.85f), blurRadius = 28f),
-        ),
-    )
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Canvas(Modifier.size(132.dp)) {
+            val u = size.minDimension / 100f
+            val sq = Path().apply {
+                addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, 100f * u, 100f * u, androidx.compose.ui.geometry.CornerRadius(30f * u)))
+            }
+            // glass body
+            drawPath(sq, Brush.linearGradient(listOf(Color.White.copy(0.30f), Color.White.copy(0.08f)), Offset(0f, 0f), Offset(100f * u, 100f * u)))
+            drawPath(sq, Brush.linearGradient(listOf(Color.White.copy(0.75f), Color.White.copy(0.10f), Color.White.copy(0.35f)), Offset(0f, 0f), Offset(100f * u, 100f * u)), style = Stroke(1.6f * u))
+            // the A
+            val a = Path().apply {
+                moveTo(25f * u, 77f * u); lineTo(50f * u, 24f * u); lineTo(75f * u, 77f * u)
+            }
+            drawPath(a, Color(0xFF59C8FF).copy(alpha = 0.35f), style = Stroke(16f * u, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(a, Color.White, style = Stroke(9f * u, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            // the lens (crossbar)
+            drawCircle(Color(0xFF59C8FF).copy(alpha = 0.35f), radius = 11f * u, center = Offset(50f * u, 60f * u), style = Stroke(8f * u))
+            drawCircle(Color.White, radius = 10f * u, center = Offset(50f * u, 60f * u), style = Stroke(5.5f * u))
+            drawCircle(Color(0xFFBFF1FF), radius = 2.6f * u, center = Offset(50f * u, 60f * u))
+        }
+        Text(
+            text = "AX",
+            style = TextStyle(
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Light,
+                fontSize = 22.sp,
+                letterSpacing = 14.sp,
+                color = Color.White.copy(alpha = 0.92f),
+                shadow = Shadow(Color(0xFF59C8FF).copy(alpha = 0.8f), blurRadius = 18f),
+            ),
+            modifier = Modifier.padding(top = 18.dp, start = 14.dp),
+        )
+    }
     }
 }
