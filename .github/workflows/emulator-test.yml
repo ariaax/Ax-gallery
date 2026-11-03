@@ -1,0 +1,72 @@
+name: Emulator test
+
+# Boots a real Android emulator, installs the app, loads test photos/videos and drives the UI with a script
+# (taps, swipes, double taps, video seeking, monkey). Screenshots, UI dumps, logcat and a results table are
+# uploaded as the "emulator-out" artifact.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'emu/**'
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Tools
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg imagemagick
+          python3 -m pip install --user pillow
+
+      - name: Build app (optimized variant, x86_64 + arm64)
+        run: |
+          chmod +x gradlew
+          if [ -f gradle.properties ]; then sed -i '/android.aapt2FromMavenOverride/d' gradle.properties; fi
+          ./gradlew assembleOptimized -PallAbis
+          ls -la app/build/outputs/apk/optimized/
+
+      - name: Make test media
+        run: python3 ci/emulator/make_media.py media
+
+      - name: Run emulator tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 3072M
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: bash ci/emulator/run.sh
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f ci-out/results.md ]; then cat ci-out/results.md; cat ci-out/results.md >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: emulator-out
+          path: ci-out/
+          retention-days: 7
