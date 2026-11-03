@@ -332,30 +332,57 @@ fun VideoPage(
         }
     }
 
-    Box(
-        Modifier.fillMaxSize().onSizeChanged { size = it }
-            .pointerInput(media.id, active, doubleTapToZoom, doubleTapZoomLevel, multiStageZoom) {
-                detectTapGestures(
-                    onTap = {
-                        if (SystemClock.uptimeMillis() >= suppressTapUntil) onTap()
-                    },
-                    onDoubleTap = { position ->
-                        val leftBoundary = size.width * 0.35f
-                        val rightBoundary = size.width * 0.65f
-                        when {
-                            position.x < leftBoundary -> {
-                                feedbackOnLeft = true
-                                val delta = -10_000L
-                                engine.player.seekTo((engine.player.currentPosition + delta).coerceIn(0L, duration()))
-                                gestureFeedback = "−10"
-                            }
-                            position.x > rightBoundary -> {
-                                feedbackOnLeft = false
-                                val delta = 10_000L
-                                engine.player.seekTo((engine.player.currentPosition + delta).coerceIn(0L, duration()))
-                                gestureFeedback = "+10"
-                            }
-                            else -> {
+    // ---- double-tap seek (-10 s / +10 s, repeatable) ----
+    val seekSeries = remember(media.id) { SeekSeries() }
+    var seekFeedback by remember { mutableStateOf<SeekFeedbackState?>(null) }
+    LaunchedEffect(seekFeedback?.token) {
+        if (seekFeedback != null) {
+            delay(800)
+            seekFeedback = null
+        }
+    }
+    fun seekBySide(side: Int) {
+        val player = engine.player
+        val now = SystemClock.uptimeMillis()
+        val total = duration()
+        val target = seekSeries.next(side, player.currentPosition, total, now)
+        (player as? androidx.media3.exoplayer.ExoPlayer)?.setSeekParameters(androidx.media3.exoplayer.SeekParameters.EXACT)
+        player.seekTo(target)
+        if (total > 0) progress = (target.toFloat() / total).coerceIn(0f, 1f)
+        feedbackOnLeft = side < 0
+        seekFeedback = SeekFeedbackState(side, seekSeries.seconds, now)
+    }
+
+    // ---- press and hold = 2x speed ----
+    var holdActive by remember { mutableStateOf(false) }
+    val holdPreviousSpeed = remember { floatArrayOf(1f) }
+    fun startHold(position: Offset) {
+        if (holdActive) return
+        holdPreviousSpeed[0] = engine.player.playbackParameters.speed
+        holdActive = true
+        engine.player.setPlaybackSpeed(2f)
+        feedbackOnLeft = position.x < size.width / 2f
+        gestureFeedback = "2×"
+    }
+    fun endHold() {
+        if (!holdActive) return
+        holdActive = false
+        engine.player.setPlaybackSpeed(holdPreviousSpeed[0])
+        gestureFeedback = null
+        suppressTapUntil = SystemClock.uptimeMillis() + 300L
+    }
+    DisposableEffect(engine) {
+        onDispose {
+            // never leave the shared player running at 2x
+            if (holdActive) {
+                holdActive = false
+                runCatching { engine.player.setPlaybackSpeed(holdPreviousSpeed[0]) }
+            }
+        }
+    }
+
+    // ---- double tap in the middle: zoom, or play / pause ----
+    fun centerDoubleTap(position: Offset) {
                                 if (doubleTapToZoom) {
                                     if (!multiStageZoom) {
                                         if (scale > 1.05f) {
@@ -416,42 +443,30 @@ fun VideoPage(
                                             onZoomChanged(true)
                                         }
                                     }
-                                } else {
-                                    val nextPlaying = !engine.player.isPlaying
-                                    if (engine.player.isPlaying) engine.player.pause() else engine.player.play()
-                                    lastPlayPauseFeedback = nextPlaying
-                                    playPauseFeedbackEvent = nextPlaying to SystemClock.uptimeMillis()
-                                }
-                            }
-                        }
-                    },
-                    // Declaring long-press handling prevents Compose from also
-                    // dispatching a normal tap when the 2× hold is released.
-                    onLongPress = { },
-                    onPress = { position ->
-                        coroutineScope {
-                        feedbackOnLeft = position.x < size.width / 2f
-                        var accelerated = false
-                        val previousSpeed = engine.player.playbackParameters.speed
-                        val speedJob = launch {
-                            delay(450)
-                            accelerated = true
-                            engine.player.setPlaybackSpeed(2f)
-                            gestureFeedback = "2×"
-                        }
-                        try { awaitRelease() } finally {
-                            speedJob.cancel()
-                            if (accelerated) {
-                                suppressTapUntil = SystemClock.uptimeMillis() + 300L
-                                engine.player.setPlaybackSpeed(previousSpeed)
-                                gestureFeedback = null
-                            }
-                        }
-                        }
-                    },
+                } else {
+                    val nowPlaying = togglePlayback(engine.player)
+                    lastPlayPauseFeedback = nowPlaying
+                    playPauseFeedbackEvent = nowPlaying to SystemClock.uptimeMillis()
+                }
+    }
+
+    Box(
+        Modifier.fillMaxSize().onSizeChanged { size = it }
+            .pointerInput(media.id, engine, active, doubleTapToZoom, doubleTapZoomLevel, multiStageZoom) {
+                detectVideoTaps(
+                    VideoTapCallbacks(
+                        // inactive pages only report plain taps; seeking / holding belongs to the page being watched
+                        zoneOf = { x -> if (active) tapZone(x, size.width.toFloat()) else ZONE_CENTER },
+                        seekRunActive = { active && seekSeries.active(SystemClock.uptimeMillis()) },
+                        onSingleTap = { if (SystemClock.uptimeMillis() >= suppressTapUntil) onTap() },
+                        onSeekTap = { side -> if (active) seekBySide(side) },
+                        onCenterDoubleTap = { position -> if (active) centerDoubleTap(position) },
+                        onHoldStart = { position -> if (active) startHold(position) },
+                        onHoldEnd = { endHold() },
+                    )
                 )
             }
-            .pointerInput(media.id, gestureControls, active) {
+            .pointerInput(media.id, engine, gestureControls, active) {
                 if (!active) return@pointerInput
                 val touchSlop = viewConfiguration.touchSlop
                 awaitEachGesture {
@@ -523,7 +538,7 @@ fun VideoPage(
                             val h = size.height.toFloat().coerceAtLeast(1f)
 
                             if (gestureType == 0) {
-                                if (gestureFeedback != null) {
+                                if (holdActive) {
                                     gestureType = -3
                                 } else {
                                     val absX = kotlin.math.abs(totalDragX)
@@ -535,19 +550,7 @@ fun VideoPage(
                                             gestureType = -2
                                         } else if (gestureControls && startX < w * 0.42f) {
                                             gestureType = 1
-                                            val curWinBrightness = activity?.window?.attributes?.screenBrightness ?: -1f
-                                            dragStartBrightness = if (curWinBrightness in 0f..1f) {
-                                                curWinBrightness
-                                            } else {
-                                                try {
-                                                    android.provider.Settings.System.getInt(
-                                                        context.contentResolver,
-                                                        android.provider.Settings.System.SCREEN_BRIGHTNESS
-                                                    ) / 255f
-                                                } catch (_: Exception) {
-                                                    0.5f
-                                                }
-                                            }.coerceIn(0.01f, 1f)
+                                            dragStartBrightness = readBrightness(context, activity)
                                             currentBrightness = dragStartBrightness
                                             brightnessHudVisible = true
                                             brightnessHudTimer = SystemClock.uptimeMillis()
@@ -591,7 +594,7 @@ fun VideoPage(
                                     val newVolume = (dragStartVolume + (deltaRatio * steps).roundToInt()).coerceIn(minVolume, maxVolume)
                                     if (newVolume != currentVolume) {
                                         currentVolume = newVolume
-                                        audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, newVolume, 0)
+                                        runCatching { audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, newVolume, 0) }
                                         if (newVolume > 0 && engine.isMuted) {
                                             engine.setMuted(false)
                                             isMuted = false
@@ -689,6 +692,7 @@ fun VideoPage(
                 )
             }
         }
+        SeekFeedbackOverlay(seekFeedback)
         AnimatedVisibility(
             visible = gestureFeedback != null,
             modifier = Modifier.align(if (feedbackOnLeft) Alignment.CenterStart else Alignment.CenterEnd)
@@ -807,34 +811,17 @@ fun VideoPage(
             }
         }
 
-        val brightnessPercent = (currentBrightness * 100).roundToInt().coerceIn(0, 100)
-        val brightnessIcon = when {
-            currentBrightness < 0.4f -> com.iris.gallery.ui.AxIcons.SunDim
-            else -> com.iris.gallery.ui.AxIcons.Sun
-        }
-        VideoGestureHud(
+        LevelHud(
             visible = brightnessHudVisible,
-            modifier = Modifier
-                .align(AbsoluteAlignment.CenterLeft)
-                .padding(start = 32.dp),
-            icon = brightnessIcon,
-            percentage = brightnessPercent,
+            icon = if (currentBrightness < 0.4f) com.iris.gallery.ui.AxIcons.SunDim else com.iris.gallery.ui.AxIcons.Sun,
             progress = currentBrightness,
+            modifier = Modifier.align(AbsoluteAlignment.CenterLeft).padding(start = 28.dp),
         )
-
-        val volumePercent = ((currentVolume.toFloat() / maxVolume.coerceAtLeast(1)) * 100).roundToInt().coerceIn(0, 100)
-        val volumeIcon = when {
-            currentVolume == 0 -> com.iris.gallery.ui.AxIcons.VolumeOff
-            else -> com.iris.gallery.ui.AxIcons.Volume
-        }
-        VideoGestureHud(
+        LevelHud(
             visible = volumeHudVisible,
-            modifier = Modifier
-                .align(AbsoluteAlignment.CenterRight)
-                .padding(end = 32.dp),
-            icon = volumeIcon,
-            percentage = volumePercent,
+            icon = if (currentVolume <= minVolume) com.iris.gallery.ui.AxIcons.VolumeOff else com.iris.gallery.ui.AxIcons.Volume,
             progress = (currentVolume - minVolume).toFloat() / (maxVolume - minVolume).coerceAtLeast(1),
+            modifier = Modifier.align(AbsoluteAlignment.CenterRight).padding(end = 28.dp),
         )
 
         AnimatedVisibility(
@@ -1074,58 +1061,6 @@ private fun formatTime(ms: Long): String {
     else "%d:%02d".format(seconds / 60, seconds % 60)
 }
 
-@Composable
-private fun VideoGestureHud(
-    visible: Boolean,
-    modifier: Modifier = Modifier,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    percentage: Int,
-    progress: Float,
-) {
-    AnimatedVisibility(
-        visible = visible,
-        modifier = modifier,
-        enter = fadeIn(tween(160, easing = com.iris.gallery.AxIosEase)) + scaleIn(tween(220, easing = com.iris.gallery.AxIosEase), initialScale = 0.92f),
-        exit = fadeOut(tween(200)),
-    ) {
-        // glass pill like the control bar; the fill follows the finger smoothly
-        val shown by animateFloatAsState(progress.coerceIn(0f, 1f), tween(90, easing = androidx.compose.animation.core.LinearEasing), label = "hudFill")
-        Column(
-            modifier = Modifier
-                .width(52.dp)
-                .axIcyPanel(26.dp)
-                .padding(vertical = 14.dp, horizontal = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(24.dp),
-            )
-            Box(
-                modifier = Modifier
-                    .width(8.dp)
-                    .height(112.dp)
-                    .background(Color.White.copy(alpha = 0.26f), CircleShape),
-                contentAlignment = Alignment.BottomCenter,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(shown)
-                        .background(Color.White, CircleShape)
-                )
-            }
-            Text(
-                text = "$percentage%",
-                color = Color.White,
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-            )
-        }
-    }
-}
 /** Short technical reason for a playback failure: error code, which decoder/format failed, and the system message. */
 @OptIn(UnstableApi::class)
 private fun describePlaybackError(e: androidx.media3.common.PlaybackException): String {
