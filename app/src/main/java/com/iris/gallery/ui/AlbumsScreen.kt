@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -449,21 +450,39 @@ fun AlbumsGrid(
                 }
             }
 
-            items(filteredAlbums, key = { it.id }) { album ->
+            // Bento layout: every 5th album is a wide hero tile, the rest are square tiles, all on dark glass cards.
+            itemsIndexed(
+                filteredAlbums,
+                key = { _, a -> a.id },
+                span = { index, _ -> if (index % 5 == 0 && maxLineSpan >= 2) GridItemSpan(minOf(2, maxLineSpan)) else GridItemSpan(1) },
+            ) { index, album ->
                 val isPinned = album.id in pinned
+                val featured = index % 5 == 0 && actualColumns >= 2
+                val tileShape = RoundedCornerShape((cornerStyle.dp + 8).dp)
+                val tileFill = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.80f)
                 Column(
                     Modifier
                         .fillMaxWidth()
                         .animateItem()
+                        .clip(tileShape)
+                        .background(tileFill)
+                        .border(
+                            1.dp,
+                            androidx.compose.ui.graphics.Brush.linearGradient(
+                                listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.03f), Color.White.copy(alpha = 0.10f))
+                            ),
+                            tileShape,
+                        )
                         .combinedClickable(
                             onClick = { onOpen(album) },
                             onLongClick = { selectedAlbumForOptions = album }
                         )
+                        .padding(6.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(1f)
+                            .aspectRatio(if (featured) 2f else 1f)
                     ) {
                         Card(
                             shape = RoundedCornerShape(cornerStyle.dp.dp),
@@ -472,7 +491,7 @@ fun AlbumsGrid(
                             MediaThumbnail(
                                 album.cover,
                                 Modifier.fillMaxSize(),
-                                targetSizePx = targetThumbnailPx,
+                                targetSizePx = if (featured) targetThumbnailPx * 2 else targetThumbnailPx,
                             )
                         }
 
@@ -606,7 +625,7 @@ fun AlbumsGrid(
 
                     // album app icon sits to the left of the name, with a living pulse
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp, start = 2.dp, end = 2.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp, end = 4.dp, bottom = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {

@@ -4,6 +4,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.border
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -71,54 +82,96 @@ fun LibraryScreen(
                 modifier = Modifier.padding(vertical = 8.dp)
             )
         }
-        item { LibraryCard(AxIcons.Video, stringResource(R.string.section_videos), stringResource(R.string.section_videos_desc, videoCount)) { onOpen("videos") } }
-        item { LibraryCard(AxIcons.Sparkle, stringResource(R.string.library_memories_title), stringResource(R.string.library_memories_subtitle)) { onOpen("memories") } }
-        item { LibraryCard(AxIcons.Copy, stringResource(R.string.library_duplicates_title), stringResource(R.string.library_duplicates_subtitle)) { onOpen("duplicates") } }
-        item { LibraryCard(AxIcons.Lock, stringResource(R.string.library_locked_title), stringResource(R.string.library_locked_subtitle, lockedCount)) { onOpen("locked") } }
-        item { LibraryCard(AxIcons.Trash, stringResource(R.string.library_trash_title), stringResource(R.string.library_trash_subtitle, trashCount)) { onOpen("trash") } }
-        item { LibraryCard(AxIcons.Edit, stringResource(R.string.library_editor_title), stringResource(R.string.library_editor_subtitle)) { onOpen("editor") } }
-        item { LibraryCard(AxIcons.GridSmall, stringResource(R.string.library_smart_title), stringResource(R.string.library_smart_subtitle)) { onOpen("smart") } }
-        item { LibraryCard(AxIcons.Photos, stringResource(R.string.library_formats_title), stringResource(R.string.library_formats_subtitle)) { onOpen("formats") } }
-        item { LibraryCard(AxIcons.Folder, stringResource(R.string.section_folder_view), stringResource(R.string.section_folder_view_desc)) { onOpen("folder_view") } }
-        item { LibraryCard(AxIcons.FolderOff, stringResource(R.string.excluded_folders_title), stringResource(R.string.excluded_folders_desc)) { onOpen("excluded_folders") } }
-        item { LibraryCard(AxIcons.Refresh, stringResource(R.string.rescan_media_title), stringResource(R.string.rescan_media_subtitle)) { onOpen("rescan") } }
+        // Bento grid: tiles of different widths on dark glass, two per row.
+        item { BentoRow(
+            BentoSpec(AxIcons.Video, stringResource(R.string.section_videos), stringResource(R.string.section_videos_desc, videoCount), 1.45f, hero = true) { onOpen("videos") },
+            BentoSpec(AxIcons.Sparkle, stringResource(R.string.library_memories_title), stringResource(R.string.library_memories_subtitle), 1f) { onOpen("memories") },
+        ) }
+        item { BentoRow(
+            BentoSpec(AxIcons.Copy, stringResource(R.string.library_duplicates_title), stringResource(R.string.library_duplicates_subtitle), 1f) { onOpen("duplicates") },
+            BentoSpec(AxIcons.Lock, stringResource(R.string.library_locked_title), stringResource(R.string.library_locked_subtitle, lockedCount), 1f) { onOpen("locked") },
+        ) }
+        item { BentoRow(
+            BentoSpec(AxIcons.Trash, stringResource(R.string.library_trash_title), stringResource(R.string.library_trash_subtitle, trashCount), 1f) { onOpen("trash") },
+            BentoSpec(AxIcons.Edit, stringResource(R.string.library_editor_title), stringResource(R.string.library_editor_subtitle), 1.45f, hero = true) { onOpen("editor") },
+        ) }
+        item { BentoRow(
+            BentoSpec(AxIcons.GridSmall, stringResource(R.string.library_smart_title), stringResource(R.string.library_smart_subtitle), 1.45f) { onOpen("smart") },
+            BentoSpec(AxIcons.Photos, stringResource(R.string.library_formats_title), stringResource(R.string.library_formats_subtitle), 1f) { onOpen("formats") },
+        ) }
+        item { BentoRow(
+            BentoSpec(AxIcons.Folder, stringResource(R.string.section_folder_view), stringResource(R.string.section_folder_view_desc), 1f) { onOpen("folder_view") },
+            BentoSpec(AxIcons.FolderOff, stringResource(R.string.excluded_folders_title), stringResource(R.string.excluded_folders_desc), 1.45f) { onOpen("excluded_folders") },
+        ) }
+        item { BentoRow(
+            BentoSpec(AxIcons.Refresh, stringResource(R.string.rescan_media_title), stringResource(R.string.rescan_media_subtitle), 1f) { onOpen("rescan") },
+        ) }
+    }
+}
+
+private class BentoSpec(
+    val icon: ImageVector,
+    val title: String,
+    val subtitle: String,
+    val weight: Float,
+    val hero: Boolean = false,
+    val onClick: () -> Unit,
+)
+
+@Composable
+private fun BentoRow(vararg tiles: BentoSpec) {
+    Row(
+        Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        for (t in tiles) {
+            BentoTile(t, Modifier.weight(t.weight).fillMaxHeight())
+        }
     }
 }
 
 @Composable
-private fun LibraryCard(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
-    val glassShape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
-    Card(
-        onClick = onClick,
-        shape = glassShape,
-        colors = androidx.compose.material3.CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f),
-        ),
-        modifier = Modifier.fillMaxWidth().axGlassBorder(glassShape),
-    ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            androidx.compose.foundation.layout.Box(
-                Modifier
-                    .size(46.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
-                    .axGlassBorder(androidx.compose.foundation.shape.CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
-            }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+private fun BentoTile(spec: BentoSpec, modifier: Modifier) {
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp)
+    val accent = MaterialTheme.colorScheme.primary
+    val fill = remember { Color(0xFF14161B).copy(alpha = 0.92f) }
+    val rim = remember {
+        Brush.linearGradient(listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.03f), Color.White.copy(alpha = 0.10f)))
+    }
+    Column(
+        modifier
+            .heightIn(min = 124.dp)
+            .clip(shape)
+            .background(fill)
+            .drawBehind {
+                // a soft accent glow in the corner; the hero tiles glow stronger
+                val k = if (spec.hero) 0.30f else 0.14f
+                drawRect(
+                    Brush.radialGradient(
+                        listOf(accent.copy(alpha = k), Color.Transparent),
+                        center = Offset(size.width, 0f),
+                        radius = size.maxDimension * 0.9f,
+                    )
                 )
             }
+            .border(1.dp, rim, shape)
+            .clickable(onClick = spec.onClick)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Box(
+            Modifier
+                .size(42.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                .background(accent.copy(alpha = if (spec.hero) 0.30f else 0.18f))
+                .border(1.dp, Color.White.copy(alpha = 0.14f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(spec.icon, null, tint = if (spec.hero) Color.White else accent)
+        }
+        Column(Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(spec.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 2)
+            Text(spec.subtitle, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.62f), maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
     }
 }
