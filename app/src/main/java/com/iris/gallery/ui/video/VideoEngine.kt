@@ -34,10 +34,13 @@ class Media3VideoEngine(context: Context) : VideoEngine {
         context,
         DefaultRenderersFactory(context).setEnableDecoderFallback(true),
     ).setLoadControl(
-        // Local files never need a 50 s read-ahead: a short buffer saves memory (big win on 4K / weak phones) and
-        // makes switching videos faster.
+        // Playback starts after only 0.25 s of data. The buffer keeps 40 s ahead and 10 s behind the play head, so the
+        // double-tap +-10 s jumps land inside data that is already loaded (instant) instead of reloading from storage.
+        // A byte cap protects weak phones from huge 4K files.
         androidx.media3.exoplayer.DefaultLoadControl.Builder()
-            .setBufferDurationsMs(2_500, 6_000, 250, 500)
+            .setBufferDurationsMs(15_000, 40_000, 250, 500)
+            .setBackBuffer(10_000, true)
+            .setTargetBufferBytes(64 * 1024 * 1024)
             .build()
     ).build().also { p ->
         p.setAudioAttributes(
