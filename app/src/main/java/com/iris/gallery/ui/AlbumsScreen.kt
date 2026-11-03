@@ -458,6 +458,7 @@ fun AlbumsGrid(
             ) { index, album ->
                 val isPinned = album.id in pinned
                 val featured = index % 5 == 0 && actualColumns >= 2
+                val narrow = actualColumns >= 4 && !featured
                 val tileShape = RoundedCornerShape((cornerStyle.dp + 8).dp)
                 val tileFill = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.80f)
                 Column(
@@ -477,7 +478,7 @@ fun AlbumsGrid(
                             onClick = { onOpen(album) },
                             onLongClick = { selectedAlbumForOptions = album }
                         )
-                        .padding(6.dp)
+                        .padding(if (narrow) 4.dp else 6.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -495,6 +496,10 @@ fun AlbumsGrid(
                             )
                         }
 
+
+                        if (narrow) {
+                            AlbumAppBadge(album, Modifier.align(Alignment.TopStart).padding(4.dp).size(22.dp))
+                        }
 
                         // glass rim around the cover + item-count chip (iOS 26 style)
                         Box(
@@ -515,8 +520,9 @@ fun AlbumsGrid(
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White,
                                 modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .padding(6.dp)
+                                    // top-right keeps it clear of a video's duration pill (bottom-right); pin / reorder buttons own that corner
+                                    .align(if ((sort != AlbumSort.CUSTOM && isPinned) || (sort == AlbumSort.CUSTOM && isEditingOrder)) Alignment.BottomEnd else Alignment.TopEnd)
+                                    .padding(if (narrow) 3.dp else 6.dp)
                                     .clip(CircleShape)
                                     .background(Color.Black.copy(alpha = 0.38f))
                                     .border(0.8.dp, Color.White.copy(alpha = 0.30f), CircleShape)
@@ -623,49 +629,50 @@ fun AlbumsGrid(
                         }
                     }
 
-                    // album app icon sits to the left of the name, with a living pulse
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp, end = 4.dp, bottom = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        AlbumAppBadge(album, Modifier.size(30.dp))
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            ,
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
+                    // Name row. Narrow tiles (4+ columns) show only the name; their app icon sits on the cover instead,
+                    // so every tile in a row ends up the same height.
+                    if (narrow) {
                         Text(
                             album.name,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, start = 3.dp, end = 3.dp, bottom = 2.dp),
                         )
+                    } else {
                         Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp, end = 4.dp, bottom = 2.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
+                            AlbumAppBadge(album, Modifier.size(30.dp))
+                            Text(
+                                album.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
                             if (album.isSdCard) {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    shape = RoundedCornerShape(4.dp),
-                                ) {
-                                    Text(
-                                        text = androidx.compose.ui.res.stringResource(com.iris.gallery.R.string.storage_sd_card),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                    )
-                                }
+                                Text(
+                                    text = "SD",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(5.dp))
+                                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                                        .padding(horizontal = 5.dp, vertical = 2.dp),
+                                )
                             }
                         }
-                    }
                     }
                 }
             }
