@@ -43,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -278,9 +279,14 @@ internal fun readBrightness(context: Context, activity: Activity?): Float {
 // Visuals
 // =====================================================================================================================
 
+// One glass look for every on-video control (seek pill, brightness / volume meters, play-pause badge), kept deliberately
+// light: small surfaces, plain fills, short fades. Frequently changing values are read only while drawing.
+private val GlassFill = Color.Black.copy(alpha = 0.46f)
+private val GlassRim = Color.White.copy(alpha = 0.18f)
+
 /**
- * Feedback for double-tap seeking: a soft half-disc grows out of the screen edge that was tapped, three arrows run in
- * the direction of the seek, and the total of the run ("+10 s", "+20 s"...) pops in the middle of it.
+ * Feedback for double-tap seeking: a small glass pill next to the edge that was tapped, with three chevrons that sweep
+ * once in the direction of the seek and the running total ("+10 s", "+20 s"...). It restarts on every tap of a run.
  */
 @Composable
 internal fun BoxScope.SeekFeedbackOverlay(feedback: SeekFeedbackState?) {
@@ -291,125 +297,113 @@ internal fun BoxScope.SeekFeedbackOverlay(feedback: SeekFeedbackState?) {
     AnimatedVisibility(
         visible = feedback != null,
         modifier = Modifier
-            .align(if (left) Alignment.CenterStart else Alignment.CenterEnd)
-            .fillMaxHeight()
-            .fillMaxWidth(0.46f),
-        enter = fadeIn(tween(90)),
-        exit = fadeOut(tween(220)),
+            .align(if (left) AbsoluteAlignment.CenterLeft else AbsoluteAlignment.CenterRight)
+            .padding(horizontal = 36.dp),
+        enter = fadeIn(tween(60)),
+        exit = fadeOut(tween(160)),
     ) {
-        val pulse = remember { Animatable(1f) }
-        val bump = remember { Animatable(1f) }
+        val sweep = remember { Animatable(1f) }
         LaunchedEffect(shown.token) {
-            pulse.snapTo(0f)
-            pulse.animateTo(1f, tween(480, easing = LinearEasing))
+            sweep.snapTo(0f)
+            sweep.animateTo(1f, tween(340, easing = LinearEasing))
         }
-        LaunchedEffect(shown.token) {
-            bump.snapTo(0.82f)
-            bump.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
-        }
-        val phase by rememberInfiniteTransition(label = "seek arrows").animateFloat(
-            initialValue = 0f,
-            targetValue = 3f,
-            animationSpec = infiniteRepeatable(tween(750, easing = LinearEasing), RepeatMode.Restart),
-            label = "seek arrows phase",
-        )
-        val shape = if (left) RoundedCornerShape(topEndPercent = 50, bottomEndPercent = 50)
-        else RoundedCornerShape(topStartPercent = 50, bottomStartPercent = 50)
-        Box(
+        val shape = RoundedCornerShape(50)
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .clip(shape)
-                .background(Color.White.copy(alpha = 0.13f))
-                .drawBehind {
-                    // the ripple spreads out of the edge the finger tapped
-                    val p = pulse.value
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.20f * (1f - p)),
-                        radius = size.maxDimension * 0.75f * p,
-                        center = Offset(if (left) 0f else size.width, size.height / 2f),
-                    )
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                modifier = Modifier.graphicsLayer { scaleX = bump.value; scaleY = bump.value },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy((-6).dp), verticalAlignment = Alignment.CenterVertically) {
-                    for (i in 0..2) {
-                        val order = if (left) 2 - i else i
-                        val a = (1f - abs(phase - order - 0.5f)).coerceIn(0.25f, 1f)
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = a),
-                            modifier = Modifier
-                                .size(26.dp)
-                                .graphicsLayer { rotationZ = if (left) 180f else 0f },
-                        )
-                    }
+                .graphicsLayer {
+                    val s = 0.92f + 0.08f * (1f - (1f - sweep.value) * (1f - sweep.value))
+                    scaleX = s; scaleY = s
                 }
-                val sign = if (shown.seconds < 0) "−" else "+"
-                Text(
-                    text = "$sign${abs(shown.seconds)} s",
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                )
+                .clip(shape)
+                .background(GlassFill)
+                .border(1.dp, GlassRim, shape)
+                .padding(horizontal = 14.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (left) SeekLabel(shown)
+            Row(horizontalArrangement = Arrangement.spacedBy((-9).dp), verticalAlignment = Alignment.CenterVertically) {
+                for (i in 0..2) {
+                    val order = if (left) 2 - i else i
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .graphicsLayer {
+                                rotationZ = if (left) 180f else 0f
+                                alpha = (1f - abs(sweep.value * 3f - order - 0.5f)).coerceIn(0.3f, 1f)
+                            },
+                    )
+                }
             }
+            if (!left) SeekLabel(shown)
         }
     }
 }
 
+@Composable
+private fun SeekLabel(s: SeekFeedbackState) {
+    Text(
+        text = "${if (s.seconds < 0) "−" else "+"}${abs(s.seconds)} s",
+        color = Color.White,
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+    )
+}
+
 /**
- * Vertical level meter for brightness / volume: a tall glass capsule that fills from the bottom with the level,
- * the icon sits at its foot and the percentage above.
+ * Vertical level meter for brightness / volume: a slim glass capsule that fills from the bottom, the icon at its foot and
+ * the percentage above. [progress] and [icon] are lambdas so only this small composable follows the finger.
  */
 @Composable
 internal fun LevelHud(
     visible: Boolean,
-    icon: ImageVector,
-    progress: Float,
+    icon: (Float) -> ImageVector,
+    progress: () -> Float,
     modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = fadeIn(tween(120)) + scaleIn(tween(180), initialScale = 0.9f),
-        exit = fadeOut(tween(220)),
+        enter = fadeIn(tween(70)),
+        exit = fadeOut(tween(150)),
     ) {
-        val level by animateFloatAsState(progress.coerceIn(0f, 1f), tween(70, easing = LinearEasing), label = "level")
-        val shape = RoundedCornerShape(28.dp)
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val p = progress().coerceIn(0f, 1f)
+        val shape = RoundedCornerShape(50)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                text = "${(level * 100f).roundToInt()}%",
+                text = "${(p * 100f).roundToInt()}%",
                 color = Color.White,
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.55f))
-                    .padding(horizontal = 10.dp, vertical = 3.dp),
+                    .clip(shape)
+                    .background(GlassFill)
+                    .border(1.dp, GlassRim, shape)
+                    .padding(horizontal = 9.dp, vertical = 3.dp),
             )
             Box(
                 modifier = Modifier
-                    .width(54.dp)
-                    .height(190.dp)
+                    .width(40.dp)
+                    .height(150.dp)
                     .clip(shape)
-                    .background(Color.Black.copy(alpha = 0.50f))
-                    .border(1.dp, Color.White.copy(alpha = 0.22f), shape),
+                    .background(GlassFill)
+                    .border(1.dp, GlassRim, shape)
+                    .drawBehind {
+                        val level = progress().coerceIn(0f, 1f)
+                        drawRect(
+                            color = Color.White.copy(alpha = 0.90f),
+                            topLeft = Offset(0f, size.height * (1f - level)),
+                            size = androidx.compose.ui.geometry.Size(size.width, size.height * level),
+                        )
+                    },
                 contentAlignment = Alignment.BottomCenter,
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(level)
-                        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.95f), Color(0xFF8FC2FF)))),
-                )
                 Icon(
-                    imageVector = icon,
+                    imageVector = icon(p),
                     contentDescription = null,
-                    tint = Color.Black.copy(alpha = 0.78f).takeIf { level > 0.12f } ?: Color.White,
-                    modifier = Modifier.padding(bottom = 12.dp).size(24.dp),
+                    tint = if (p > 0.12f) Color.Black.copy(alpha = 0.75f) else Color.White,
+                    modifier = Modifier.padding(bottom = 10.dp).size(20.dp),
                 )
             }
         }

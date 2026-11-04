@@ -45,6 +45,7 @@ import com.iris.gallery.data.isRaw
 import com.iris.gallery.data.isSvg
 import com.iris.gallery.data.livpJpegCacheFile
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 
 /**
@@ -52,12 +53,31 @@ import kotlinx.coroutines.withContext
  * each other (and the UI thread) for CPU/IO, and decodes for tiles that had already scrolled away still ran to the end.
  * With a small fixed width, tiles that left the screen are still queued, so their work is cancelled before it starts.
  */
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-private val thumbDispatcher = Dispatchers.IO.limitedParallelism(3)
+private fun backgroundPool(name: String, threads: Int) = java.util.concurrent.Executors.newFixedThreadPool(threads) { r ->
+    // Decoding runs at *background* thread priority: on a weak phone the UI / render threads then win the CPU
+    // while a fast fling is decoding dozens of tiles, which is what keeps the scroll smooth.
+    Thread({
+        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+        r.run()
+    }, name).apply { isDaemon = true }
+}.asCoroutineDispatcher()
+
+private val thumbDispatcher = backgroundPool("ax-thumb", 3)
 
 /** Badge detection (HDR/depth) is low priority: a single background lane so it never competes with thumbnails. */
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-private val detectDispatcher = Dispatchers.IO.limitedParallelism(1)
+private val detectDispatcher = backgroundPool("ax-detect", 1)
+
+/** Look-ahead decoding of tiles that are about to scroll in: one lane, so it never delays the visible tiles. */
+private val prefetchDispatcher = backgroundPool("ax-prefetch", 1)
+
+/** Decodes a thumbnail into the memory cache without showing it (no-op when it is already cached). */
+suspend fun prefetchThumbnail(context: Context, image: MediaImage, targetSizePx: Int) {
+    val key = (image.id shl 16) xor (targetSizePx.toLong() and 0xFFFFL)
+    if (ThumbnailCache.get(key) != null) return
+    withContext(prefetchDispatcher) {
+        if (ThumbnailCache.get(key) == null) loadThumbnail(context, image, targetSizePx)
+    }
+}
 
 object ThumbnailCache {
     private val maxKilobytes = (Runtime.getRuntime().maxMemory() / 1024 / 4).toInt() // 25% heap
@@ -445,8 +465,9 @@ fun MediaThumbnail(
 
     Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
         bitmap?.let {
+            val shown = remember(it) { it.asImageBitmap() }
             Image(
-                bitmap = it.asImageBitmap(),
+                bitmap = shown,
                 contentDescription = image.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
