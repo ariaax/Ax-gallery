@@ -432,25 +432,14 @@ def s04_photo_viewer():
 
 
 def open_clock_video():
-    """Opens clock72.mp4 through Library -> Videos. Returns True when a video page is showing."""
-    tab_tap("Library", 0.62)
-    time.sleep(1.2)
-    nodes = dump("05_library")
-    vid = find(nodes, r"^Videos$")
-    if vid:
-        touch.tap(vid[0]["cx"], vid[0]["cy"])
-    else:
-        touch.tap(W * 0.3, H * 0.30)
-    time.sleep(2.0)
-    shot("05_videos_list")
-    nodes = dump("05_videos_list")
-    # tiles: the clock video is 72 s long -> its duration label is "1:12"
-    dur = find(nodes, r"1:12")
-    if dur:
-        touch.tap(dur[0]["cx"], dur[0]["cy"] - 40)
-    else:
-        touch.tap(W * 0.18, H * 0.25)
-    time.sleep(3.0)
+    """Opens clock72.mp4 directly with a VIEW intent (reliable; the list navigation is covered by other scenarios)."""
+    out = sh("content query --uri content://media/external/video/media --projection _id:_display_name")
+    m = re.search(r"_id=(\d+), _display_name=clock72", out)
+    if not m:
+        log("WARN clock72 not in MediaStore: " + out[:200])
+        return False
+    sh(f"am start -a android.intent.action.VIEW -p {PKG} -d content://media/external/video/media/{m.group(1)} -t video/mp4", timeout=60)
+    time.sleep(5.0)
     return True
 
 
