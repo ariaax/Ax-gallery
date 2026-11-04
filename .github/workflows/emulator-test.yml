@@ -5,6 +5,11 @@ name: Emulator test
 # uploaded as the "emulator-out" artifact.
 on:
   workflow_dispatch:
+    inputs:
+      scenarios:
+        description: 'Comma list of scenario prefixes (s01,s05,...). Empty = all'
+        required: false
+        default: ''
   push:
     branches:
       - 'emu/**'
@@ -48,6 +53,9 @@ jobs:
         run: python3 ci/emulator/make_media.py media
 
       - name: Run emulator tests
+        env:
+          # pushes run only the scenarios that have not been verified yet; run 'all' by dispatching with an empty list
+          SCENARIOS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.scenarios || 's11,s12,s13' }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33

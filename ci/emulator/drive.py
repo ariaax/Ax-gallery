@@ -598,6 +598,99 @@ def s10_favorite_and_delete():
     record("delete: info only (see shots 10_*)", True, f"row before={'Row' in before} after={'Row' in after}; file: {onfs.strip()[:80]}; dialog buttons={[(n['text'] or n['desc']) for n in btn]}")
 
 
+def media_id(name):
+    out = sh(f"content query --uri content://media/external/file --projection _id:_display_name --where \"_display_name='{name}'\"")
+    m = re.search(r"_id=(\d+)", out)
+    return m.group(1) if m else None
+
+
+def pss_mb():
+    out = sh(f"dumpsys meminfo {PKG} | grep -E 'TOTAL PSS|TOTAL:'")
+    m = re.search(r"(\d{4,})", out)
+    return round(int(m.group(1)) / 1024) if m else None
+
+
+def s11_bulk_library():
+    """2500+ photos: start-up under load, long fling to the bottom and back, memory, no crash / ANR."""
+    launch()
+    t0 = time.time()
+    for _ in range(40):
+        if len(dump("11_bulk_start")) > 25:
+            break
+        time.sleep(1)
+    metrics["bulk_first_content_s"] = round(time.time() - t0, 1)
+    m0 = pss_mb()
+    gfx_reset()
+    for i in range(40):
+        touch.swipe(W * 0.5, H * 0.80, W * 0.5, H * 0.20, 180) if hasattr(touch, "swipe") else sh(f"input swipe {int(W*.5)} {int(H*.8)} {int(W*.5)} {int(H*.2)} 180")
+    shot("11_bulk_bottom")
+    for i in range(40):
+        sh(f"input swipe {int(W*.5)} {int(H*.2)} {int(W*.5)} {int(H*.8)} 180")
+    shot("11_bulk_back_top")
+    m1 = pss_mb()
+    metrics["bulk_pss_mb"] = {"start": m0, "after_80_flings": m1}
+    metrics["bulk_scroll"] = gfx_stats()
+    record("bulk: survives 80 long flings with 2500+ items", alive(), f"memory {m0} -> {m1} MB, first content {metrics['bulk_first_content_s']} s")
+    record("bulk: memory stays reasonable (< 700 MB)", m1 is not None and m1 < 700, f"{m1} MB")
+
+
+def s12_odd_files():
+    """Broken and unusual files must never crash the viewer: zero byte, truncated, text named .jpg, webp, gif, huge, panorama, svg."""
+    launch()
+    for name in ("zero_byte.jpg", "truncated.jpg", "not_an_image.jpg", "photo.webp", "anim.gif", "huge_12000x9000.jpg", "tall_panorama.png", "vector.svg"):
+        mid = media_id(name)
+        if not mid:
+            record(f"odd file: {name} indexed", False, "not in MediaStore")
+            continue
+        mime = {"jpg": "image/jpeg", "webp": "image/webp", "gif": "image/gif", "png": "image/png", "svg": "image/svg+xml"}[name.rsplit(".", 1)[1]]
+        sh(f"am start -a android.intent.action.VIEW -p {PKG} -d content://media/external/file/{mid} -t {mime}", timeout=60)
+        time.sleep(3.5)
+        shot("12_" + name.replace(".", "_"))
+        crashed = bool(crash_lines()) or not alive()
+        record(f"odd file: {name} opens without crash", not crashed, "; ".join(crash_lines())[:200] if crashed else "")
+        if crashed:
+            save_log("12_" + name)
+            launch()
+        else:
+            sh("input keyevent KEYCODE_BACK")
+            time.sleep(0.8)
+            if not foreground_ok():
+                launch()
+
+
+def s13_selection_and_search():
+    """Discovery + sanity for selection mode and search (long-press, select several, menu entries, search field)."""
+    launch()
+    touch.long_press(W * 0.17, H * 0.27) if hasattr(touch, "long_press") else sh(f"input swipe {int(W*.17)} {int(H*.27)} {int(W*.17)} {int(H*.27)} 700")
+    time.sleep(1.2)
+    shot("13_selected_one")
+    nodes = dump("13_selection")
+    texts = sorted({(n["text"] or n["desc"]) for n in nodes if (n["text"] or n["desc"]) and n["cy"] < H * 0.2 or (n["cy"] > H * 0.85 and (n["text"] or n["desc"]))})
+    log("selection mode labels:", texts)
+    touch.tap(W * 0.50, H * 0.27)
+    touch.tap(W * 0.83, H * 0.27)
+    time.sleep(0.8)
+    shot("13_selected_three")
+    nodes = dump("13_selection3")
+    record("selection: multi-select shows a counter / actions (info)", True, str(sorted({(n['text'] or n['desc']) for n in nodes if (n['text'] or n['desc'])} )[:40]))
+    sh("input keyevent KEYCODE_BACK")
+    time.sleep(0.8)
+    # search
+    nodes = dump("13_before_search")
+    sr = find(nodes, r"^Search$")
+    if sr:
+        touch.tap(sr[0]["cx"], sr[0]["cy"])
+        time.sleep(1.2)
+        sh("input text B_00")
+        time.sleep(1.5)
+        shot("13_search_result")
+        n2 = dump("13_search")
+        hits = len([n for n in n2 if re.match(r"B_00\d\d\.jpg", n["desc"] or "")])
+        record("search: typing 'B_00' lists matching files", hits > 0, f"{hits} matching tiles visible")
+    else:
+        record("search: Search button found", False, "no node with description 'Search'")
+
+
 def s09_monkey():
     launch()
     gfx_reset()
@@ -620,17 +713,24 @@ def main():
     adb("push", "media/.", "/sdcard/", check=True, timeout=300)
     sh("find /sdcard/DCIM /sdcard/Pictures /sdcard/Download /sdcard/Movies -type f | while read f; do "
        "am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d \"file://$f\" >/dev/null 2>&1; done", timeout=300)
-    time.sleep(8)
+    sh("content call --uri content://media/ --method scan_volume --arg external_primary", timeout=300)
+    time.sleep(25)
     cnt = sh("content query --uri content://media/external/file --projection _id --where \"media_type=1 OR media_type=3\"").count("Row:")
     log("media rows indexed:", cnt)
     metrics["media_rows"] = cnt
-    record("setup: media indexed by MediaStore", cnt >= 30, f"{cnt} rows")
+    record("setup: media indexed by MediaStore", cnt >= 2500, f"{cnt} rows")
     sh("settings put global window_animation_scale 1; settings put global transition_animation_scale 1; settings put global animator_duration_scale 1")
     sh("settings put secure immersive_mode_confirmations confirmed")  # no 'Viewing full screen' popup over the video
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
-    for fn in (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-               s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s09_monkey):
+    all_fns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
+               s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete,
+               s11_bulk_library, s12_odd_files, s13_selection_and_search, s09_monkey)
+    sel = [x.strip() for x in os.environ.get("SCENARIOS", "").split(",") if x.strip()]
+    for fn in all_fns:
+        # touch calibration always runs first (it decides how taps are injected); the others only when selected
+        if sel and fn is not s00_touch_calibration and not any(fn.__name__.startswith(x) for x in sel):
+            continue
         scenario(fn)
     # report
     lines = ["# Emulator test results", "", "| result | check | detail |", "|---|---|---|"]
