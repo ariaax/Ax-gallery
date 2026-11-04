@@ -119,13 +119,16 @@ class Touch:
 
     def double_tap(self, x, y, gap=0.06):
         if not self.native:
-            sh(f"input tap {int(x)} {int(y)}; input tap {int(x)} {int(y)}")
+            self.taps(x, y, 2)
             return
         self._run(self._down(x, y) + ["sleep 0.03"] + self._up() + [f"sleep {gap}"] + self._down(x, y) + ["sleep 0.03"] + self._up())
 
     def taps(self, x, y, n, gap=0.12):
         if not self.native:
-            sh("; ".join([f"input tap {int(x)} {int(y)}"] * n))
+            # every `input` call boots a JVM (~0.3-0.6 s on the CI emulator) - far slower than the 300 ms double-tap window.
+            # Start them as overlapping background jobs, staggered, so the taps *land* ~gap seconds apart.
+            cmd = "; ".join(f"(input tap {int(x)} {int(y)} &) ; sleep 0.12" for _ in range(n)) + "; sleep 2.5"
+            sh(cmd, timeout=60)
             return
         c = []
         for i in range(n):
