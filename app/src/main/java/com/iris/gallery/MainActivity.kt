@@ -795,7 +795,6 @@ private fun GalleryApp(
             viewModel.refresh(showLoading = false)
             val count = pending?.trashedMedia?.size ?: 0
             trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, count)
-            Toast.makeText(context, context.getString(R.string.toast_items_moved_to_trash, count), Toast.LENGTH_SHORT).show()
             cb?.invoke()
         } else {
             pending?.let { moveResult ->
@@ -820,7 +819,6 @@ private fun GalleryApp(
             viewModel.markMediaDeleted(delIds, delPaths)
             viewModel.refresh(showLoading = false)
             trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, items.size)
-            Toast.makeText(context, context.getString(R.string.toast_items_moved_to_trash, items.size), Toast.LENGTH_SHORT).show()
             cb?.invoke()
         }
     }
@@ -1179,7 +1177,6 @@ private fun GalleryApp(
                                                     viewModel.refresh(showLoading = false)
                                                     trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, moveResult.trashedMedia.size)
                                                     onConfirmed?.invoke()
-                                                    Toast.makeText(context, context.getString(R.string.toast_items_moved_to_trash, moveResult.trashedMedia.size), Toast.LENGTH_SHORT).show()
                                                 } else if (Build.VERSION.SDK_INT >= 30) {
                                                     runCatching {
                                                         pendingTrashMove = moveResult
@@ -1203,7 +1200,6 @@ private fun GalleryApp(
                                                             viewModel.refresh(showLoading = false)
                                                             trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, moveResult.trashedMedia.size)
                                                             onConfirmed?.invoke()
-                                                            Toast.makeText(context, context.getString(R.string.toast_items_moved_to_trash, moveResult.trashedMedia.size), Toast.LENGTH_SHORT).show()
                                                         } else {
                                                             pendingTrashMove = null
                                                             pendingTrashCallback = null
@@ -1226,7 +1222,6 @@ private fun GalleryApp(
                                                 viewModel.refresh(showLoading = false)
                                                 trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, moveResult.trashedMedia.size)
                                                 onConfirmed?.invoke()
-                                                Toast.makeText(context, context.getString(R.string.toast_items_moved_to_trash, moveResult.trashedMedia.size), Toast.LENGTH_SHORT).show()
                                             } else if (Build.VERSION.SDK_INT >= 30) {
                                                 runCatching {
                                                     pendingTrashMove = moveResult
@@ -1250,7 +1245,6 @@ private fun GalleryApp(
                                                         viewModel.refresh(showLoading = false)
                                                         trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, moveResult.trashedMedia.size)
                                                         onConfirmed?.invoke()
-                                                        Toast.makeText(context, context.getString(R.string.toast_items_moved_to_trash, moveResult.trashedMedia.size), Toast.LENGTH_SHORT).show()
                                                     } else {
                                                         pendingTrashMove = null
                                                         pendingTrashCallback = null
@@ -1272,7 +1266,6 @@ private fun GalleryApp(
                                                     viewModel.refresh(showLoading = false)
                                                     trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, moveResult.trashedMedia.size)
                                                     onConfirmed?.invoke()
-                                                    Toast.makeText(context, context.getString(R.string.toast_items_moved_to_trash, moveResult.trashedMedia.size), Toast.LENGTH_SHORT).show()
                                                 } else {
                                                     viewModel.rollbackTrashMove(moveResult.trashedMedia)
                                                     Toast.makeText(context, context.getString(R.string.toast_could_not_request_removal), Toast.LENGTH_SHORT).show()
