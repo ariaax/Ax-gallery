@@ -279,15 +279,38 @@ def scenario(fn):
 
 
 # ----------------------------------------------------------------------------------------------- app helpers
+def dismiss_system_dialogs():
+    """The CI emulator is slow: Android sometimes shows 'X isn't responding' for the launcher / Google apps. Press Wait."""
+    for _ in range(3):
+        nodes = dump("anr_check")
+        if not find(nodes, r"isn't responding|not responding"):
+            return
+        w = find(nodes, r"^Wait$")
+        if w:
+            touch_input_tap(w[0]["cx"], w[0]["cy"])
+        else:
+            sh("input keyevent KEYCODE_BACK")
+        time.sleep(1.0)
+
+
+def touch_input_tap(x, y):
+    sh(f"input tap {int(x)} {int(y)}")
+
+
 def launch(wait=True):
-    sh(f"am force-stop {PKG}")
-    time.sleep(0.5)
-    out = sh(f"am start -W -n {ACT}", timeout=120)
-    m = re.search(r"TotalTime: (\d+)", out)
-    if m:
-        metrics["cold_start_ms"] = int(m.group(1))
-    if wait:
-        time.sleep(7)  # the intro animation + first composition
+    for attempt in range(3):
+        sh(f"am force-stop {PKG}")
+        time.sleep(0.5)
+        out = sh(f"am start -W -n {ACT}", timeout=120)
+        m = re.search(r"TotalTime: (\d+)", out)
+        if m:
+            metrics["cold_start_ms"] = int(m.group(1))
+        if wait:
+            time.sleep(7)  # the intro animation + first composition
+        dismiss_system_dialogs()
+        if foreground_ok():
+            return
+        log("WARN launch attempt", attempt + 1, "left the app in the background:", focus())
 
 
 def hue_to_second(img, box=(0.25, 0.30, 0.75, 0.55)):
@@ -549,6 +572,32 @@ def s08_rotation():
     sh("settings put system accelerometer_rotation 1")
 
 
+def s10_favorite_and_delete():
+    """Viewer actions that change data: favourite toggle, then delete. Reports what really happened to the file."""
+    launch()
+    before = sh("content query --uri content://media/external/images/media --projection _id:_display_name:is_favorite --where \"_display_name='IMG_001.jpg'\"")
+    touch.tap(W * 0.17, H * 0.27)  # first tile
+    time.sleep(2.5)
+    shot("10_viewer")
+    touch.tap(W * 0.34, H * 0.94)  # heart
+    time.sleep(1.2)
+    shot("10_after_heart")
+    touch.tap(W * 0.84, H * 0.94)  # trash
+    time.sleep(1.5)
+    shot("10_after_trash_tap")
+    nodes = dump("10_delete_dialog")
+    btn = find(nodes, r"^(delete|move to trash|trash|remove|ok|allow|yes)$")
+    log("delete dialog buttons:", [(n["text"] or n["desc"]) for n in btn])
+    if btn:
+        touch_input_tap(btn[-1]["cx"], btn[-1]["cy"])
+        time.sleep(2.5)
+    shot("10_after_delete")
+    dismiss_system_dialogs()
+    after = sh("content query --uri content://media/external/images/media --projection _id:_display_name --where \"_display_name='IMG_001.jpg'\"")
+    onfs = sh("ls /sdcard/DCIM/Camera/IMG_001.jpg 2>&1")
+    record("delete: info only (see shots 10_*)", True, f"row before={'Row' in before} after={'Row' in after}; file: {onfs.strip()[:80]}; dialog buttons={[(n['text'] or n['desc']) for n in btn]}")
+
+
 def s09_monkey():
     launch()
     gfx_reset()
@@ -581,7 +630,7 @@ def main():
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     for fn in (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-               s06_video_gestures, s07_swipe_between_videos, s08_rotation, s09_monkey):
+               s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s09_monkey):
         scenario(fn)
     # report
     lines = ["# Emulator test results", "", "| result | check | detail |", "|---|---|---|"]
