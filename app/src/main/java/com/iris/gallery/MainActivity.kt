@@ -5554,7 +5554,7 @@ private fun PhotoViewer(
             userScrollEnabled = zoomedImageId != current.id && !isDismissing,
             pageSpacing = 16.dp,
             modifier = Modifier.axGlassSource(viewerGlass).graphicsLayer {
-                if (!viewerPortrait || zoomedImageId != null) return@graphicsLayer
+                if (!viewerPortrait || zoomedImageId != null || current.isVideo) return@graphicsLayer
                 val d = density
                 translationX = tiltX.floatValue * 14f * d
                 translationY = -tiltY.floatValue * 14f * d
@@ -5565,15 +5565,13 @@ private fun PhotoViewer(
           ) { page ->
           Box(
             Modifier.graphicsLayer {
-                // page-turn: each page hinges on its inner edge and folds away as you swipe
+                // Plain slide with a very light shrink on the neighbouring page. The old 3D page-turn (rotationY + perspective)
+                // made video surfaces flash black / draw outside their page, so no rotation is used any more.
                 val position = -((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
                 val ap = kotlin.math.abs(position).coerceIn(0f, 1f)
-                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(if (position < 0f) 1f else 0f, 0.5f)
-                rotationY = 32f * position.coerceIn(-1f, 1f)
-                val sc = 1f - 0.07f * ap
+                val sc = 1f - 0.04f * ap
                 scaleX = sc
                 scaleY = sc
-                cameraDistance = 14f * density
             }
           ) {
             val media = images[page]
