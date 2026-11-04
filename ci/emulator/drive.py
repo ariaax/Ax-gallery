@@ -49,13 +49,15 @@ def screen_size():
 
 
 class Touch:
-    """Native touch injection through the emulator's virtual touchscreen."""
+    """Touch injection. mode "input" = Android's own `input` command (always works, slow for double taps);
+    mode "ev<N>" = native sendevent chains through the virtual touchscreen (fast), variant N."""
 
     def __init__(self):
+        self.mode = "input"
         self.dev = None
         self.maxx = self.maxy = 0
         self.tid = 100
-        dev, info = None, {}
+        dev = None
         devs = {}
         for line in sh("getevent -pl").splitlines():
             m = re.match(r"add device \d+: (\S+)", line)
@@ -71,52 +73,83 @@ class Touch:
                 break
         log("touch device:", self.dev, self.maxx, self.maxy)
 
+    # ---- sendevent building blocks ----
     def _ev(self, t, c, v):
         return f"sendevent {self.dev} {t} {c} {v}"
 
     def _pt(self, x, y):
-        return [self._ev(3, 53, int(min(max(x, 0), W - 1) / W * self.maxx)),
-                self._ev(3, 54, int(min(max(y, 0), H - 1) / H * self.maxy))]
+        rx = int(min(max(x, 0), W - 1) / W * self.maxx)
+        ry = int(min(max(y, 0), H - 1) / H * self.maxy)
+        c = [self._ev(3, 53, rx), self._ev(3, 54, ry)]
+        if self.mode == "ev1":
+            c += [self._ev(3, 58, 40), self._ev(3, 48, 6)]
+        if self.mode == "ev2":
+            c += [self._ev(3, 0, rx), self._ev(3, 1, ry)]
+        return c
 
     def _down(self, x, y):
         self.tid += 1
-        return [self._ev(3, 57, self.tid)] + self._pt(x, y) + [self._ev(1, 330, 1), self._ev(0, 0, 0)]
+        c = [self._ev(3, 57, self.tid)] + self._pt(x, y) + [self._ev(1, 330, 1)]
+        if self.mode == "ev1":
+            c.append(self._ev(1, 325, 1))
+        return c + [self._ev(0, 0, 0)]
 
     def _move(self, x, y):
         return self._pt(x, y) + [self._ev(0, 0, 0)]
 
     def _up(self):
-        return [self._ev(3, 57, 4294967295), self._ev(1, 330, 0), self._ev(0, 0, 0)]
+        c = [self._ev(3, 57, 4294967295), self._ev(1, 330, 0)]
+        if self.mode == "ev1":
+            c.append(self._ev(1, 325, 0))
+        return c + [self._ev(0, 0, 0)]
 
-    def run(self, cmds):
-        if self.dev is None:
-            raise RuntimeError("no touch device")
+    def _run(self, cmds):
         sh("; ".join(cmds))
 
+    @property
+    def native(self):
+        return self.mode.startswith("ev")
+
+    # ---- gestures ----
     def tap(self, x, y):
-        self.run(self._down(x, y) + ["sleep 0.03"] + self._up())
+        if not self.native:
+            sh(f"input tap {int(x)} {int(y)}")
+            return
+        self._run(self._down(x, y) + ["sleep 0.03"] + self._up())
 
     def double_tap(self, x, y, gap=0.06):
-        self.run(self._down(x, y) + ["sleep 0.03"] + self._up() + [f"sleep {gap}"] + self._down(x, y) + ["sleep 0.03"] + self._up())
+        if not self.native:
+            sh(f"input tap {int(x)} {int(y)}; input tap {int(x)} {int(y)}")
+            return
+        self._run(self._down(x, y) + ["sleep 0.03"] + self._up() + [f"sleep {gap}"] + self._down(x, y) + ["sleep 0.03"] + self._up())
 
     def taps(self, x, y, n, gap=0.12):
+        if not self.native:
+            sh("; ".join([f"input tap {int(x)} {int(y)}"] * n))
+            return
         c = []
         for i in range(n):
             c += self._down(x, y) + ["sleep 0.03"] + self._up()
             if i < n - 1:
                 c.append(f"sleep {gap}")
-        self.run(c)
+        self._run(c)
 
     def swipe(self, x1, y1, x2, y2, ms=300, steps=14):
+        if not self.native:
+            sh(f"input swipe {int(x1)} {int(y1)} {int(x2)} {int(y2)} {int(ms)}")
+            return
         c = self._down(x1, y1)
         for i in range(1, steps + 1):
             f = i / steps
             c += [f"sleep {ms / 1000 / steps:.3f}"] + self._move(x1 + (x2 - x1) * f, y1 + (y2 - y1) * f)
         c += self._up()
-        self.run(c)
+        self._run(c)
 
     def hold(self, x, y, seconds=1.2):
-        self.run(self._down(x, y) + [f"sleep {seconds}"] + self._up())
+        if not self.native:
+            sh(f"input swipe {int(x)} {int(y)} {int(x)} {int(y)} {int(seconds * 1000)}")
+            return
+        self._run(self._down(x, y) + [f"sleep {seconds}"] + self._up())
 
 
 touch = None
@@ -155,6 +188,25 @@ def dump(name):
 def find(nodes, pattern):
     rx = re.compile(pattern, re.I)
     return [n for n in nodes if rx.search(n["text"]) or rx.search(n["desc"])]
+
+
+def focus():
+    t = sh("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'")
+    return " | ".join(l.strip() for l in t.splitlines())[:300]
+
+
+def foreground_ok():
+    return PKG in focus()
+
+
+def pic_diff(a, b):
+    """Mean absolute difference between two screenshots (0..255)."""
+    if a is None or b is None:
+        return 0.0
+    x = a.convert("L").resize((90, 200))
+    y = b.convert("L").resize((90, 200))
+    px, py = list(x.getdata()), list(y.getdata())
+    return sum(abs(p - q) for p, q in zip(px, py)) / len(px)
 
 
 def alive():
@@ -201,11 +253,18 @@ def record(name, ok, detail=""):
 def scenario(fn):
     name = fn.__name__
     log("=== scenario", name)
+    if not foreground_ok():
+        log("WARN app not in foreground before", name, "->", focus())
+        results.append(("WARN", f"{name}: app was not in the foreground at the start", focus()))
+        launch()
     adb("logcat", "-c")
     try:
         fn()
     except Exception as e:  # noqa
         record(name + " (exception)", False, f"{type(e).__name__}: {e}\n{traceback.format_exc()[-600:]}")
+    if alive() and not foreground_ok():
+        results.append(("WARN", f"{name}: app left the foreground during the scenario", focus()))
+        shot(name + "_left_foreground")
     hits = crash_lines()
     if hits or not alive():
         record(name + " -> app alive", False, "; ".join(hits) or "process is gone")
@@ -253,6 +312,46 @@ def tab_tap(label, fallback_x):
 
 
 # ----------------------------------------------------------------------------------------------- scenarios
+def s00_touch_calibration():
+    """Finds out which way of injecting touches really reaches the app (diagnostic for the harness itself)."""
+    launch()
+    nodes = dump("00_calib")
+    base = shot("00_base")
+    albums = [n for n in find(nodes, r"^Albums$") if n["cy"] > H * 0.8]
+    if not albums:
+        record("calibration: found Albums tab in UI dump", False, f"{len(nodes)} nodes, focus={focus()}")
+        return
+    ax, ay = albums[0]["cx"], albums[0]["cy"]
+    back = [n for n in find(nodes, r"^Media$") if n["cy"] > H * 0.8]
+    mx, my = (back[0]["cx"], back[0]["cy"]) if back else (W * 0.2, H * 0.925)
+
+    def attempt(mode):
+        touch.mode = mode
+        touch.tap(ax, ay)
+        time.sleep(1.4)
+        img = shot(f"00_after_{mode}")
+        moved = pic_diff(base, img) > 4.0
+        touch.mode = "input"
+        sh(f"input tap {int(mx)} {int(my)}")  # go back with the known-good method
+        time.sleep(1.4)
+        return moved
+
+    ok_input = attempt("input")
+    record("calibration: `input tap` reaches the app", ok_input, f"focus={focus()}")
+    chosen = "input"
+    for mode in ("ev0", "ev1", "ev2"):
+        if touch.dev is None:
+            break
+        ok = attempt(mode)
+        record(f"calibration: sendevent variant {mode} reaches the app", ok)
+        if ok:
+            chosen = mode
+            break
+    touch.mode = chosen
+    metrics["touch_mode"] = chosen
+    log("touch mode ->", chosen)
+
+
 def s01_startup():
     launch()
     img = shot("01_after_launch")
@@ -489,7 +588,7 @@ def main():
     sh("settings put global window_animation_scale 1; settings put global transition_animation_scale 1; settings put global animator_duration_scale 1")
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
-    for fn in (s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
+    for fn in (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
                s06_video_gestures, s07_swipe_between_videos, s08_rotation, s09_monkey):
         scenario(fn)
     # report
