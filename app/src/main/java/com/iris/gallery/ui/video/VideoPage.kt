@@ -577,11 +577,14 @@ fun VideoPage(
                                     val scrollRange = (h * 0.75f).coerceAtLeast(200f)
                                     val delta = -totalDragY / scrollRange
                                     val newBrightness = (dragStartBrightness + delta).coerceIn(0.01f, 1f)
-                                    currentBrightness = newBrightness
-                                    activity?.let { act ->
-                                        val lp = act.window.attributes
-                                        lp.screenBrightness = newBrightness
-                                        act.window.attributes = lp
+                                    val applied = kotlin.math.abs(newBrightness - currentBrightness) >= 0.006f || newBrightness <= 0.011f || newBrightness >= 0.999f
+                                    if (applied) {
+                                        currentBrightness = newBrightness
+                                        activity?.let { act ->
+                                            val lp = act.window.attributes
+                                            lp.screenBrightness = newBrightness
+                                            act.window.attributes = lp
+                                        }
                                     }
                                     brightnessHudVisible = true
                                     brightnessHudTimer = SystemClock.uptimeMillis()
@@ -748,20 +751,15 @@ fun VideoPage(
         AnimatedVisibility(
             visible = playPauseFeedbackEvent != null,
             modifier = Modifier.align(Alignment.Center),
-            enter = fadeIn(tween(140)) + scaleIn(
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-                initialScale = 0.7f
-            ),
-            exit = fadeOut(tween(200, easing = FastOutSlowInEasing)) + scaleOut(
-                animationSpec = tween(180, easing = FastOutSlowInEasing),
-                targetScale = 0.85f
-            ),
+            enter = fadeIn(tween(70)) + scaleIn(tween(120), initialScale = 0.85f),
+            exit = fadeOut(tween(140)),
         ) {
             val isPlay = lastPlayPauseFeedback ?: (playPauseFeedbackEvent?.first == true)
             Box(
                 modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.72f), CircleShape)
-                    .padding(20.dp),
+                    .background(Color.Black.copy(alpha = 0.46f), CircleShape)
+                    .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
+                    .padding(16.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -813,14 +811,14 @@ fun VideoPage(
 
         LevelHud(
             visible = brightnessHudVisible,
-            icon = if (currentBrightness < 0.4f) com.iris.gallery.ui.AxIcons.SunDim else com.iris.gallery.ui.AxIcons.Sun,
-            progress = currentBrightness,
+            icon = { b -> if (b < 0.4f) com.iris.gallery.ui.AxIcons.SunDim else com.iris.gallery.ui.AxIcons.Sun },
+            progress = { currentBrightness },
             modifier = Modifier.align(AbsoluteAlignment.CenterLeft).padding(start = 28.dp),
         )
         LevelHud(
             visible = volumeHudVisible,
-            icon = if (currentVolume <= minVolume) com.iris.gallery.ui.AxIcons.VolumeOff else com.iris.gallery.ui.AxIcons.Volume,
-            progress = (currentVolume - minVolume).toFloat() / (maxVolume - minVolume).coerceAtLeast(1),
+            icon = { v -> if (v <= 0f) com.iris.gallery.ui.AxIcons.VolumeOff else com.iris.gallery.ui.AxIcons.Volume },
+            progress = { (currentVolume - minVolume).toFloat() / (maxVolume - minVolume).coerceAtLeast(1) },
             modifier = Modifier.align(AbsoluteAlignment.CenterRight).padding(end = 28.dp),
         )
 
