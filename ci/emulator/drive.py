@@ -470,8 +470,7 @@ def s05_video_playback_and_seek():
     c0 = shot("05_before_series")
     s0 = hue_to_second(c0)
     t0 = time.time()
-    touch.double_tap(W * 0.85, H * 0.45)
-    touch.taps(W * 0.85, H * 0.45, 1)
+    touch.taps(W * 0.85, H * 0.45, 3)
     time.sleep(0.4)
     e = shot("05_after_series_plus20")
     s1 = hue_to_second(e)
@@ -578,6 +577,7 @@ def main():
     metrics["media_rows"] = cnt
     record("setup: media indexed by MediaStore", cnt >= 30, f"{cnt} rows")
     sh("settings put global window_animation_scale 1; settings put global transition_animation_scale 1; settings put global animator_duration_scale 1")
+    sh("settings put secure immersive_mode_confirmations confirmed")  # no 'Viewing full screen' popup over the video
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     for fn in (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
