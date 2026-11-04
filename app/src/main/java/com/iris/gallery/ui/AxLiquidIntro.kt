@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlin.math.PI
@@ -42,40 +43,15 @@ import kotlin.math.pow
 import kotlin.math.sin
 
 
-// ---- collage pieces, drawn in a 200 x 150 unit box ----
-private fun torn(l: Float, t: Float, r: Float, b: Float): Path {
-    fun j(i: Int) = (sin(i * 12.9898f) * 4.3758f).let { it - kotlin.math.floor(it) } * 3.6f - 1.8f
-    val p = Path()
-    var i = 0
-    var x = l
-    p.moveTo(l, t + j(i++))
-    while (x < r) { x = minOf(x + 9f, r); p.lineTo(x, t + j(i++)) }
-    var y = t
-    while (y < b) { y = minOf(y + 9f, b); p.lineTo(r + j(i++), y) }
-    x = r
-    while (x > l) { x = maxOf(x - 9f, l); p.lineTo(x, b + j(i++)) }
-    y = b
-    while (y > t) { y = maxOf(y - 9f, t); p.lineTo(l + j(i++), y) }
-    p.close()
-    return p
-}
-
-private fun rectPath(l: Float, t: Float, r: Float, b: Float) = Path().apply { addRect(androidx.compose.ui.geometry.Rect(l, t, r, b)) }
-
-private val discPath = Path().apply { addOval(androidx.compose.ui.geometry.Rect(62f - 38f, 76f - 38f, 62f + 38f, 76f + 38f)) }
-private val dotPath = Path().apply { addOval(androidx.compose.ui.geometry.Rect(22f, 22f, 38f, 38f)) }
-private val bluePath = torn(112f, 12f, 188f, 60f)
-private val paperPath = torn(28f, 18f, 150f, 128f)
-private val pinkPath = torn(120f, 64f, 188f, 132f)
-private val stripPath = rectPath(116f, 88f, 192f, 108f)
-private val tapePath = rectPath(58f, 10f, 94f, 24f)
-private val trianglePath = Path().apply { moveTo(172f, 16f); lineTo(184f, 38f); lineTo(160f, 38f); close() }
-private val letterAPath = Path().apply {
+// ---- the mark: a faceted glass "A" with a crossing glass stroke (the "X"), drawn in a 200 x 200 unit box ----
+private val markA = Path().apply {
     fillType = androidx.compose.ui.graphics.PathFillType.EvenOdd
-    moveTo(40f, 114f); lineTo(74f, 32f); lineTo(98f, 32f); lineTo(132f, 114f)
-    lineTo(111f, 114f); lineTo(105f, 98f); lineTo(68f, 98f); lineTo(62f, 114f); close()
-    moveTo(86f, 52f); lineTo(97f, 82f); lineTo(75f, 82f); close()
+    moveTo(87f, 28f); lineTo(113f, 28f); lineTo(165f, 172f); lineTo(137f, 172f); lineTo(126f, 142f)
+    lineTo(74f, 142f); lineTo(63f, 172f); lineTo(35f, 172f); close()
+    // counter (the hole above the crossbar)
+    moveTo(100f, 72f); lineTo(117f, 118f); lineTo(83f, 118f); close()
 }
+private val markSlash = Path().apply { moveTo(172f, 38f); lineTo(92f, 176f) }
 
 /** One "drip": a column where the liquid runs further down than around it. All values are fractions of the screen. */
 private class Drip(val x: Float, val width: Float, val length: Float, val delay: Float)
@@ -241,97 +217,67 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
             drawPath(topPath, Color(0xFFBFF1FF).copy(alpha = 0.75f), style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
     }
-    // The mark: a frosted squircle with a geometric "A" whose crossbar is a camera-lens ring, and the name under it.
+    // The mark: a faceted glass "A" crossed by one glass stroke (the "X"), and a quiet wordmark under it.
     // Everything is read only while drawing (graphicsLayer / Canvas lambdas), so this never recomposes.
     Column(
         modifier = Modifier.graphicsLayer {
             val appear = smooth((cover.value - 0.70f) / 0.30f)
             val leave = smooth(reveal.value / 0.35f)
             alpha = appear * (1f - leave)
-            val sc = 0.86f + 0.14f * appear + 0.10f * leave
+            val sc = 0.92f + 0.08f * appear + 0.08f * leave
             scaleX = sc
             scaleY = sc
-            translationY = (1f - appear) * 24.dp.toPx() - leave * 18.dp.toPx()
+            translationY = (1f - appear) * 16.dp.toPx() - leave * 14.dp.toPx()
         },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Canvas(Modifier.size(300.dp, 225.dp)) {
+        Canvas(Modifier.size(190.dp)) {
             val u = size.width / 200f
             val cv = cover.value
-            val rv = reveal.value
-            val leave = smooth(rv / 0.35f)
-            // every cut-out drops in on its own beat, like pieces being pasted down one after another
-            fun piece(
-                idx: Int, pivot: Offset, rot: Float, path: Path, color: Color,
-                shadow: Boolean = true, dxFrom: Float = 0f, dyFrom: Float = -46f,
-            ) {
-                val ap = smooth((cv - 0.66f - idx * 0.035f) / 0.20f)
-                if (ap <= 0f) return
-                val a = ap * (1f - leave)
-                val fall = 1f - ap
-                withTransform({
-                    translate(dxFrom * fall * u, dyFrom * fall * u)
-                    scale(u, u, Offset.Zero)
-                    rotate(rot - 9f * fall, pivot)
-                }) {
-                    if (shadow) {
-                        withTransform({ translate(2.2f, 3.2f) }) { drawPath(path, Color.Black.copy(alpha = 0.30f * a)) }
-                    }
-                    drawPath(path, color.copy(alpha = a))
+            val appear = smooth((cv - 0.72f) / 0.28f)
+            val sheen = smooth((cv - 0.80f) / 0.20f)
+            withTransform({ scale(u, u, pivot = Offset.Zero) }) {
+                // soft glow behind the mark
+                drawCircle(
+                    Brush.radialGradient(listOf(Color(0xFF8FD8FF).copy(alpha = 0.30f * appear), Color.Transparent), center = Offset(100f, 104f), radius = 110f),
+                    radius = 110f, center = Offset(100f, 104f),
+                )
+                // contact shadow
+                withTransform({ translate(0f, 5f) }) { drawPath(markA, Color(0xFF04164F).copy(alpha = 0.35f * appear)) }
+                // glass body: bright at the top, cool at the bottom
+                drawPath(
+                    markA,
+                    Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = 0.98f * appear),
+                        1f to Color(0xFFBFE4FF).copy(alpha = 0.92f * appear),
+                        startY = 28f, endY = 172f,
+                    ),
+                )
+                // a light sweep across the letter, once, while it settles
+                clipPath(markA) {
+                    val cx = -40f + 280f * sheen
+                    drawRect(
+                        Brush.linearGradient(
+                            0f to Color.Transparent, 0.5f to Color(0xFF59C8FF).copy(alpha = 0.55f * (1f - sheen) * appear), 1f to Color.Transparent,
+                            start = Offset(cx - 40f, 28f), end = Offset(cx + 20f, 172f),
+                        ),
+                    )
                 }
+                drawPath(markA, Color.White.copy(alpha = 0.9f * appear), style = Stroke(1.1f, join = StrokeJoin.Round))
+                // the "X": one translucent glass stroke crossing the right leg
+                drawPath(markSlash, Color(0xFF2FA8FF).copy(alpha = 0.50f * appear), style = Stroke(11f, cap = StrokeCap.Round))
+                drawPath(markSlash, Color.White.copy(alpha = 0.85f * appear), style = Stroke(1.6f, cap = StrokeCap.Round))
             }
-            // 1 blue paper strip, 2 cream torn paper
-            piece(0, Offset(150f, 36f), 12f, bluePath, Color(0xFF2447D8), dxFrom = 40f, dyFrom = 0f)
-            piece(1, Offset(89f, 73f), -5f, paperPath, Color(0xFFF3E7CE))
-            // coral (printed on the paper) disc with a halftone shade
-            piece(2, Offset(62f, 70f), 0f, discPath, Color(0xFFFF6B4A), dxFrom = -30f, dyFrom = 0f)
-            run {
-                val raw = smooth((cv - 0.66f - 2 * 0.035f) / 0.20f)
-                val ap = raw * (1f - leave)
-                val slide = -30f * (1f - raw)
-                if (ap > 0f) {
-                    var gy = 30f
-                    while (gy < 112f) {
-                        var gx = 20f
-                        while (gx < 104f) {
-                            val dx = gx - 62f; val dy = gy - 76f
-                            if (dx * dx + dy * dy < 34f * 34f && dx + dy > 6f) {
-                                val k = ((dx + dy) / 70f).coerceIn(0.2f, 1f)
-                                drawCircle(Color(0xFFB8321A).copy(alpha = ap * 0.85f), radius = 2.4f * k * u, center = Offset((gx + slide) * u, gy * u))
-                            }
-                            gx += 7f
-                        }
-                        gy += 7f
-                    }
-                }
-            }
-            // 3 pink tile for the x, 4 the black cut-out A
-            piece(3, Offset(154f, 98f), 6f, pinkPath, Color(0xFFFF8FB1), dxFrom = 30f, dyFrom = -20f)
-            piece(4, Offset(86f, 75f), -5f, letterAPath, Color(0xFF141414))
-            // 5/6 the x: two crossing strips of different paper
-            piece(5, Offset(154f, 98f), 45f, stripPath, Color(0xFFFFC928), dxFrom = 20f, dyFrom = -40f)
-            piece(6, Offset(154f, 98f), -45f, stripPath, Color(0xFF18B6A4), dxFrom = -10f, dyFrom = -40f)
-            // 7 small cut shapes, 8 tape
-            piece(7, Offset(30f, 30f), 0f, dotPath, Color(0xFF141414), dxFrom = 0f, dyFrom = -30f)
-            piece(7, Offset(172f, 28f), 14f, trianglePath, Color(0xFFFFC928), dxFrom = 0f, dyFrom = -30f)
-            piece(8, Offset(76f, 17f), -18f, tapePath, Color(0xFFFFF3A0).copy(alpha = 0.85f), shadow = false, dyFrom = -20f)
         }
-        // typewriter label stuck under the collage
         Text(
-            text = "GALLERY",
+            text = "AX  GALLERY",
             style = TextStyle(
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                letterSpacing = 6.sp,
-                color = Color(0xFF141414),
+                fontWeight = FontWeight.Light,
+                fontSize = 14.sp,
+                letterSpacing = 9.sp,
+                color = Color.White.copy(alpha = 0.90f),
             ),
-            modifier = Modifier
-                .padding(top = 6.dp)
-                .graphicsLayer { rotationZ = -2f }
-                .background(Color(0xFFF3E7CE))
-                .padding(horizontal = 12.dp, vertical = 3.dp),
+            modifier = Modifier.padding(top = 14.dp),
         )
-    }
-    }
+    }    }
 }

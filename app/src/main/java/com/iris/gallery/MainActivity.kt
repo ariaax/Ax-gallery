@@ -34,6 +34,9 @@ import com.iris.gallery.ui.AxHero
 import com.iris.gallery.ui.AxHeroClip
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.collectLatest
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
@@ -4554,7 +4557,34 @@ private fun PhotoGrid(
                 }
             }
     ) {
+        val rimAccent = MaterialTheme.colorScheme.primary
         val targetThumbnailPx = remember(actualColumns) { com.iris.gallery.ui.getThumbnailTargetSizePx(actualColumns) }
+        // Look-ahead: while scrolling, decode the next ~3 screens of tiles in the scroll direction so they are
+        // already in the memory cache when they arrive (fewer empty tiles during a fling).
+        val prefetchCtx = LocalContext.current
+        LaunchedEffect(gridState, groups, targetThumbnailPx) {
+            val flat = groups.flatMap { it.value }
+            if (flat.isEmpty()) return@LaunchedEffect
+            val indexOfId = HashMap<Long, Int>(flat.size * 2).also { m -> flat.forEachIndexed { i, im -> m[im.id] = i } }
+            var lastFirst = -1
+            snapshotFlow {
+                val vis = gridState.layoutInfo.visibleItemsInfo
+                val ids = vis.mapNotNull { it.key as? Long }
+                if (ids.isEmpty()) null else (indexOfId[ids.first()] ?: -1) to (indexOfId[ids.last()] ?: -1)
+            }.collectLatest { range ->
+                if (range == null || range.first < 0 || range.second < 0) return@collectLatest
+                val (first, last) = range
+                val forward = first >= lastFirst
+                lastFirst = first
+                kotlinx.coroutines.delay(40) // a fling that is still running re-triggers us; only the last position counts
+                val span = (last - first + 1).coerceAtLeast(6)
+                val targets = if (forward) (last + 1)..minOf(flat.size - 1, last + span * 3)
+                else (first - 1) downTo maxOf(0, first - span * 3)
+                for (i in targets) {
+                    com.iris.gallery.ui.prefetchThumbnail(prefetchCtx, flat[i], targetThumbnailPx)
+                }
+            }
+        }
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Adaptive(cellSize),
@@ -4691,6 +4721,20 @@ private fun PhotoGrid(
                 Box(Modifier.aspectRatio(1f)
                     .onGloballyPositioned { heroCell[0] = it }
                     .clip(RoundedCornerShape(if (selected) 20.dp else maxOf(cornerStyle.dp, 18).dp))
+                    // thin glass rim around every tile (glowing accent ring when selected), drawn in this same node
+                    // instead of an extra Box + border per tile
+                    .drawWithContent {
+                        drawContent()
+                        val r = (if (selected) 20.dp else maxOf(cornerStyle.dp, 18).dp).toPx()
+                        val w = (if (selected) 2.5.dp else 0.8.dp).toPx()
+                        drawRoundRect(
+                            color = if (selected) rimAccent else Color.White.copy(alpha = 0.14f),
+                            topLeft = Offset(w / 2, w / 2),
+                            size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(r - w / 2),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(w),
+                        )
+                    }
                     .combinedClickable(onClick = {
                         if (suppressReleaseClickId == image.id) suppressReleaseClickId = null
                         else { AxHero.mark(heroCell[0], image.id); onOpen(image) }
@@ -4725,17 +4769,6 @@ private fun PhotoGrid(
                             ),
                         )
                     }
-                    // thin glass rim around every tile; a glowing accent ring when selected
-                    Box(
-                        Modifier
-                            .matchParentSize()
-                            .border(
-                                if (selected) 2.5.dp else 0.8.dp,
-                                if (selected) androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary)
-                                else androidx.compose.ui.graphics.SolidColor(Color.White.copy(alpha = 0.14f)),
-                                RoundedCornerShape(if (selected) 20.dp else maxOf(cornerStyle.dp, 18).dp),
-                            )
-                    )
                     // only selected tiles compose the check (an AnimatedVisibility on every tile was costly)
                     if (selected) {
                         com.iris.gallery.ui.AxSelectCheck(Modifier.align(Alignment.TopEnd).padding(7.dp))
