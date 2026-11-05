@@ -764,7 +764,7 @@ def s14_exotic_formats():
         crashed = (not pid1) or (pid0 and pid1 != pid0) or bool(crash_lines())
         err = [n["text"] or n["desc"] for n in find(nodes, ERR_RX) if n["cy"] < H * 0.92][:2]
         mean, std = screen_stats(b) if b else (0, 0)
-        blank = std < 7
+        blank = mean < 22 and std < 6  # black screen (a flat grey or red picture is a picture)
         moving = band_color_distance(a, b) > 25
         if crashed:
             verdict = "CRASH"
