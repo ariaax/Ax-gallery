@@ -705,11 +705,24 @@ def mediastore_index():
 def screen_stats(img):
     """(mean, std) of luminance in the middle band of the screen, where the picture is."""
     w, h = img.size
-    band = img.convert("L").crop((0, int(h * 0.22), w, int(h * 0.78))).resize((90, 120))
+    band = img.convert("L").crop((0, int(h * 0.30), w, int(h * 0.58))).resize((90, 60))
     px = list(band.getdata())
     mean = sum(px) / len(px)
     std = (sum((p - mean) ** 2 for p in px) / len(px)) ** 0.5
     return mean, std
+
+
+def band_color_distance(a, b):
+    """Distance between the mean colours of the picture band of two screenshots (the test videos cycle their hue)."""
+    if a is None or b is None:
+        return 0.0
+    def mean_rgb(img):
+        w, h = img.size
+        c = img.crop((int(w * 0.1), int(h * 0.32), int(w * 0.9), int(h * 0.56))).resize((16, 16))
+        px = list(c.getdata())
+        return [sum(p[i] for p in px) / len(px) for i in range(3)]
+    x, y = mean_rgb(a), mean_rgb(b)
+    return sum(abs(p - q) for p, q in zip(x, y))
 
 
 ERR_RX = r"can't be (displayed|played)|cannot be|couldn't|could not|unsupported|not supported|error|failed"
@@ -752,7 +765,7 @@ def s14_exotic_formats():
         err = [n["text"] or n["desc"] for n in find(nodes, ERR_RX) if n["cy"] < H * 0.92][:2]
         mean, std = screen_stats(b) if b else (0, 0)
         blank = std < 7
-        moving = pic_diff(a, b) > 1.5
+        moving = band_color_distance(a, b) > 25
         if crashed:
             verdict = "CRASH"
             save_log("14_crash_" + re.sub(r"\W", "_", name)[:40])

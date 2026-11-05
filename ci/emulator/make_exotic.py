@@ -143,41 +143,46 @@ gen("broken images", broken_images)
 
 # ---------------- videos
 V = root / "vid"
-def vid(name, args, vf="testsrc2=size=1280x720:rate=30:duration=4", audio=True, note="", expect="ok"):
-    cmd = ["ffmpeg", "-y", "-f", "lavfi", "-i", vf]
+def cyc(size, rate, dur):
+    return f"color=size={size}:rate={rate}:duration={dur}:c=red,format=yuv444p,hue=h=360*t/3"
+
+
+def vid(name, args, vf=None, audio=True, note="", expect="ok"):
+    vfx = vf or cyc("1280x720", 30, 4)
+    cmd = ["ffmpeg", "-y", "-f", "lavfi", "-i", vfx]
     if audio: cmd += ["-f", "lavfi", "-i", "sine=frequency=440:duration=4"]
     cmd += args + ([] if not audio else ["-shortest"]) + [str(V / name)]
     def g():
         run(*cmd); add(f"Exotic/vid/{name}", "video", expect, note)
     gen(name, g)
 
-vid("h264_baseline_320x240.mp4", ["-c:v", "libx264", "-profile:v", "baseline", "-pix_fmt", "yuv420p", "-c:a", "aac"], "testsrc2=size=320x240:rate=15:duration=4", note="H.264 baseline")
-vid("h264_1080p60.mp4", ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac"], "testsrc2=size=1920x1080:rate=60:duration=4", note="1080p 60 fps")
-vid("hevc_1080p.mp4", ["-c:v", "libx265", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-tag:v", "hvc1", "-c:a", "aac"], "testsrc2=size=1920x1080:rate=30:duration=4", note="HEVC")
-vid("hevc_10bit_1080p.mp4", ["-c:v", "libx265", "-preset", "ultrafast", "-pix_fmt", "yuv420p10le", "-tag:v", "hvc1", "-c:a", "aac"], "testsrc2=size=1920x1080:rate=30:duration=3", note="HEVC Main10 (HDR-style 10-bit)")
-vid("hevc_4k.mp4", ["-c:v", "libx265", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-tag:v", "hvc1", "-c:a", "aac"], "testsrc2=size=3840x2160:rate=30:duration=3", note="4K HEVC")
-vid("hevc_8k.mp4", ["-c:v", "libx265", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-tag:v", "hvc1", "-an"], "testsrc2=size=7680x4320:rate=24:duration=1", audio=False, note="8K HEVC (beyond most phone decoders)")
+vid("h264_baseline_320x240.mp4", ["-c:v", "libx264", "-profile:v", "baseline", "-pix_fmt", "yuv420p", "-c:a", "aac"], cyc("320x240", 15, 4), note="H.264 baseline")
+vid("h264_1080p60.mp4", ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac"], cyc("1920x1080", 60, 4), note="1080p 60 fps")
+vid("hevc_1080p.mp4", ["-c:v", "libx265", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-tag:v", "hvc1", "-c:a", "aac"], cyc("1920x1080", 30, 4), note="HEVC")
+vid("hevc_10bit_1080p.mp4", ["-c:v", "libx265", "-preset", "ultrafast", "-pix_fmt", "yuv420p10le", "-tag:v", "hvc1", "-c:a", "aac"], cyc("1920x1080", 30, 3), note="HEVC Main10 (HDR-style 10-bit)")
+vid("hevc_4k.mp4", ["-c:v", "libx265", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-tag:v", "hvc1", "-c:a", "aac"], cyc("3840x2160", 30, 3), note="4K HEVC")
+vid("hevc_8k.mp4", ["-c:v", "libx265", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-tag:v", "hvc1", "-an"], cyc("7680x4320", 24, 1), audio=False, note="8K HEVC (beyond most phone decoders)")
 vid("vp9.webm", ["-c:v", "libvpx-vp9", "-deadline", "realtime", "-cpu-used", "8", "-b:v", "2M", "-c:a", "libopus"], note="VP9 + Opus")
 vid("vp8.webm", ["-c:v", "libvpx", "-deadline", "realtime", "-cpu-used", "8", "-b:v", "2M", "-c:a", "libvorbis"], note="VP8 + Vorbis")
-vid("av1_720p.mp4", ["-c:v", "libsvtav1", "-preset", "12", "-pix_fmt", "yuv420p", "-c:a", "aac"], "testsrc2=size=1280x720:rate=30:duration=3", note="AV1")
+vid("av1_720p.mp4", ["-c:v", "libsvtav1", "-preset", "12", "-pix_fmt", "yuv420p", "-c:a", "aac"], cyc("1280x720", 30, 3), note="AV1")
 vid("mpeg2.mpg", ["-c:v", "mpeg2video", "-b:v", "4M", "-c:a", "ac3"], note="MPEG-2 / AC-3")
 vid("mpeg2.ts", ["-c:v", "mpeg2video", "-b:v", "4M", "-c:a", "aac", "-f", "mpegts"], note="MPEG-TS")
 vid("mpeg4_mp3.avi", ["-c:v", "mpeg4", "-q:v", "4", "-c:a", "libmp3lame"], note="AVI MPEG-4 part 2 + MP3")
-vid("h263.3gp", ["-c:v", "h263", "-c:a", "aac", "-ar", "8000", "-ac", "1", "-strict", "-2"], "testsrc2=size=176x144:rate=15:duration=4", note="3GP H.263")
+vid("h263.3gp", ["-c:v", "h263", "-c:a", "aac", "-ar", "8000", "-ac", "1", "-strict", "-2"], cyc("176x144", 15, 4), note="3GP H.263")
 vid("wmv2.wmv", ["-c:v", "wmv2", "-c:a", "wmav2"], note="WMV")
 vid("theora.ogv", ["-c:v", "libtheora", "-q:v", "6", "-c:a", "libvorbis"], note="Theora/Ogg")
 vid("mjpeg.avi", ["-c:v", "mjpeg", "-q:v", "5", "-an"], audio=False, note="Motion-JPEG")
-vid("prores_1080p.mov", ["-c:v", "prores_ks", "-profile:v", "3", "-c:a", "pcm_s16le"], "testsrc2=size=1920x1080:rate=30:duration=2", note="ProRes 422 HQ (pro codec, not in Android)")
-vid("ffv1_lossless.mkv", ["-c:v", "ffv1", "-c:a", "flac"], "testsrc2=size=1280x720:rate=30:duration=2", note="FFV1 lossless (very heavy)")
+vid("prores_1080p.mov", ["-c:v", "prores_ks", "-profile:v", "3", "-c:a", "pcm_s16le"], cyc("1920x1080", 30, 2), note="ProRes 422 HQ (pro codec, not in Android)")
+vid("ffv1_lossless.mkv", ["-c:v", "ffv1", "-c:a", "flac"], cyc("1280x720", 30, 2), note="FFV1 lossless (very heavy)")
 vid("no_audio.mp4", ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-an"], audio=False, note="no audio track")
-vid("portrait_rotate90.mp4", ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-metadata:s:v:0", "rotate=90"], "testsrc2=size=1280x720:rate=30:duration=4", note="rotation metadata (phone portrait video)")
+vid("portrait_rotate90.mp4", ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-metadata:s:v:0", "rotate=90"], cyc("1280x720", 30, 4), note="rotation metadata (phone portrait video)")
 vid("odd_sar_4x3_pixels.mp4", ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-vf", "setsar=4/3", "-c:a", "aac"], note="non-square pixels")
 vid("vfr_variable_framerate.mp4", ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-vf", "select='not(mod(n,3))+gt(random(0),0.7)',setpts=N/FRAME_RATE/TB", "-fps_mode", "vfr", "-c:a", "aac"], note="variable frame rate")
 vid("long_audio_tracks_subs.mkv", ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-map", "0:v", "-map", "1:a", "-map", "1:a"], note="two audio tracks")
 
 def long_video():
     src = V / "_clip.mp4"
-    run("ffmpeg", "-y", "-f", "lavfi", "-i", "testsrc=size=640x360:rate=30:duration=6", "-f", "lavfi", "-i", "sine=frequency=330:duration=6",
+    run("ffmpeg", "-y", "-f", "lavfi", "-i", "color=size=640x360:rate=30:duration=6:c=red,format=yuv444p,hue=h=360*t/3", "-f", "lavfi", "-i", "sine=frequency=330:duration=6",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "38", "-g", "60", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "24k", "-shortest", str(src))
     run("ffmpeg", "-y", "-stream_loop", "600", "-i", str(src), "-c", "copy", str(V / "long_1h.mp4"), timeout=900)  # 6 s x 601 = 1 hour
     src.unlink(); add("Exotic/vid/long_1h.mp4", "video", note="1 hour long (seek across a huge file)")
