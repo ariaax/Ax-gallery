@@ -224,6 +224,20 @@ fun VideoPage(
         return Offset(clampedX, clampedY)
     }
 
+    // A video whose picture cannot be decoded on this device (MPEG-2, MJPEG, ProRes, FFV1...) used to leave a silent black
+    // screen: the audio track plays (or nothing does) and no error is raised. If no frame shows up after the player is
+    // ready, say so and offer another app.
+    LaunchedEffect(media.id, active) {
+        if (!active) return@LaunchedEffect
+        delay(3500)
+        if (!isFirstFrameRendered && playbackError == null) {
+            val st = engine.player.playbackState
+            if (st == Player.STATE_READY || st == Player.STATE_ENDED) {
+                playbackError = "Video track not supported on this device (audio only)"
+            }
+        }
+    }
+
     LaunchedEffect(engine, active, autoPlay, loop) {
         if (!active) {
             isFirstFrameRendered = false
