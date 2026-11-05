@@ -691,6 +691,109 @@ def s13_selection_and_search():
         record("search: Search button found", False, "no node with description 'Search'")
 
 
+def mediastore_index():
+    """name -> (id, media_type, mime) for everything Android indexed."""
+    out = sh("content query --uri content://media/external/file --projection _id:_display_name:media_type:mime_type", timeout=120)
+    idx = {}
+    for line in out.splitlines():
+        m = re.search(r"_id=(\d+), _display_name=(.*?), media_type=(\d+), mime_type=(.*)$", line)
+        if m:
+            idx[m.group(2)] = (m.group(1), int(m.group(3)), m.group(4).strip())
+    return idx
+
+
+def screen_stats(img):
+    """(mean, std) of luminance in the middle band of the screen, where the picture is."""
+    w, h = img.size
+    band = img.convert("L").crop((0, int(h * 0.22), w, int(h * 0.78))).resize((90, 120))
+    px = list(band.getdata())
+    mean = sum(px) / len(px)
+    std = (sum((p - mean) ** 2 for p in px) / len(px)) ** 0.5
+    return mean, std
+
+
+ERR_RX = r"can't be (displayed|played)|cannot be|couldn't|could not|unsupported|not supported|error|failed"
+
+
+def s14_exotic_formats():
+    """Opens every file of the compatibility set in the viewer and reports what the app really did with it."""
+    man_path = Path("media/Exotic/manifest.json")
+    if not man_path.exists():
+        record("exotic: manifest present", False, "media/Exotic/manifest.json missing")
+        return
+    files = json.loads(man_path.read_text())["files"]
+    idx = mediastore_index()
+    launch()
+    rows = []
+    for f in files:
+        name = f["path"].rsplit("/", 1)[-1]
+        kind, expect = f["kind"], f["expect"]
+        info = idx.get(name)
+        if kind in ("audio", "other"):
+            ok = info is None or info[1] not in (1, 3)
+            rows.append((name, kind, expect, "IGNORED (correct)" if ok else "LISTED AS MEDIA", f["note"]))
+            record(f"exotic: {name} is not treated as photo/video", ok, "" if ok else f"media_type={info[1]}")
+            continue
+        if not info or info[1] not in (1, 3):
+            rows.append((name, kind, expect, "NOT INDEXED BY ANDROID", f["note"]))
+            log("exotic: not indexed", name)
+            continue
+        mid, mtype, mime = info
+        adb("logcat", "-c")
+        pid0 = sh(f"pidof {PKG}").strip()
+        sh(f"am start -a android.intent.action.VIEW -p {PKG} -d content://media/external/file/{mid} -t {mime}", timeout=60)
+        time.sleep(4.0 if kind == "image" else 6.0)
+        a = shot("14_a")
+        time.sleep(1.5)
+        b = shot("14_b")
+        nodes = dump("14_nodes")
+        pid1 = sh(f"pidof {PKG}").strip()
+        crashed = (not pid1) or (pid0 and pid1 != pid0) or bool(crash_lines())
+        err = [n["text"] or n["desc"] for n in find(nodes, ERR_RX) if n["cy"] < H * 0.92][:2]
+        mean, std = screen_stats(b) if b else (0, 0)
+        blank = std < 7
+        moving = pic_diff(a, b) > 1.5
+        if crashed:
+            verdict = "CRASH"
+            save_log("14_crash_" + re.sub(r"\W", "_", name)[:40])
+        elif err:
+            verdict = "ERROR MESSAGE SHOWN"
+        elif blank:
+            verdict = "SILENT BLANK SCREEN"
+        elif kind == "video":
+            verdict = "PLAYING" if moving else "SHOWN BUT NOT MOVING"
+        else:
+            verdict = "SHOWN"
+        shot_name = "14_" + re.sub(r"\W", "_", name)[:40]
+        if b is not None:
+            b.save(OUT / "shots" / f"{shot_name}.png")
+        rows.append((name, kind, expect, verdict, f["note"]))
+        bad = verdict in ("CRASH", "SILENT BLANK SCREEN")
+        record(f"exotic: {name} ({f['note'] or kind})", not bad, verdict + (f" | {err}" if err else ""))
+        if crashed or not foreground_ok():
+            launch()
+        else:
+            sh("input keyevent KEYCODE_BACK")
+            time.sleep(0.6)
+    # the grid: do all those files get a thumbnail? (they were stamped 'now', so they sit at the top)
+    launch()
+    for i in range(4):
+        shot(f"14_grid_{i}")
+        sh(f"input swipe {int(W*.5)} {int(H*.75)} {int(W*.5)} {int(H*.25)} 250")
+        time.sleep(1.0)
+    metrics["exotic_pss_mb"] = pss_mb()
+    # table for humans
+    lines = ["# Compatibility results (emulator: Android 13, x86_64, software codecs - a real phone differs for video)", "",
+             "| file | kind | expected | what the app did | note |", "|---|---|---|---|---|"]
+    for r in rows:
+        lines.append("| " + " | ".join(str(x).replace("|", "/") for x in r) + " |")
+    (OUT / "compat.md").write_text("\n".join(lines))
+    counts = {}
+    for r in rows:
+        counts[r[3]] = counts.get(r[3], 0) + 1
+    metrics["exotic_verdicts"] = counts
+
+
 def s09_monkey():
     launch()
     gfx_reset()
@@ -718,14 +821,14 @@ def main():
     cnt = sh("content query --uri content://media/external/file --projection _id --where \"media_type=1 OR media_type=3\"").count("Row:")
     log("media rows indexed:", cnt)
     metrics["media_rows"] = cnt
-    record("setup: media indexed by MediaStore", cnt >= 2500, f"{cnt} rows")
+    record("setup: media indexed by MediaStore", cnt >= 30, f"{cnt} rows")
     sh("settings put global window_animation_scale 1; settings put global transition_animation_scale 1; settings put global animator_duration_scale 1")
     sh("settings put secure immersive_mode_confirmations confirmed")  # no 'Viewing full screen' popup over the video
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     all_fns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
                s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete,
-               s11_bulk_library, s12_odd_files, s13_selection_and_search, s09_monkey)
+               s11_bulk_library, s12_odd_files, s13_selection_and_search, s14_exotic_formats, s09_monkey)
     sel = [x.strip() for x in os.environ.get("SCENARIOS", "").split(",") if x.strip()]
     for fn in all_fns:
         # touch calibration always runs first (it decides how taps are injected); the others only when selected

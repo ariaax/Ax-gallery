@@ -20,7 +20,7 @@ permissions:
 jobs:
   emulator:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
@@ -50,12 +50,16 @@ jobs:
           ls -la app/build/outputs/apk/optimized/
 
       - name: Make test media
-        run: python3 ci/emulator/make_media.py media
+        env:
+          SCENARIOS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.scenarios || 's14' }}
+        run: |
+          python3 ci/emulator/make_media.py media
+          if [ -z "$SCENARIOS" ] || echo "$SCENARIOS" | grep -q s14; then python3 ci/emulator/make_exotic.py media; fi
 
       - name: Run emulator tests
         env:
           # pushes run only the scenarios that have not been verified yet; run 'all' by dispatching with an empty list
-          SCENARIOS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.scenarios || 's11,s12,s13' }}
+          SCENARIOS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.scenarios || 's14' }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
@@ -78,7 +82,7 @@ jobs:
           rm -rf /tmp/res && mkdir -p /tmp/res
           [ -d ci-out/shots_small ] && cp -r ci-out/shots_small /tmp/res/shots
           [ -d ci-out/dumps ] && cp -r ci-out/dumps /tmp/res/dumps
-          cp ci-out/results.md ci-out/drive.log /tmp/res/ 2>/dev/null || true
+          cp ci-out/results.md ci-out/compat.md ci-out/drive.log /tmp/res/ 2>/dev/null || true
           mkdir -p /tmp/res/logs && cp ci-out/logs/*crash*.txt /tmp/res/logs/ 2>/dev/null || true
           cd /tmp/res
           git init -q

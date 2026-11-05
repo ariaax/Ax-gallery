@@ -46,28 +46,31 @@ for i, name in enumerate(("DCIM/Camera/VID_A.mp4", "Download/VID_B.mp4")):
     run("ffmpeg", "-y", "-f", "lavfi", "-i", f"testsrc2=size=1280x720:rate=30:duration={12 + i * 6}",
         "-f", "lavfi", "-i", "sine=frequency=330:duration=30", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
         "-g", "60", "-c:a", "aac", "-shortest", str(out / name))
-# ---- odd files (crash hunters) ----
-odd = out / "Pictures/Odd"
-odd.mkdir(parents=True, exist_ok=True)
-(odd / "zero_byte.jpg").write_bytes(b"")
-good = out / "DCIM/Camera/IMG_001.jpg"
-(odd / "truncated.jpg").write_bytes(good.read_bytes()[:20000])
-(odd / "not_an_image.jpg").write_bytes(b"hello this is text, not a jpeg" * 50)
-run("convert", "-size", "800x600", "plasma:fractal", str(odd / "photo.webp"))
-run("convert", "-size", "300x300", "-delay", "10", "plasma:red-blue", "plasma:green-yellow", "plasma:blue-white", "-loop", "0", str(odd / "anim.gif"))
-run("convert", "-size", "12000x9000", "gradient:red-blue", "-quality", "60", str(odd / "huge_12000x9000.jpg"))
-run("convert", "-size", "100x7000", "gradient:black-white", str(odd / "tall_panorama.png"))
-(odd / "vector.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#2447d8"/><circle cx="200" cy="150" r="90" fill="#ffc928"/></svg>')
-# ---- bulk library: thousands of small photos (scroll / memory / start-up under a realistic load) ----
-bulk = out / "DCIM/Bulk"
-bulk.mkdir(parents=True, exist_ok=True)
-base = bulk / "base.jpg"
-run("convert", "-size", "640x480", "plasma:fractal", "-quality", "80", str(base))
-import shutil
-for i in range(2500):
-    f = bulk / f"B_{i:04d}.jpg"
-    shutil.copyfile(base, f)
-    t = 1700000000 - i * 3000
-    os.utime(f, (t, t))
-base.unlink()
+SC = os.environ.get("SCENARIOS", "")
+want = lambda *tags: (not SC.strip()) or any(t in SC for t in tags)
+if want("s11", "s12", "s13"):
+    # ---- odd files (crash hunters) ----
+    odd = out / "Pictures/Odd"
+    odd.mkdir(parents=True, exist_ok=True)
+    (odd / "zero_byte.jpg").write_bytes(b"")
+    good = out / "DCIM/Camera/IMG_001.jpg"
+    (odd / "truncated.jpg").write_bytes(good.read_bytes()[:20000])
+    (odd / "not_an_image.jpg").write_bytes(b"hello this is text, not a jpeg" * 50)
+    run("convert", "-size", "800x600", "plasma:fractal", str(odd / "photo.webp"))
+    run("convert", "-size", "300x300", "-delay", "10", "plasma:red-blue", "plasma:green-yellow", "plasma:blue-white", "-loop", "0", str(odd / "anim.gif"))
+    run("convert", "-size", "12000x9000", "gradient:red-blue", "-quality", "60", str(odd / "huge_12000x9000.jpg"))
+    run("convert", "-size", "100x7000", "gradient:black-white", str(odd / "tall_panorama.png"))
+    (odd / "vector.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#2447d8"/><circle cx="200" cy="150" r="90" fill="#ffc928"/></svg>')
+    # ---- bulk library: thousands of small photos (scroll / memory / start-up under a realistic load) ----
+    bulk = out / "DCIM/Bulk"
+    bulk.mkdir(parents=True, exist_ok=True)
+    base = bulk / "base.jpg"
+    run("convert", "-size", "640x480", "plasma:fractal", "-quality", "80", str(base))
+    import shutil
+    for i in range(2500):
+        f = bulk / f"B_{i:04d}.jpg"
+        shutil.copyfile(base, f)
+        t = 1700000000 - i * 3000
+        os.utime(f, (t, t))
+    base.unlink()
 print("media ready:", sum(1 for _ in out.rglob("*") if _.is_file()), "files")
