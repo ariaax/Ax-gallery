@@ -4698,8 +4698,21 @@ private fun PhotoGrid(
                             .padding(start = 14.dp, end = 12.dp, top = 22.dp, bottom = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(group.key, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium,
+                        Text(group.key, style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        // a clean white rule after the date: bright next to the name, fading out to the right edge
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .padding(start = 12.dp, end = 4.dp)
+                                .height(2.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(Color.White.copy(alpha = 0.70f), Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.06f))
+                                    )
+                                )
+                        )
                         AnimatedVisibility(selectedIds.isNotEmpty()) {
                             Text(if (wholeDateSelected) stringResource(R.string.action_deselect_date) else stringResource(R.string.action_select_date),
                                 style = MaterialTheme.typography.labelMedium,
