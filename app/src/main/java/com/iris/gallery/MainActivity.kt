@@ -7490,6 +7490,15 @@ private fun ZoomablePhoto(
                 }
             }
         }
+        // A file the decoder cannot read (empty, damaged, not an image) used to leave a silent black screen.
+        if (painterState is AsyncImagePainter.State.Error && thumbPainter == null) {
+            Text(
+                text = "This file can't be displayed",
+                color = Color.White.copy(alpha = 0.75f),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.align(Alignment.Center).padding(24.dp),
+            )
+        }
     }
 }
 
