@@ -144,6 +144,10 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         instance = this
         installDiagnostics()
+        // TEMPORARY (emulator bug hunt only): log every disk read/write that happens on the main thread.
+        android.os.StrictMode.setThreadPolicy(
+            android.os.StrictMode.ThreadPolicy.Builder().detectDiskReads().detectDiskWrites().detectCustomSlowCalls().penaltyLog().build()
+        )
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {
