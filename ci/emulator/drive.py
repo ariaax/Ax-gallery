@@ -669,6 +669,12 @@ def main():
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     allfns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
               s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s09_monkey)
+    # the fresh emulator often shows a launcher ANR dialog; restart the launcher before the first scenario
+    sh("am force-stop com.google.android.apps.nexuslauncher; am force-stop com.google.android.apps.nexuslauncher")
+    time.sleep(12)
+    sh("input keyevent KEYCODE_HOME")
+    time.sleep(4)
+    dismiss_system_dialogs()
     only = [x.strip() for x in os.environ.get("SCENARIOS", "").split(",") if x.strip()]
     for fn in allfns:
         if only and fn.__name__.split("_")[0] not in only:
