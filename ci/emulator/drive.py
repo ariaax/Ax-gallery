@@ -615,6 +615,8 @@ def s15_viewer_menu():
         time.sleep(1.0)
         shot(f"15_menu_open_{rnd}")
         n2 = dump(f"15_menu_open_{rnd}")
+        time.sleep(2.0)
+        shot(f"15_menu_open_late_{rnd}")
         has = bool(find(n2, "Rename|Move to album|Copy to album"))
         record(f"menu: entries visible (round {rnd})", has, f"{len(n2)} nodes")
         if rnd == 1:
