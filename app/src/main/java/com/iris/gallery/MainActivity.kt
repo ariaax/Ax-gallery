@@ -5791,7 +5791,12 @@ private fun PhotoViewer(
                     }
                     DropdownMenu(
                         expanded = viewerMenuExpanded,
-                        onDismissRequest = { viewerMenuExpanded = false }
+                        onDismissRequest = { viewerMenuExpanded = false },
+                        containerColor = com.iris.gallery.ui.AxMenuGlass.color,
+                        shape = com.iris.gallery.ui.AxMenuGlass.shape,
+                        border = com.iris.gallery.ui.AxMenuGlass.border,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 12.dp,
                     ) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_move_to_album)) },

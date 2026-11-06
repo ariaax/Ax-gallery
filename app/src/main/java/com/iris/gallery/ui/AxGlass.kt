@@ -13,6 +13,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -526,14 +527,15 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
         onDispose { state.regions.remove(region) }
     }
     val shape = RoundedCornerShape(corner)
-    // One look for every viewer panel (top buttons, filmstrip, info, action bar): icy light glass.
-    // It no longer turns black when blur is off (videos), so everything stays uniform.
-    val tint = Color(0xFF0B0B0D).copy(alpha = 0.90f)
+    // One look for every viewer panel (top buttons, filmstrip, info, action bar): translucent frosted glass in the style of
+    // Telegram. The tint is light enough that the picture's own colours (the ambient gradient) glow through it; a white
+    // wash + a bright top-lit rim give the frosted edge. It stays the same with or without live blur, so all panels match.
+    val tint = Color(0xFF0B0D12).copy(alpha = 0.42f)
     val edge = Brush.linearGradient(
         listOf(
+            Color.White.copy(alpha = 0.42f),
+            Color.White.copy(alpha = 0.06f),
             Color.White.copy(alpha = 0.26f),
-            Color.White.copy(alpha = 0.04f),
-            Color.White.copy(alpha = 0.18f),
         )
     )
     return this
@@ -545,14 +547,26 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
         .clip(shape)
         .background(tint)
         .drawBehind {
+            // frosted wash + light falling from the top
+            drawRect(Color.White.copy(alpha = 0.07f))
             drawRect(
                 brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.06f), Color.Transparent),
-                    endY = size.height * 0.55f,
+                    listOf(Color.White.copy(alpha = 0.14f), Color.Transparent),
+                    endY = size.height * 0.60f,
                 )
             )
         }
-        .border(1.2.dp, edge, shape)
+        .border(1.dp, edge, shape)
+}
+
+/** Container look for pop-up menus over a picture: dark enough to read over any photo, still glassy. */
+object AxMenuGlass {
+    val color: Color = Color(0xFF12151C).copy(alpha = 0.80f)
+    val shape = RoundedCornerShape(22.dp)
+    val border = BorderStroke(
+        1.dp,
+        Brush.linearGradient(listOf(Color.White.copy(alpha = 0.38f), Color.White.copy(alpha = 0.05f), Color.White.copy(alpha = 0.22f))),
+    )
 }
 
 private val HeartPink = Color(0xFFFF3B6B)
