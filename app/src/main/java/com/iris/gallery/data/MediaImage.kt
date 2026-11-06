@@ -89,6 +89,8 @@ val MediaImage.isGif: Boolean
     get() = mimeType.equals("image/gif", ignoreCase = true) ||
             name.endsWith(".gif", ignoreCase = true)
 
+private val movStemCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
 val MediaImage.isMotionPhoto: Boolean
     get() {
         if (isVideo || isScreenshot) return false
@@ -105,10 +107,16 @@ val MediaImage.isMotionPhoto: Boolean
         if (path.isNotBlank() && (name.startsWith("IMG_", ignoreCase = true) || name.endsWith(".heic", ignoreCase = true))) {
             val stem = path.substringBeforeLast('.', "")
             if (stem.isNotBlank()) {
-                val movFile = java.io.File("$stem.MOV")
-                val movFile2 = java.io.File("$stem.mov")
-                if ((movFile.exists() && movFile.canRead()) ||
-                    (movFile2.exists() && movFile2.canRead())) return true
+                // cached per stem: this runs for every photo when the formats list is built
+                val cached = movStemCache[stem]
+                val hasMov = cached ?: run {
+                    val movFile = java.io.File("$stem.MOV")
+                    val movFile2 = java.io.File("$stem.mov")
+                    val r = (movFile.exists() && movFile.canRead()) || (movFile2.exists() && movFile2.canRead())
+                    movStemCache[stem] = r
+                    r
+                }
+                if (hasMov) return true
             }
         }
         return false

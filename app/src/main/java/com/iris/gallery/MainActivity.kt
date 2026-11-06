@@ -590,6 +590,29 @@ private fun smartMatches(g: SmartGroup, m: MediaImage): Boolean {
     }
 }
 
+private class FormatLists(
+    val videos: List<MediaImage>,
+    val raw: List<MediaImage>,
+    val gifs: List<MediaImage>,
+    val panos: List<MediaImage>,
+    val motion: List<MediaImage>,
+    val special: List<MediaImage>,
+) {
+    companion object {
+        val EMPTY = FormatLists(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+    }
+}
+
+private fun buildFormatLists(images: List<MediaImage>): FormatLists {
+    val videos = images.filter { it.isVideo }
+    val raw = images.filter { it.isRaw }
+    val gifs = images.filter { it.isGif }
+    val panos = images.filter { it.isPanorama }
+    val motion = images.filter { it.isMotionPhoto }
+    val special = (videos + raw + gifs + panos + motion).distinctBy { it.id }.sortedByDescending { it.sortDate }
+    return FormatLists(videos, raw, gifs, panos, motion, special)
+}
+
 private enum class MediaFormatFilter(val label: String) {
     ALL("All"),
     VIDEOS("Videos"),
@@ -3222,14 +3245,18 @@ private fun GalleryScaffold(
                         }
                         "formats" -> {
                             var formatFilter by remember { mutableStateOf(MediaFormatFilter.ALL) }
-                            val allVideos = remember(images) { images.filter { it.isVideo } }
-                            val allRaw = remember(images) { images.filter { it.isRaw } }
-                            val allGifs = remember(images) { images.filter { it.isGif } }
-                            val allPanos = remember(images) { images.filter { it.isPanorama } }
-                            val allMotion = remember(images) { images.filter { it.isMotionPhoto } }
-                            val allSpecial = remember(allVideos, allRaw, allGifs, allPanos, allMotion) {
-                                (allVideos + allRaw + allGifs + allPanos + allMotion).distinctBy { it.id }.sortedByDescending { it.sortDate }
+                            // Built off the main thread: the motion-photo check touches the disk per file,
+                            // which used to freeze this screen (blank for a second or more) on every open.
+                            val formatLists by produceState<FormatLists?>(null, images) {
+                                value = withContext(Dispatchers.Default) { buildFormatLists(images) }
                             }
+                            val fl = formatLists ?: FormatLists.EMPTY
+                            val allVideos = fl.videos
+                            val allRaw = fl.raw
+                            val allGifs = fl.gifs
+                            val allPanos = fl.panos
+                            val allMotion = fl.motion
+                            val allSpecial = fl.special
                             val currentFiltered = when (formatFilter) {
                                 MediaFormatFilter.ALL -> allSpecial
                                 MediaFormatFilter.VIDEOS -> allVideos
@@ -3239,7 +3266,11 @@ private fun GalleryScaffold(
                                 MediaFormatFilter.MOTION -> allMotion
                             }
 
-                            if (allSpecial.isEmpty()) {
+                            if (formatLists == null) {
+                                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = Color.White.copy(alpha = 0.7f))
+                                }
+                            } else if (allSpecial.isEmpty()) {
                                 EmptyState(stringResource(R.string.empty_special_formats), padding)
                             } else {
                                 Column(Modifier.fillMaxSize().padding(padding)) {
