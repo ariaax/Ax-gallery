@@ -5789,14 +5789,14 @@ private fun PhotoViewer(
                     IconButton(onClick = { viewerMenuExpanded = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) {
                         Icon(AxIcons.Flower, stringResource(R.string.action_more), tint = Color.White)
                     }
+                    // this Material version has no container parameters on DropdownMenu: restyle it through the theme
+                    MaterialTheme(
+                        colorScheme = MaterialTheme.colorScheme.copy(surfaceContainer = com.iris.gallery.ui.AxMenuGlass.color),
+                        shapes = MaterialTheme.shapes.copy(extraSmall = com.iris.gallery.ui.AxMenuGlass.shape),
+                    ) {
                     DropdownMenu(
                         expanded = viewerMenuExpanded,
-                        onDismissRequest = { viewerMenuExpanded = false },
-                        containerColor = com.iris.gallery.ui.AxMenuGlass.color,
-                        shape = com.iris.gallery.ui.AxMenuGlass.shape,
-                        border = com.iris.gallery.ui.AxMenuGlass.border,
-                        tonalElevation = 0.dp,
-                        shadowElevation = 12.dp,
+                        onDismissRequest = { viewerMenuExpanded = false }
                     ) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_move_to_album)) },
@@ -5865,6 +5865,7 @@ private fun PhotoViewer(
                                 directPermanentDelete = true
                             }
                         )
+                    }
                     }
                 }
             }
