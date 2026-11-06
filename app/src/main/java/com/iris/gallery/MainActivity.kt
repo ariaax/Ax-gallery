@@ -5121,6 +5121,20 @@ private fun PhotoViewer(
         }
     }
     val viewerBg by androidx.compose.animation.animateColorAsState(viewerColors.first, tween(350), label = "viewer bg")
+    // Background gradient tinted from the picture itself (top: lighter and richer, bottom: deeper). The animated colours are
+    // read in the draw lambda only, so changing page never recomposes the viewer.
+    val ambient by produceState<Pair<Color, Color>?>(null, current.id, current.isVideo) {
+        androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
+        value = withContext(Dispatchers.Default) {
+            val bmp = com.iris.gallery.ui.ThumbnailCache.findForImage(current.id)
+                ?: com.iris.gallery.ui.loadThumbnailSync(context, current, 256)
+            bmp?.let { com.iris.gallery.ui.axAmbientGradient(it) }
+        }
+    }
+    val ambientTopState = androidx.compose.animation.animateColorAsState(ambient?.first ?: viewerBg, tween(520), label = "ambient top")
+    val ambientBottomState = androidx.compose.animation.animateColorAsState(
+        ambient?.second ?: androidx.compose.ui.graphics.lerp(viewerBg, Color(0xFF040404), 0.65f), tween(520), label = "ambient bottom",
+    )
     val defaultViewerAccent = MaterialTheme.colorScheme.primary
     val viewerAccent by androidx.compose.animation.animateColorAsState(viewerColors.second ?: defaultViewerAccent, tween(350), label = "viewer accent")
 
@@ -5511,7 +5525,11 @@ private fun PhotoViewer(
             .drawBehind {
                 drawRect(
                     androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(viewerBg, androidx.compose.ui.graphics.lerp(viewerBg, Color(0xFF040404), 0.65f))
+                        listOf(
+                            ambientTopState.value,
+                            androidx.compose.ui.graphics.lerp(ambientTopState.value, ambientBottomState.value, 0.55f),
+                            ambientBottomState.value,
+                        )
                     ),
                     alpha = bgAlphaNow(),
                 )

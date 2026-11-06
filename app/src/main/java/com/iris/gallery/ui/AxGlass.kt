@@ -790,6 +790,75 @@ fun axPhotoColors(src: android.graphics.Bitmap): Pair<Color, Color?> {
 
 fun axDominantDark(src: android.graphics.Bitmap): Color = axPhotoColors(src).first
 
+/**
+ * Two colours for the viewer background, taken from the picture itself (like a music player tinting itself from the
+ * album art): [first] comes from the upper part of the picture and is the lighter, richer one, [second] from the
+ * lower part and is deeper. Pictures without colour (manga, screenshots, black and white) give a neutral dark pair.
+ */
+fun axAmbientGradient(src: android.graphics.Bitmap): Pair<Color, Color>? {
+    return try {
+        val base = if (src.config == android.graphics.Bitmap.Config.HARDWARE) src.copy(android.graphics.Bitmap.Config.ARGB_8888, false) ?: return null else src
+        val n = 24
+        val small = android.graphics.Bitmap.createScaledBitmap(base, n, n, true)
+        val hsv = FloatArray(3)
+        // Dominant colour of a band: a hue histogram weighted by saturation and brightness. Averaging RGB made sand + sky + a blue
+        // shirt cancel out to grey; picking the strongest hue family keeps the picture's real tint (like a music player does).
+        fun region(y0: Int, y1: Int): FloatArray {
+            val bins = 24
+            val wBin = DoubleArray(bins); val sBin = DoubleArray(bins); val vBin = DoubleArray(bins)
+            val hx = DoubleArray(bins); val hy = DoubleArray(bins)
+            var all = 0.0; var sumV = 0.0; var count = 0
+            for (y in y0 until y1) for (x in 0 until n) {
+                android.graphics.Color.colorToHSV(small.getPixel(x, y), hsv)
+                sumV += hsv[2]; count++
+                if (hsv[1] < 0.12f || hsv[2] < 0.15f) continue
+                val w = (hsv[1] * (0.4 + hsv[2])).toDouble()
+                val bi = ((hsv[0] / 360f) * bins).toInt().coerceIn(0, bins - 1)
+                wBin[bi] += w; sBin[bi] += hsv[1] * w; vBin[bi] += hsv[2] * w
+                val rad = Math.toRadians(hsv[0].toDouble())
+                hx[bi] += Math.cos(rad) * w; hy[bi] += Math.sin(rad) * w
+                all += w
+            }
+            val out = FloatArray(3)
+            // a family = a bin plus its two neighbours
+            var best = -1; var bestW = 0.0
+            for (i in 0 until bins) {
+                val w = wBin[i] + wBin[(i + 1) % bins] + wBin[(i + bins - 1) % bins]
+                if (w > bestW) { bestW = w; best = i }
+            }
+            if (best < 0 || all < 0.35) {          // no real colour in this band: neutral, remember how bright it is
+                out[0] = 0f; out[1] = 0f; out[2] = (sumV / count.coerceAtLeast(1)).toFloat()
+                return out
+            }
+            var w = 0.0; var sx = 0.0; var sy = 0.0; var ss = 0.0; var sv = 0.0
+            for (d in -1..1) {
+                val i = (best + d + bins) % bins
+                w += wBin[i]; sx += hx[i]; sy += hy[i]; ss += sBin[i]; sv += vBin[i]
+            }
+            var hue = Math.toDegrees(Math.atan2(sy, sx)).toFloat(); if (hue < 0) hue += 360f
+            out[0] = hue; out[1] = (ss / w).toFloat(); out[2] = (sv / w).toFloat()
+            return out
+        }
+        val top = region(0, 11)
+        val bottom = region(13, n)
+        if (small !== base) small.recycle()
+        if (base !== src) base.recycle()
+        var hueB = bottom[0]
+        // two nearly identical tints make a flat background: push the lower one towards cooler / deeper
+        val dh = Math.abs(((top[0] - hueB + 540f) % 360f) - 180f)
+        if (dh < 28f && top[1] > 0.12f && bottom[1] > 0.12f) hueB = (hueB + 38f) % 360f
+        fun tint(h: Float, s: Float, v: Float) = Color(android.graphics.Color.HSVToColor(floatArrayOf(h, s, v)))
+        val topS = if (top[1] < 0.07f) 0.05f else (top[1] * 1.35f).coerceIn(0.40f, 0.80f)
+        val botS = if (bottom[1] < 0.07f) 0.05f else (bottom[1] * 1.4f).coerceIn(0.50f, 0.90f)
+        Pair(
+            tint(top[0], topS, if (top[1] < 0.07f) 0.30f else 0.44f),
+            tint(hueB, botS, if (bottom[1] < 0.07f) 0.11f else 0.17f),
+        )
+    } catch (e: Throwable) {
+        null
+    }
+}
+
 
 /**
  * A thin iridescent ring (cyan, blue, warm orange, white) that keeps turning around the selected dock item.
