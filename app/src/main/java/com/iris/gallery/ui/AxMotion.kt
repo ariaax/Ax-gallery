@@ -113,3 +113,20 @@ class AxHeroClip(private val p: Float, private val s0: Float, private val corner
         return Outline.Rounded(RoundRect(0f, top, size.width, top + h, CornerRadius(r, r)))
     }
 }
+
+// ---- Telegram motion tokens (taken from Telegram-Android: CubicBezierInterpolator + AndroidUtilities.cascade) ----
+val TgDefault = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)
+val TgEaseOut = CubicBezierEasing(0f, 0f, 0.58f, 1f)
+val TgEaseOutQuint = CubicBezierEasing(0.23f, 1f, 0.32f, 1f)
+/** Android DecelerateInterpolator(1.5): 1 - (1 - x)^3 — what Telegram uses for zoom / move. */
+val TgDecelerate15 = androidx.compose.animation.core.Easing { x -> 1f - (1f - x) * (1f - x) * (1f - x) }
+/** Android AccelerateDecelerateInterpolator — default of Telegram's popup menu. */
+val TgAccelDecel = androidx.compose.animation.core.Easing { x -> (kotlin.math.cos((x + 1f) * Math.PI) / 2.0 + 0.5).toFloat() }
+
+/** Telegram's AndroidUtilities.cascade: staggered 0..1 progress of item [pos] out of [count]. */
+fun tgCascade(t: Float, pos: Int, count: Int, waveLength: Float = 4f): Float {
+    if (count <= 0) return t
+    val waveDuration = 1f / count * minOf(waveLength, count.toFloat())
+    val waveOffset = pos.toFloat() / count * (1f - waveDuration)
+    return ((t - waveOffset) / waveDuration).coerceIn(0f, 1f)
+}

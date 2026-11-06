@@ -5310,6 +5310,7 @@ private fun PhotoViewer(
         }
     }
 
+    val tgBarShift = with(androidx.compose.ui.platform.LocalDensity.current) { 24.dp.roundToPx() }
     val dismissOffsetY = remember { Animatable(0f) }
     // Hero open: grows out of the thumbnail that was tapped (when we know where it is);
     // otherwise a soft fade + scale. No bounce either way.
@@ -5325,7 +5326,7 @@ private fun PhotoViewer(
             androidx.compose.runtime.withFrameNanos { }
             androidx.compose.runtime.withFrameNanos { }
             if (heroStartRect != null) heroP.animateTo(1f, tween(420, easing = AxIosEase))
-            else openAnim.animateTo(1f, tween(150, easing = AxIosEase))
+            else openAnim.animateTo(1f, tween(250, easing = com.iris.gallery.ui.TgEaseOutQuint))
         } finally {
             AxHero.settledState.value = true
         }
@@ -5463,7 +5464,7 @@ private fun PhotoViewer(
                     heroRect = cellNow
                     heroP.animateTo(0f, tween(340, easing = AxIosEase))
                 } else {
-                    closeAnim.animateTo(1f, tween(durationMillis = 150, easing = AxIosEase))
+                    closeAnim.animateTo(1f, tween(durationMillis = 200, easing = com.iris.gallery.ui.TgDefault))
                 }
             } else {
                 // finished a drag-down: keep going in the same direction
@@ -5545,7 +5546,7 @@ private fun PhotoViewer(
                     val lift = infoLift.value
                     val liftP = (-lift / (viewerHeightPx * 0.10f).coerceAtLeast(1f)).coerceIn(0f, 1f)
                     val closeP = closeAnim.value.coerceIn(0f, 1f)
-                    var sc = (1f - dprog * 0.12f) * (1f - 0.08f * liftP) * (1f - 0.06f * closeP)
+                    var sc = (1f - dprog * 0.12f) * (1f - 0.08f * liftP) * (1f - 0.10f * closeP)
                     var tx = 0f
                     var ty = dismissOffsetY.value + lift
                     val hr = heroRect
@@ -5561,7 +5562,7 @@ private fun PhotoViewer(
                         clip = false
                     }
                     if (heroStartRect == null) {
-                        sc *= 0.92f + 0.08f * openAnim.value.coerceIn(0f, 1f)
+                        sc *= 0.90f + 0.10f * openAnim.value.coerceIn(0f, 1f)
                         alpha = shownNow()
                     } else {
                         alpha = 1f - closeP
@@ -5575,6 +5576,10 @@ private fun PhotoViewer(
           HorizontalPager(
             state = pagerState,
             beyondViewportPageCount = 1,
+            flingBehavior = androidx.compose.foundation.pager.PagerDefaults.flingBehavior(
+                state = pagerState,
+                snapAnimationSpec = tween(250, easing = com.iris.gallery.ui.TgDecelerate15),
+            ),
             userScrollEnabled = zoomedImageId != current.id && !isDismissing,
             pageSpacing = 16.dp,
             modifier = Modifier.axGlassSource(viewerGlass).graphicsLayer {
@@ -5705,8 +5710,8 @@ private fun PhotoViewer(
           modifier = Modifier
               .align(Alignment.TopCenter)
               .graphicsLayer { alpha = controlsAlphaNow() },
-          enter = fadeIn(tween(240, easing = AxIosEase)) + slideInVertically(tween(340, easing = AxIosEase)) { -it / 3 },
-          exit = fadeOut(tween(140)) + slideOutVertically(tween(220, easing = AxIosEase)) { -it / 3 },
+          enter = fadeIn(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInVertically(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) { -tgBarShift },
+          exit = fadeOut(tween(200, easing = com.iris.gallery.ui.TgDefault)) + slideOutVertically(tween(200, easing = com.iris.gallery.ui.TgDefault)) { -tgBarShift },
         ) {
           Box(Modifier.fillMaxWidth().height(156.dp)) {
           Box(
@@ -5789,84 +5794,22 @@ private fun PhotoViewer(
                     IconButton(onClick = { viewerMenuExpanded = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) {
                         Icon(AxIcons.Flower, stringResource(R.string.action_more), tint = Color.White)
                     }
-                    // this Material version has no container parameters on DropdownMenu: restyle it through the theme
-                    MaterialTheme(
-                        colorScheme = MaterialTheme.colorScheme.copy(surfaceContainer = com.iris.gallery.ui.AxMenuGlass.color),
-                        shapes = MaterialTheme.shapes.copy(extraSmall = com.iris.gallery.ui.AxMenuGlass.shape),
-                    ) {
-                    DropdownMenu(
-                        expanded = viewerMenuExpanded,
-                        onDismissRequest = { viewerMenuExpanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_move_to_album)) },
-                            leadingIcon = { Icon(AxIcons.MoveTo, null) },
-                            onClick = {
-                                viewerMenuExpanded = false
-                                viewerAlbumAction = AlbumAction.MOVE
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_copy_to_album)) },
-                            leadingIcon = { Icon(AxIcons.Copy, null) },
-                            onClick = {
-                                viewerMenuExpanded = false
-                                viewerAlbumAction = AlbumAction.COPY
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_rename)) },
-                            leadingIcon = { Icon(AxIcons.Edit, null) },
-                            onClick = {
-                                viewerMenuExpanded = false
-                                showRenameDialog = true
-                            }
-                        )
+                    val menuEntries = buildList {
+                        add(com.iris.gallery.ui.AxMenuEntry(AxIcons.MoveTo, stringResource(R.string.action_move_to_album)) { viewerMenuExpanded = false; viewerAlbumAction = AlbumAction.MOVE })
+                        add(com.iris.gallery.ui.AxMenuEntry(AxIcons.Copy, stringResource(R.string.action_copy_to_album)) { viewerMenuExpanded = false; viewerAlbumAction = AlbumAction.COPY })
+                        add(com.iris.gallery.ui.AxMenuEntry(AxIcons.Edit, stringResource(R.string.action_rename)) { viewerMenuExpanded = false; showRenameDialog = true })
                         if (!current.isVideo) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_set_as_wallpaper)) },
-                                leadingIcon = { Icon(AxIcons.Photos, null) },
-                                onClick = {
-                                    viewerMenuExpanded = false
-                                    showWallpaperSheet = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_edit_builtin)) },
-                                leadingIcon = { Icon(AxIcons.Sparkle, null) },
-                                onClick = {
-                                    viewerMenuExpanded = false
-                                    onEdit(current)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_edit_external)) },
-                                leadingIcon = { Icon(AxIcons.External, null) },
-                                onClick = {
-                                    viewerMenuExpanded = false
-                                    launchExternalEditor(context, current)
-                                }
-                            )
-                        } else {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_edit_external)) },
-                                leadingIcon = { Icon(AxIcons.External, null) },
-                                onClick = {
-                                    viewerMenuExpanded = false
-                                    launchExternalEditor(context, current)
-                                }
-                            )
+                            add(com.iris.gallery.ui.AxMenuEntry(AxIcons.Photos, stringResource(R.string.action_set_as_wallpaper)) { viewerMenuExpanded = false; showWallpaperSheet = true })
+                            add(com.iris.gallery.ui.AxMenuEntry(AxIcons.Sparkle, stringResource(R.string.action_edit_builtin)) { viewerMenuExpanded = false; onEdit(current) })
                         }
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_delete_permanently), color = MaterialTheme.colorScheme.error) },
-                            leadingIcon = { Icon(AxIcons.TrashX, null, tint = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                viewerMenuExpanded = false
-                                directPermanentDelete = true
-                            }
-                        )
+                        add(com.iris.gallery.ui.AxMenuEntry(AxIcons.External, stringResource(R.string.action_edit_external)) { viewerMenuExpanded = false; launchExternalEditor(context, current) })
+                        add(com.iris.gallery.ui.AxMenuEntry(AxIcons.TrashX, stringResource(R.string.action_delete_permanently), danger = true) { viewerMenuExpanded = false; directPermanentDelete = true })
                     }
-                    }
+                    com.iris.gallery.ui.AxPopupMenu(
+                        expanded = viewerMenuExpanded,
+                        onDismissRequest = { viewerMenuExpanded = false },
+                        entries = menuEntries,
+                    )
                 }
             }
           }
@@ -5884,8 +5827,8 @@ private fun PhotoViewer(
                     .navigationBarsPadding()
                     .padding(start = 16.dp, end = 16.dp, bottom = bottomOffset)
                     .graphicsLayer { alpha = controlsAlphaNow() },
-                enter = fadeIn(tween(240, easing = AxIosEase)) + slideInVertically(tween(340, easing = AxIosEase)) { it / 2 },
-                exit = fadeOut(tween(140)) + slideOutVertically(tween(220, easing = AxIosEase)) { it / 2 },
+                enter = fadeIn(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInVertically(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) { tgBarShift },
+                exit = fadeOut(tween(200, easing = com.iris.gallery.ui.TgDefault)) + slideOutVertically(tween(200, easing = com.iris.gallery.ui.TgDefault)) { tgBarShift },
             ) {
                 Surface(
                     color = Color.Transparent,
@@ -6090,8 +6033,8 @@ private fun PhotoViewer(
               .navigationBarsPadding()
               .padding(start = 16.dp, end = 16.dp, bottom = 0.dp)
               .graphicsLayer { alpha = controlsAlphaNow() },
-          enter = fadeIn(tween(240, easing = AxIosEase)) + slideInVertically(tween(340, easing = AxIosEase)) { it / 2 },
-          exit = fadeOut(tween(140)) + slideOutVertically(tween(220, easing = AxIosEase)) { it / 2 },
+          enter = fadeIn(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInVertically(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) { tgBarShift },
+          exit = fadeOut(tween(200, easing = com.iris.gallery.ui.TgDefault)) + slideOutVertically(tween(200, easing = com.iris.gallery.ui.TgDefault)) { tgBarShift },
         ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -6367,8 +6310,8 @@ private fun PhotoViewer(
                     .align(Alignment.CenterStart)
                     .padding(start = 14.dp, top = 84.dp, bottom = 12.dp)
                     .graphicsLayer { alpha = controlsAlphaNow() },
-                enter = fadeIn(tween(240, easing = AxIosEase)) + slideInHorizontally(tween(340, easing = AxIosEase)) { -it / 2 },
-                exit = fadeOut(tween(140)) + slideOutHorizontally(tween(220, easing = AxIosEase)) { -it / 2 },
+                enter = fadeIn(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInHorizontally(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) { -tgBarShift },
+                exit = fadeOut(tween(200, easing = com.iris.gallery.ui.TgDefault)) + slideOutHorizontally(tween(200, easing = com.iris.gallery.ui.TgDefault)) { -tgBarShift },
             ) {
                 AnimatedContent(
                     targetState = docksExpanded,
@@ -6420,8 +6363,8 @@ private fun PhotoViewer(
                     .align(Alignment.CenterEnd)
                     .padding(end = 14.dp, top = 84.dp, bottom = 12.dp)
                     .graphicsLayer { alpha = controlsAlphaNow() },
-                enter = fadeIn(tween(240, easing = AxIosEase)) + slideInHorizontally(tween(340, easing = AxIosEase)) { it / 2 },
-                exit = fadeOut(tween(140)) + slideOutHorizontally(tween(220, easing = AxIosEase)) { it / 2 },
+                enter = fadeIn(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInHorizontally(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) { tgBarShift },
+                exit = fadeOut(tween(200, easing = com.iris.gallery.ui.TgDefault)) + slideOutHorizontally(tween(200, easing = com.iris.gallery.ui.TgDefault)) { tgBarShift },
             ) {
                 AnimatedContent(
                     targetState = docksExpanded,
@@ -7108,17 +7051,17 @@ private fun ZoomablePhoto(
                                 val currentOffset = offsetAnim.value
                                 if (!multiStageZoom) {
                                     if (currentScale > 1.05f || kotlin.math.abs(rotationAnim.value) > 1f) {
-                                        launch { scaleAnim.animateTo(1f, tween(260, easing = FastOutSlowInEasing)) }
-                                        launch { offsetAnim.animateTo(Offset.Zero, tween(260, easing = FastOutSlowInEasing)) }
-                                        launch { rotationAnim.animateTo(0f, tween(260, easing = FastOutSlowInEasing)) }
+                                        launch { scaleAnim.animateTo(1f, tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) }
+                                        launch { offsetAnim.animateTo(Offset.Zero, tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) }
+                                        launch { rotationAnim.animateTo(0f, tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) }
                                         onZoomChanged(false)
                                     } else {
                                         val targetScale = doubleTapZoomLevel
                                         val center = Offset(containerSize.width / 2f, containerSize.height / 2f)
                                         val z = targetScale / currentScale
                                         val targetOffset = clampOffset(currentOffset + (tapPos - center - currentOffset) * (1f - z), targetScale)
-                                        launch { scaleAnim.animateTo(targetScale, tween(260, easing = FastOutSlowInEasing)) }
-                                        launch { offsetAnim.animateTo(targetOffset, tween(260, easing = FastOutSlowInEasing)) }
+                                        launch { scaleAnim.animateTo(targetScale, tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) }
+                                        launch { offsetAnim.animateTo(targetOffset, tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) }
                                         onZoomChanged(true)
                                     }
                                 } else {
@@ -7153,18 +7096,18 @@ private fun ZoomablePhoto(
                                     }
 
                                     if (nextScale <= 1.05f) {
-                                        launch { scaleAnim.animateTo(1f, tween(260, easing = FastOutSlowInEasing)) }
-                                        launch { offsetAnim.animateTo(Offset.Zero, tween(260, easing = FastOutSlowInEasing)) }
-                                        launch { rotationAnim.animateTo(0f, tween(260, easing = FastOutSlowInEasing)) }
+                                        launch { scaleAnim.animateTo(1f, tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) }
+                                        launch { offsetAnim.animateTo(Offset.Zero, tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) }
+                                        launch { rotationAnim.animateTo(0f, tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) }
                                         onZoomChanged(false)
                                     } else {
                                         val center = Offset(containerSize.width / 2f, containerSize.height / 2f)
                                         val z = nextScale / currentScale
                                         val targetOffset = clampOffset(currentOffset + (tapPos - center - currentOffset) * (1f - z), nextScale)
-                                        launch { scaleAnim.animateTo(nextScale, tween(260, easing = FastOutSlowInEasing)) }
-                                        launch { offsetAnim.animateTo(targetOffset, tween(260, easing = FastOutSlowInEasing)) }
+                                        launch { scaleAnim.animateTo(nextScale, tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) }
+                                        launch { offsetAnim.animateTo(targetOffset, tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) }
                                         if (rotationAnim.value != 0f) {
-                                            launch { rotationAnim.animateTo(0f, tween(260, easing = FastOutSlowInEasing)) }
+                                            launch { rotationAnim.animateTo(0f, tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) }
                                         }
                                         onZoomChanged(true)
                                     }
