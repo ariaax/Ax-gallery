@@ -687,6 +687,24 @@ def main():
     for n, st, d in results:
         lines.append(f"| {st} | {n} | {d.replace('|', '/').replace(chr(10), ' ')[:260]} |")
     lines += ["", "## Metrics", "```json", json.dumps(metrics, indent=1), "```"]
+    # main-thread disk I/O reported by StrictMode (logged by IrisApplication): where it happens in our code
+    sm = {}
+    for lf in (OUT / "logs").glob("*.txt"):
+        cur = None
+        for ln in lf.read_text(errors="replace").splitlines():
+            if "StrictMode policy violation" in ln:
+                cur = ln.split("violation")[-1][:120].strip(); sm.setdefault(cur, 0); sm[cur] += 1
+                continue
+            if cur and "com.iris.gallery" in ln and "at " in ln:
+                key = (ln.strip()[:140] + " | " + (cur or ""))
+                sm[key] = sm.get(key, 0) + 1
+                cur = None
+    lines += ["", "## Main-thread disk I/O (StrictMode)", ""]
+    for k, v in sorted(sm.items(), key=lambda kv: -kv[1])[:60]:
+        if "com.iris.gallery" in k:
+            lines.append(f"- {v}x `{k.replace('|', ' / ')}`")
+    if not any("com.iris.gallery" in k for k in sm):
+        lines.append("- none found in the app's own code")
     (OUT / "results.md").write_text("\n".join(lines))
     save_log("final")
     small = OUT / "shots_small"

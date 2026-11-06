@@ -152,6 +152,10 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
                 }
             }
         }.apply { name = "prefs-prewarm"; isDaemon = true }.start()
+        // TEMPORARY (emulator bug hunt only): log every disk read/write that happens on the main thread.
+        android.os.StrictMode.setThreadPolicy(
+            android.os.StrictMode.ThreadPolicy.Builder().detectDiskReads().detectDiskWrites().detectCustomSlowCalls().penaltyLog().build()
+        )
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {
