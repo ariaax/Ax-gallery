@@ -598,6 +598,44 @@ def s10_favorite_and_delete():
     record("delete: info only (see shots 10_*)", True, f"row before={'Row' in before} after={'Row' in after}; file: {onfs.strip()[:80]}; dialog buttons={[(n['text'] or n['desc']) for n in btn]}")
 
 
+def s15_viewer_menu():
+    """New Telegram-style popup menu: open, check entries are visible, dismiss; then reopen and dismiss with BACK."""
+    launch()
+    tab_tap("Media", 0.20)
+    time.sleep(1.2)
+    touch.tap(W * 0.18, H * 0.30)
+    time.sleep(2.0)
+    nodes = dump("15_viewer")
+    more = find(nodes, "More selection")
+    record("menu: flower button found in viewer", bool(more), f"{len(more)} nodes")
+    if not more:
+        return
+    for rnd in (1, 2):
+        touch.tap(more[0]["cx"], more[0]["cy"])
+        time.sleep(1.0)
+        shot(f"15_menu_open_{rnd}")
+        n2 = dump(f"15_menu_open_{rnd}")
+        has = bool(find(n2, "Rename|Move to album|Copy to album"))
+        record(f"menu: entries visible (round {rnd})", has, f"{len(n2)} nodes")
+        if rnd == 1:
+            sh("input keyevent KEYCODE_BACK")
+        else:
+            touch.tap(W * 0.5, H * 0.75)
+        time.sleep(0.8)
+        shot(f"15_menu_closed_{rnd}")
+        n3 = dump(f"15_menu_closed_{rnd}")
+        record(f"menu: dismissed (round {rnd})", not find(n3, "Rename|Copy to album"), "")
+    for i in range(4):
+        touch.swipe(W * 0.85, H * 0.5, W * 0.15, H * 0.5, ms=150)
+        time.sleep(0.5)
+    shot("15_after_pager")
+    touch.tap(W * 0.5, H * 0.5)
+    time.sleep(0.6)
+    touch.tap(W * 0.5, H * 0.5)
+    time.sleep(0.6)
+    shot("15_bars_toggled")
+
+
 def s09_monkey():
     launch()
     gfx_reset()
@@ -629,8 +667,12 @@ def main():
     sh("settings put secure immersive_mode_confirmations confirmed")  # no 'Viewing full screen' popup over the video
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
-    for fn in (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-               s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s09_monkey):
+    allfns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
+              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s09_monkey)
+    only = [x.strip() for x in os.environ.get("SCENARIOS", "").split(",") if x.strip()]
+    for fn in allfns:
+        if only and fn.__name__.split("_")[0] not in only:
+            continue
         scenario(fn)
     # report
     lines = ["# Emulator test results", "", "| result | check | detail |", "|---|---|---|"]
