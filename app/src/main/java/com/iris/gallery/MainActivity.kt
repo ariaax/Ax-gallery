@@ -364,6 +364,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.filled.Check
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -4828,6 +4829,8 @@ private fun PhotoGrid(
 
             val thumbColor = MaterialTheme.colorScheme.primary
             val trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f)
+            val scrollHaptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+            val scrollSlop = androidx.compose.ui.platform.LocalViewConfiguration.current.touchSlop
 
             if (scrollerAlpha > 0f) {
                 Canvas(
@@ -4839,11 +4842,30 @@ private fun PhotoGrid(
                         .graphicsLayer { alpha = scrollerAlpha }
                         .pointerInput(timelineItems.size, totalRows, totalContentHeight) {
                             awaitEachGesture {
-                                val down = awaitFirstDown()
-                                scrubberDragging = true
+                                // Deliberate grab only: a touch on the thumb, or a finger held still for 350 ms here.
+                                // Anything else (a quick tap, a swipe) is left alone so photos and scrolling still work.
+                                val down = awaitFirstDown(requireUnconsumed = false)
                                 val inset = 16.dp.toPx()
                                 val thumbHeight = 48.dp.toPx()
                                 val maxTravel = (size.height - inset * 2 - thumbHeight).coerceAtLeast(1f)
+                                val thumbCenterY = inset + thumbHeight / 2f + scrollFraction.coerceIn(0f, 1f) * maxTravel
+                                val onThumb = kotlin.math.abs(down.position.y - thumbCenterY) <= 40.dp.toPx()
+                                if (!onThumb) {
+                                    val heldStill = withTimeoutOrNull(350L) {
+                                        var released = false
+                                        while (!released) {
+                                            val ev = awaitPointerEvent().changes.first()
+                                            if (!ev.pressed || (ev.position - down.position).getDistance() > scrollSlop) {
+                                                released = true
+                                            }
+                                        }
+                                        false
+                                    }
+                                    // null = still held at 350 ms (grab it); false = released or moved (not ours)
+                                    if (heldStill != null) return@awaitEachGesture
+                                }
+                                scrollHaptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                scrubberDragging = true
 
                                 fun calculateFraction(y: Float): Float {
                                     val topTarget = y - inset - (thumbHeight / 2f)
@@ -4915,7 +4937,7 @@ private fun PhotoGrid(
                         }
                 ) {
                     val inset = 16.dp.toPx()
-                    val thumbWidth = 5.dp.toPx()
+                    val thumbWidth = (if (scrubberDragging) 8.dp else 5.dp).toPx()
                     val thumbHeight = 48.dp.toPx()
                     val maxTravel = (size.height - inset * 2 - thumbHeight).coerceAtLeast(0f)
                     val thumbTop = inset + scrollFraction.coerceIn(0f, 1f) * maxTravel
