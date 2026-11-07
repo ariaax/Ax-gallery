@@ -695,10 +695,9 @@ def main():
             if "StrictMode policy violation" in ln or "DiskReadViolation" in ln:
                 cur = ""
                 continue
-            if cur and "com.iris.gallery" in ln and "at " in ln:
-                cur = cur if cur.count(" > ") >= 2 else cur
+            if cur is not None and "com.iris.gallery" in ln and "at " in ln:
                 frame = ln.strip().split("(")[0].replace("at ", "")
-                cur = (cur or "") + " > " + frame if " > " in (cur or "") or True else cur
+                cur = cur + " > " + frame
                 if cur.count(" > ") >= 3:
                     sm[cur] = sm.get(cur, 0) + 1
                     cur = None
