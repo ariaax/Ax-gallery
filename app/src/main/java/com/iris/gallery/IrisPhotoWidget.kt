@@ -92,10 +92,15 @@ class IrisPhotoWidget : AppWidgetProvider() {
         val allMemories = loadMemories(context)
         val slot = (System.currentTimeMillis() / 1_800_000L).toInt()
         val offset = context.getSharedPreferences("iris_widget", Context.MODE_PRIVATE).getInt("offset_$id", 0)
-        val memories = if (allMemories.isEmpty()) emptyList()
-            else listOf(allMemories[Math.floorMod(slot + offset, allMemories.size)])
+        // No "on this day" photos today: show a random photo from the library instead.
+        val fromMemories = allMemories.isNotEmpty()
+        val memories = if (fromMemories) listOf(allMemories[Math.floorMod(slot + offset, allMemories.size)])
+            else loadRandomPool(context).let { pool ->
+                if (pool.isEmpty()) emptyList()
+                else listOf(pool[java.util.Random(slot.toLong() * 31 + offset).nextInt(pool.size)])
+            }
         val open = PendingIntent.getActivity(context, id, Intent(context, MainActivity::class.java).apply {
-            putExtra("open_memories", true)
+            putExtra("open_memories", fromMemories)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         views.setOnClickPendingIntent(R.id.widget_flipper, open)
@@ -147,6 +152,25 @@ class IrisPhotoWidget : AppWidgetProvider() {
                     if (date.year < today.year && date.month == today.month && date.dayOfMonth == today.dayOfMonth) {
                         add(Memory(mediaId, date))
                     }
+                }
+            }
+        }
+    }
+
+    /** Every non-locked photo in the library (used for the random fallback). */
+    private fun loadRandomPool(context: Context): List<Memory> {
+        val zone = ZoneId.systemDefault()
+        val locked = context.getSharedPreferences("library_preferences", Context.MODE_PRIVATE)
+            .getStringSet("locked", emptySet()).orEmpty().mapNotNullTo(hashSetOf(), String::toLongOrNull)
+        return buildList {
+            context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_TAKEN, MediaStore.Images.Media.DATE_ADDED),
+                null, null, null)?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val mediaId = cursor.getLong(0)
+                    if (mediaId in locked) continue
+                    val timestamp = cursor.getLong(1).takeIf { it > 0 } ?: cursor.getLong(2) * 1_000
+                    add(Memory(mediaId, Instant.ofEpochMilli(timestamp).atZone(zone).toLocalDate()))
                 }
             }
         }
