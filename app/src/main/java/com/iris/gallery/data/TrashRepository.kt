@@ -11,6 +11,7 @@ import android.provider.MediaStore
 import android.util.AtomicFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
@@ -67,8 +68,12 @@ class TrashRepository(private val context: Context) {
         const val TRASH_RETENTION_MS = 30L * 24L * 60L * 60L * 1000L // 30 days
     }
 
+    // Loaded off the main thread: the index read and per-item file checks used to block app start.
+    // Until it finishes the list is simply empty.
+    private val initScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
     init {
-        loadTrashItems()
+        initScope.launch { loadTrashItems() }
     }
 
     fun hasAllFilesAccess(): Boolean {

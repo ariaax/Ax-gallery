@@ -11,6 +11,7 @@ import android.provider.MediaStore
 import android.util.AtomicFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
@@ -61,8 +62,12 @@ class VaultRepository(private val context: Context) {
     private val _vaultMedia = MutableStateFlow<List<MediaImage>>(emptyList())
     val vaultMedia: StateFlow<List<MediaImage>> = _vaultMedia.asStateFlow()
 
+    // Loaded off the main thread: the index read and per-item file checks used to block app start.
+    // Until it finishes the list is simply empty.
+    private val initScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
     init {
-        loadVaultItems()
+        initScope.launch { loadVaultItems() }
     }
 
     fun hasAllFilesAccess(): Boolean {

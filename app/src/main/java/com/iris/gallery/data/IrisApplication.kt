@@ -144,6 +144,14 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         instance = this
         installDiagnostics()
+        // Open the preference files on a background thread so the main thread finds them already cached.
+        Thread {
+            runCatching {
+                for (name in listOf("library_preferences", "iris_gallery_settings")) {
+                    getSharedPreferences(name, Context.MODE_PRIVATE).all
+                }
+            }
+        }.apply { name = "prefs-prewarm"; isDaemon = true }.start()
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {
