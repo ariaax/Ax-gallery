@@ -687,25 +687,25 @@ def main():
     for n, st, d in results:
         lines.append(f"| {st} | {n} | {d.replace('|', '/').replace(chr(10), ' ')[:260]} |")
     lines += ["", "## Metrics", "```json", json.dumps(metrics, indent=1), "```"]
-    # main-thread disk I/O reported by StrictMode (logged by IrisApplication): where it happens in our code
+    # main-thread disk I/O reported by StrictMode (logged by IrisApplication): top app frames + their callers
     sm = {}
+    frame_rx = re.compile(r"at ([\w.$<>]+\([^)]*\))")
     for lf in (OUT / "logs").glob("*.txt"):
-        cur = None
-        for ln in lf.read_text(errors="replace").splitlines():
-            if "StrictMode policy violation" in ln or "DiskReadViolation" in ln:
-                cur = ""
+        all_lines = lf.read_text(errors="replace").splitlines()
+        for i, ln in enumerate(all_lines):
+            if "DiskReadViolation" not in ln and "DiskWriteViolation" not in ln:
                 continue
-            if cur is not None and "com.iris.gallery" in ln and "at " in ln:
-                frame = ln.strip().split("(")[0].replace("at ", "")
-                cur = cur + " > " + frame
-                if cur.count(" > ") >= 3:
-                    sm[cur] = sm.get(cur, 0) + 1
-                    cur = None
+            seq = []
+            for l2 in all_lines[max(0, i - 3): i + 4]:
+                seq += frame_rx.findall(l2)
+            seq = [f for f in seq if f.startswith("com.iris") or "com.iris" in f][:4]
+            if seq:
+                key = " > ".join(seq)
+                sm[key] = sm.get(key, 0) + 1
     lines += ["", "## Main-thread disk I/O (StrictMode)", ""]
-    for k, v in sorted(sm.items(), key=lambda kv: -kv[1])[:60]:
-        if "com.iris.gallery" in k:
-            lines.append(f"- {v}x `{k.replace('|', ' / ')}`")
-    if not any("com.iris.gallery" in k for k in sm):
+    for k, v in sorted(sm.items(), key=lambda kv: -kv[1])[:40]:
+        lines.append(f"- {v}x `{k}`")
+    if not sm:
         lines.append("- none found in the app's own code")
     (OUT / "results.md").write_text("\n".join(lines))
     save_log("final")
