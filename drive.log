@@ -1,0 +1,74 @@
+08:16:57 installing app/build/outputs/apk/optimized/app-optimized.apk
+08:17:08 screen 1080 2400
+08:17:22 media rows indexed: 43
+08:17:22 PASS setup: media indexed by MediaStore 43 rows
+08:17:23 touch device: /dev/input/event12 32767 32767
+08:17:23 PASS setup: touch device found /dev/input/event12
+08:17:42 === scenario s00_touch_calibration
+08:17:42 WARN app not in foreground before s00_touch_calibration -> mCurrentFocus=Window{2f5a0e1 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity} | mFocusedApp=ActivityRecord{e03bc68 u0 com.google.android.apps.nexuslauncher/.NexusLauncherActivity} t12}
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:211: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px, py = list(x.getdata()), list(y.getdata())
+08:18:47 PASS calibration: `input tap` reaches the app focus=mCurrentFocus=Window{d3f8b42 u0 com.ax.gallery/com.iris.gallery.MainActivity} | mFocusedApp=ActivityRecord{2ee6ac6 u0 com.ax.gallery/com.iris.gallery.MainActivity} t14}
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:211: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px, py = list(x.getdata()), list(y.getdata())
+08:18:59 FAIL calibration: sendevent variant ev0 reaches the app 
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:211: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px, py = list(x.getdata()), list(y.getdata())
+08:19:10 FAIL calibration: sendevent variant ev1 reaches the app 
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:211: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px, py = list(x.getdata()), list(y.getdata())
+08:19:24 FAIL calibration: sendevent variant ev2 reaches the app 
+08:19:24 touch mode -> input
+08:19:25 === scenario s01_startup
+08:20:00 PASS startup: app visible and alive cold start 1421 ms, 69 ui nodes
+08:20:00 PASS startup: no crash report dialog 
+08:20:01 === scenario s02_tabs
+08:20:17 PASS tabs: found 'Albums' by text 
+08:20:29 PASS tabs: found 'Library' by text 
+08:20:41 PASS tabs: found 'Favorites' by text 
+08:20:54 PASS tabs: found 'Media' by text 
+08:22:29 === scenario s03_scroll_perf
+08:23:03 PASS scroll: photo grid fling x16 (info) {"frames": 109, "janky_pct": "100.00", "p50_ms": "200", "p90_ms": "300", "p95_ms": "300", "p99_ms": "1000"}
+08:23:14 PASS scroll: albums fling x6 (info) {"frames": 41, "janky_pct": "100.00", "p50_ms": "200", "p90_ms": "300", "p95_ms": "300", "p99_ms": "400"}
+08:23:15 === scenario s04_photo_viewer
+08:23:30 PASS viewer: opened (controls or image present) 45 nodes
+08:24:03 === scenario s05_video_playback_and_seek
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:320: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px = list(crop.getdata())
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:320: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px = list(crop.getdata())
+08:24:16 PASS video: opens and plays (second advances) second 2 -> 6
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:320: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px = list(crop.getdata())
+08:24:21 PASS video: double tap right = +10 s 6 -> 17 (delta 11, tapped 5.4s ago)
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:320: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px = list(crop.getdata())
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:320: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px = list(crop.getdata())
+08:24:31 PASS video: double tap + one more tap = +20 s (series) 19 -> 40 (delta 21)
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:320: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px = list(crop.getdata())
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:320: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px = list(crop.getdata())
+08:24:38 FAIL video: double tap left = -10 s 41 -> 44 (delta 3)
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:320: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px = list(crop.getdata())
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:320: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  px = list(crop.getdata())
+08:24:46 PASS video: centre double tap toggles pause (info) 49 -> 52 (still playing / zoom mode)
+08:24:46 === scenario s06_video_gestures
+08:24:52 PASS video: swipe up on right changes volume '[V] will get volume\n[V] will control stream=3 (STREAM_MUSIC)\n[V] Connecting to AudioService\n[V] volume is 5 in range [0..15]' -> '[V] will get volume\n[V] will control stream=3 (STREAM_MUSIC)\n[V] Connecting to AudioService\n[V] volume is 10 in range [0..15]'
+08:25:02 === scenario s07_swipe_between_videos
+08:25:49 === scenario s08_rotation
+08:26:17 === scenario s10_favorite_and_delete
+08:26:54 delete dialog buttons: ['Allow']
+08:27:01 PASS delete: info only (see shots 10_*) row before=True after=True; file: /sdcard/DCIM/Camera/IMG_001.jpg; dialog buttons=['Allow']
+08:27:01 === scenario s15_viewer_menu
+08:27:30 PASS menu: flower button found in viewer 1 nodes
+08:27:38 PASS menu: entries visible (round 1) 17 nodes
+08:27:42 PASS menu: dismissed (round 1) 
+08:27:49 PASS menu: entries visible (round 2) 17 nodes
+08:27:53 PASS menu: dismissed (round 2) 
+08:28:03 === scenario s09_monkey
+08:30:10 PASS monkey: 1500 random events without crash/ANR ## Network stats: elapsed time=107702ms (0ms mobile, 0ms wifi, 107702ms not connected)
+08:30:19 26 passed, 4 failed
