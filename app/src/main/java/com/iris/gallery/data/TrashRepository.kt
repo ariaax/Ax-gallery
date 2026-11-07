@@ -107,7 +107,8 @@ class TrashRepository(private val context: Context) {
     fun loadTrashItems(): List<MediaImage> {
         autoPurgeOldItems()
         val items = readIndex()
-        val mediaList = items.mapNotNull { item ->
+        // newest trashed first (the index is stored oldest-first)
+        val mediaList = items.sortedByDescending { it.dateTrashed }.mapNotNull { item ->
             val file = File(trashDir, item.trashFileName)
             if (file.exists()) {
                 val uniqueId = if (item.id > 0) -item.id else item.id

@@ -2427,11 +2427,12 @@ private fun GalleryScaffold(
                             )
                         )
                     } else {
+                        val trashTotalBytes = remember(trashed) { trashed.sumOf { it.sizeBytes } }
                         val count = if (selectedIds.isNotEmpty()) stringResource(R.string.selected_count, selectedIds.size)
                             else when {
                                 destination == 1 && selectedAlbum != null -> selectedAlbum!!.name
                                 destination == 3 && librarySection == "videos" -> stringResource(R.string.section_videos)
-                                destination == 3 && librarySection == "trash" -> stringResource(R.string.section_trash)
+                                destination == 3 && librarySection == "trash" -> stringResource(R.string.section_trash) + " · " + formatFileSize(trashTotalBytes)
                                 destination == 3 && librarySection == "locked" -> if (selectedLockedAlbum != null) selectedLockedAlbum!! else stringResource(R.string.section_locked)
                                 destination == 3 && librarySection == "duplicates" -> stringResource(R.string.section_duplicates)
                                 destination == 3 && librarySection == "memories" -> stringResource(R.string.section_memories)
