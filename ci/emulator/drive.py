@@ -692,13 +692,16 @@ def main():
     for lf in (OUT / "logs").glob("*.txt"):
         cur = None
         for ln in lf.read_text(errors="replace").splitlines():
-            if "StrictMode policy violation" in ln:
-                cur = ln.split("violation")[-1][:120].strip(); sm.setdefault(cur, 0); sm[cur] += 1
+            if "StrictMode policy violation" in ln or "DiskReadViolation" in ln:
+                cur = ""
                 continue
             if cur and "com.iris.gallery" in ln and "at " in ln:
-                key = (ln.strip()[:140] + " | " + (cur or ""))
-                sm[key] = sm.get(key, 0) + 1
-                cur = None
+                cur = cur if cur.count(" > ") >= 2 else cur
+                frame = ln.strip().split("(")[0].replace("at ", "")
+                cur = (cur or "") + " > " + frame if " > " in (cur or "") or True else cur
+                if cur.count(" > ") >= 3:
+                    sm[cur] = sm.get(cur, 0) + 1
+                    cur = None
     lines += ["", "## Main-thread disk I/O (StrictMode)", ""]
     for k, v in sorted(sm.items(), key=lambda kv: -kv[1])[:60]:
         if "com.iris.gallery" in k:
