@@ -1,6 +1,14 @@
 package com.iris.gallery.ui
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.iris.gallery.R
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -43,7 +51,7 @@ import kotlin.math.pow
 import kotlin.math.sin
 
 
-// ---- the mark: a faceted glass "A" with a crossing glass stroke (the "X"), drawn in a 200 x 200 unit box ----
+// ---- launch animation: blue liquid, then the chrome AX mark with a light sweep ----
 
 /** One "drip": a column where the liquid runs further down than around it. All values are fractions of the screen. */
 private class Drip(val x: Float, val width: Float, val length: Float, val delay: Float)
@@ -55,23 +63,6 @@ private val DRIPS = arrayOf(
     Drip(0.60f, 0.100f, 0.42f, 0.17f),
     Drip(0.78f, 0.080f, 0.58f, 0.08f),
     Drip(0.94f, 0.085f, 0.30f, 0.21f),
-)
-
-private class Ribbon(
-    val path: Path, val width: Float, val c0: Color, val c1: Color,
-    val from: Offset, val to: Offset, val alpha: Float,
-) {
-    val measure = androidx.compose.ui.graphics.PathMeasure()
-    val dst = Path()
-}
-
-private val RIBBONS = listOf(
-    Ribbon(Path().apply { moveTo(50f, 150f); cubicTo(62f, 118f, 82f, 76f, 100f, 52f) }, 27f,
-        Color(0xFF5828EB), Color(0xFFBEA0FF), Offset(50f, 150f), Offset(100f, 52f), 0.93f),
-    Ribbon(Path().apply { moveTo(100f, 52f); cubicTo(120f, 82f, 138f, 116f, 152f, 150f) }, 27f,
-        Color(0xFFFF80BE), Color(0xFFB038FF), Offset(100f, 52f), Offset(152f, 150f), 0.93f),
-    Ribbon(Path().apply { moveTo(32f, 118f); cubicTo(70f, 142f, 130f, 146f, 170f, 104f) }, 25f,
-        Color(0xFF34BEFF), Color(0xFF7E60FF), Offset(32f, 118f), Offset(170f, 104f), 0.82f),
 )
 
 private fun smooth(t: Float): Float {
@@ -115,6 +106,7 @@ private fun revealTop(fx: Float, q: Float): Float {
 fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
     val cover = remember { Animatable(0f) }
     val reveal = remember { Animatable(0f) }
+    val sweep = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
         cover.animateTo(1f, tween(700, easing = LinearEasing))
@@ -122,7 +114,9 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
         onCovered()
         withFrameNanos { }
         withFrameNanos { }
-        delay(180)
+        // light sweeps across the chrome mark, then the liquid drains
+        sweep.animateTo(1f, tween(640, easing = LinearEasing))
+        delay(120)
         reveal.animateTo(1f, tween(620, easing = LinearEasing))
         onFinished()
     }
@@ -170,14 +164,13 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
         }
         bodyPath.close()
 
-        // body: deep navy at the top of the screen, bright azure at the bottom
+        // body: bright azure at the top of the screen, deep navy at the bottom
         drawPath(
             bodyPath,
             Brush.verticalGradient(
-                0f to Color(0xFF0E0628),
-                0.35f to Color(0xFF3A1B9E),
-                0.70f to Color(0xFF6F3CFF),
-                1f to Color(0xFFB693FF),
+                0f to Color(0xFF6298FE),
+                0.48f to Color(0xFF0A2F79),
+                1f to Color(0xFF00011A),
                 startY = 0f,
                 endY = h,
             ),
@@ -211,23 +204,23 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
                         streak.lineTo(w * sx, endY)
                         drawPath(
                             streak,
-                            Color(0xFFE3D6FF).copy(alpha = 0.22f * k),
+                            Color(0xFFDCE8FF).copy(alpha = 0.22f * k),
                             style = Stroke(width = max(1.2.dp.toPx(), w * d.width * 0.12f), cap = StrokeCap.Round),
                         )
                     }
                 }
             }
             // glowing rim on the leading edge
-            drawPath(bottomPath, Color(0xFFA78BFF).copy(alpha = 0.30f), style = Stroke(14.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-            drawPath(bottomPath, Color(0xFFD9C9FF).copy(alpha = 0.95f), style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(bottomPath, Color(0xFF7FA8FF).copy(alpha = 0.30f), style = Stroke(14.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(bottomPath, Color(0xFFDCE8FF).copy(alpha = 0.95f), style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
         // thin bright rim on the trailing edge while draining
         if (draining && q < 1f) {
-            drawPath(topPath, Color(0xFFD9C9FF).copy(alpha = 0.75f), style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(topPath, Color(0xFFDCE8FF).copy(alpha = 0.75f), style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
     }
-    // The mark: a faceted glass "A" crossed by one glass stroke (the "X"), and a quiet wordmark under it.
-    // Everything is read only while drawing (graphicsLayer / Canvas lambdas), so this never recomposes.
+    // The chrome AX mark and a quiet wordmark under it.
+    // Everything is read only while drawing (graphicsLayer / drawWithContent lambdas), so this never recomposes.
     Column(
         modifier = Modifier.graphicsLayer {
             val appear = smooth((cover.value - 0.70f) / 0.30f)
@@ -240,45 +233,43 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
         },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Canvas(Modifier.size(190.dp)) {
-            val u = size.width / 200f
-            val cv = cover.value
-            val appear = smooth((cv - 0.72f) / 0.28f)
-            val sheen = smooth((cv - 0.80f) / 0.20f)
-            withTransform({ scale(u, u, pivot = Offset.Zero) }) {
-                // soft violet glow behind the mark
-                drawCircle(
-                    Brush.radialGradient(listOf(Color(0xFF8B5CFF).copy(alpha = 0.45f * appear), Color.Transparent), center = Offset(100f, 100f), radius = 125f),
-                    radius = 125f, center = Offset(100f, 100f),
-                )
-                // three glass ribbons draw themselves one after another and overlap into the "A"
-                // (same geometry and colours as the launcher icon)
-                for ((i, r) in RIBBONS.withIndex()) {
-                    val prog = smooth((cv - (0.68f + 0.07f * i)) / 0.15f)
-                    if (prog <= 0.001f) continue
-                    r.measure.setPath(r.path, false)
-                    r.dst.reset()
-                    r.measure.getSegment(0f, r.measure.length * prog, r.dst, true)
-                    val a = r.alpha * appear.coerceAtLeast(prog * 0.9f)
-                    drawPath(r.dst, Color(0xFF8B5CFF).copy(alpha = 0.32f * a), style = Stroke(r.width + 22f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                    drawPath(r.dst, Color.White.copy(alpha = 0.40f * a), style = Stroke(r.width + 3.2f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                    drawPath(r.dst, Brush.linearGradient(0f to r.c0.copy(alpha = a), 1f to r.c1.copy(alpha = a), start = r.from, end = r.to),
-                        style = Stroke(r.width, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                    withTransform({ translate(-3.2f, -3.2f) }) {
-                        drawPath(r.dst, Color.White.copy(alpha = 0.34f * a), style = Stroke(5.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        // The chrome "AX" mark. A diagonal light band sweeps across it once it has appeared.
+        Image(
+            painter = painterResource(R.drawable.ax_logo),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .width(230.dp)
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    val t = smooth(sweep.value)
+                    val pos = t * 1.5f - 0.25f
+                    if (sweep.value > 0f && sweep.value < 1f) {
+                        val wv = size.width
+                        val x0 = wv * pos
+                        drawRect(
+                            Brush.linearGradient(
+                                0f to Color.Transparent,
+                                0.5f to Color.White.copy(alpha = 0.85f),
+                                1f to Color.Transparent,
+                                start = Offset(x0 - wv * 0.18f, 0f),
+                                end = Offset(x0 + wv * 0.18f, size.height * 0.45f),
+                            ),
+                            blendMode = BlendMode.SrcAtop,
+                        )
                     }
-                }
-            }
-        }
+                },
+        )
         Text(
             text = "AX  GALLERY",
             style = TextStyle(
                 fontWeight = FontWeight.Light,
                 fontSize = 14.sp,
                 letterSpacing = 9.sp,
-                color = Color.White.copy(alpha = 0.90f),
+                color = Color.White.copy(alpha = 0.92f),
             ),
-            modifier = Modifier.padding(top = 14.dp),
+            modifier = Modifier.padding(top = 18.dp),
         )
     }    }
 }
