@@ -1,19 +1,13 @@
 package com.iris.gallery.data
 
-import kotlin.math.asin
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
-
 /**
- * "Trips" = photos taken close in time AND place. A new trip starts after a 12 h gap
- * or when the location jumps more than 50 km. Only trips with at least [MIN_TRIP_ITEMS] photos are kept.
+ * "Trips" = photos taken close in time (a new trip starts after a 12 h gap). Only trips with at least
+ * [MIN_TRIP_ITEMS] photos are kept. GPS is not loaded into the library model, so location is not used yet.
  * Pure data code: no disk or network access.
  */
 data class TripGroup(val start: Long, val end: Long, val items: List<MediaImage>)
 
 private const val TRIP_GAP_MS = 12L * 60 * 60 * 1000
-private const val TRIP_JUMP_KM = 50.0
 private const val MIN_TRIP_ITEMS = 8
 
 fun buildTrips(images: List<MediaImage>): List<TripGroup> {
@@ -23,7 +17,7 @@ fun buildTrips(images: List<MediaImage>): List<TripGroup> {
     var prev: MediaImage? = null
     for (item in timed) {
         val p = prev
-        if (p != null && (item.sortDate - p.sortDate > TRIP_GAP_MS || jumpedFar(p, item))) {
+        if (p != null && item.sortDate - p.sortDate > TRIP_GAP_MS) {
             groups += current
             current = mutableListOf()
         }
@@ -35,22 +29,6 @@ fun buildTrips(images: List<MediaImage>): List<TripGroup> {
         .filter { it.size >= MIN_TRIP_ITEMS }
         .map { TripGroup(start = it.first().sortDate, end = it.last().sortDate, items = it) }
         .sortedByDescending { it.start }
-}
-
-private fun jumpedFar(a: MediaImage, b: MediaImage): Boolean {
-    val la = a.latitude ?: return false
-    val lo = a.longitude ?: return false
-    val lb = b.latitude ?: return false
-    val lob = b.longitude ?: return false
-    return distanceKm(la, lo, lb, lob) > TRIP_JUMP_KM
-}
-
-fun distanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-    val dLat = Math.toRadians(lat2 - lat1)
-    val dLon = Math.toRadians(lon2 - lon1)
-    val h = sin(dLat / 2) * sin(dLat / 2) +
-        cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2) * sin(dLon / 2)
-    return 2 * 6371.0 * asin(sqrt(h.coerceIn(0.0, 1.0)))
 }
 
 /**
