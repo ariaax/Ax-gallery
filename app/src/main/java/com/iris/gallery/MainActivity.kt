@@ -324,6 +324,8 @@ import com.iris.gallery.data.isSvg
 import com.iris.gallery.ui.GalleryViewModel
 import com.iris.gallery.ui.DuplicateScanState
 import com.iris.gallery.ui.TripsScreen
+import com.iris.gallery.ui.QuickAction
+import com.iris.gallery.ui.QuickActionRow
 import com.iris.gallery.ui.CleanupScreen
 import com.iris.gallery.ui.MediaThumbnail
 import com.iris.gallery.ui.ThumbnailCache
@@ -2861,8 +2863,33 @@ private fun GalleryScaffold(
                 }
               ) {
                 CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+                  if (destination == 0 && fileSearchQuery.isBlank()) QuickActionRow(
+                      actions = listOf(
+                          QuickAction(AxIcons.Trash, "Trash") { openLibrarySection("trash") },
+                          QuickAction(AxIcons.Video, "Videos") { openLibrarySection("videos") },
+                          QuickAction(AxIcons.Folder, "Trips") { openLibrarySection("trips") },
+                          QuickAction(AxIcons.Trash, "Cleanup") { openLibrarySection("cleanup") },
+                          QuickAction(AxIcons.Lock, "Locked") { openLibrarySection("locked") },
+                          QuickAction(AxIcons.Sparkle, "Memories") { openLibrarySection("memories") },
+                      ),
+                      modifier = Modifier.padding(top = padding.calculateTopPadding() + 8.dp),
+                  )
+                  // quick shortcuts above the Media grid (Media tab only, not while searching)
+                  val quickLibraryIndex = visibleTabs.indexOfFirst { it.destination == 3 }
+                  fun openLibrarySection(section: String) {
+                      if (quickLibraryIndex >= 0) tabScope.launch {
+                          tabPagerState.animateScrollToPage(quickLibraryIndex, animationSpec = tween(220, easing = FastOutSlowInEasing))
+                      }
+                      librarySection = section
+                  }
+                  val quickPadding = PaddingValues(
+                      start = padding.calculateStartPadding(LocalLayoutDirection.current),
+                      top = padding.calculateTopPadding() + if (destination == 0 && fileSearchQuery.isBlank()) 92.dp else 0.dp,
+                      end = padding.calculateEndPadding(LocalLayoutDirection.current),
+                      bottom = padding.calculateBottomPadding(),
+                  )
                   if (displayedPhotos.isNotEmpty()) PhotoGrid(
-                    displayedPhotos, padding, photoGridState, cellSize = photoCellSize, onCellSizeChange = onCellSizeChange,
+                    displayedPhotos, if (destination == 0) quickPadding else padding, photoGridState, cellSize = photoCellSize, onCellSizeChange = onCellSizeChange,
                     showTimeline = settings.showTimelineHeaders && fileSearchQuery.isBlank(),
                     timelineDateFormat = settings.timelineDateFormat,
                     customTimelineDateFormat = settings.customTimelineDateFormat,
