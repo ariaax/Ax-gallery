@@ -44,14 +44,6 @@ import kotlin.math.sin
 
 
 // ---- the mark: a faceted glass "A" with a crossing glass stroke (the "X"), drawn in a 200 x 200 unit box ----
-private val markA = Path().apply {
-    fillType = androidx.compose.ui.graphics.PathFillType.EvenOdd
-    moveTo(87f, 28f); lineTo(113f, 28f); lineTo(165f, 172f); lineTo(137f, 172f); lineTo(126f, 142f)
-    lineTo(74f, 142f); lineTo(63f, 172f); lineTo(35f, 172f); close()
-    // counter (the hole above the crossbar)
-    moveTo(100f, 72f); lineTo(117f, 118f); lineTo(83f, 118f); close()
-}
-private val markSlash = Path().apply { moveTo(172f, 38f); lineTo(92f, 176f) }
 
 /** One "drip": a column where the liquid runs further down than around it. All values are fractions of the screen. */
 private class Drip(val x: Float, val width: Float, val length: Float, val delay: Float)
@@ -165,10 +157,10 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
         drawPath(
             bodyPath,
             Brush.verticalGradient(
-                0f to Color(0xFF06103F),
-                0.35f to Color(0xFF1234E1),
-                0.70f to Color(0xFF2F7BFF),
-                1f to Color(0xFF63D2FF),
+                0f to Color(0xFF0E0628),
+                0.35f to Color(0xFF3A1B9E),
+                0.70f to Color(0xFF6F3CFF),
+                1f to Color(0xFFB693FF),
                 startY = 0f,
                 endY = h,
             ),
@@ -202,19 +194,19 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
                         streak.lineTo(w * sx, endY)
                         drawPath(
                             streak,
-                            Color(0xFFC8E6FF).copy(alpha = 0.22f * k),
+                            Color(0xFFE3D6FF).copy(alpha = 0.22f * k),
                             style = Stroke(width = max(1.2.dp.toPx(), w * d.width * 0.12f), cap = StrokeCap.Round),
                         )
                     }
                 }
             }
             // glowing rim on the leading edge
-            drawPath(bottomPath, Color(0xFF59C8FF).copy(alpha = 0.30f), style = Stroke(14.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-            drawPath(bottomPath, Color(0xFFBFF1FF).copy(alpha = 0.95f), style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(bottomPath, Color(0xFFA78BFF).copy(alpha = 0.30f), style = Stroke(14.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(bottomPath, Color(0xFFD9C9FF).copy(alpha = 0.95f), style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
         // thin bright rim on the trailing edge while draining
         if (draining && q < 1f) {
-            drawPath(topPath, Color(0xFFBFF1FF).copy(alpha = 0.75f), style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(topPath, Color(0xFFD9C9FF).copy(alpha = 0.75f), style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
     }
     // The mark: a faceted glass "A" crossed by one glass stroke (the "X"), and a quiet wordmark under it.
@@ -237,36 +229,39 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
             val appear = smooth((cv - 0.72f) / 0.28f)
             val sheen = smooth((cv - 0.80f) / 0.20f)
             withTransform({ scale(u, u, pivot = Offset.Zero) }) {
-                // soft glow behind the mark
+                // soft violet glow behind the mark
                 drawCircle(
-                    Brush.radialGradient(listOf(Color(0xFF8FD8FF).copy(alpha = 0.30f * appear), Color.Transparent), center = Offset(100f, 104f), radius = 110f),
-                    radius = 110f, center = Offset(100f, 104f),
+                    Brush.radialGradient(listOf(Color(0xFF8B5CFF).copy(alpha = 0.45f * appear), Color.Transparent), center = Offset(100f, 100f), radius = 120f),
+                    radius = 120f, center = Offset(100f, 100f),
                 )
-                // contact shadow
-                withTransform({ translate(0f, 5f) }) { drawPath(markA, Color(0xFF04164F).copy(alpha = 0.35f * appear)) }
-                // glass body: bright at the top, cool at the bottom
+                // the "A": the same geometry as the launcher icon, drawn as glass strokes
+                val leg = Path().apply { moveTo(48f, 147f); lineTo(100f, 55f); lineTo(152f, 147f) }
+                val barFrom = Offset(73f, 116f)
+                val barTo = Offset(127f, 116f)
+                withTransform({ translate(0f, 4f) }) {
+                    drawPath(leg, Color(0xFF1A0A40).copy(alpha = 0.40f * appear), style = Stroke(21f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                }
+                drawPath(leg, Color(0xFF8B5CFF).copy(alpha = 0.40f * appear), style = Stroke(30f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                 drawPath(
-                    markA,
+                    leg,
                     Brush.verticalGradient(
                         0f to Color.White.copy(alpha = 0.98f * appear),
-                        1f to Color(0xFFBFE4FF).copy(alpha = 0.92f * appear),
-                        startY = 28f, endY = 172f,
+                        1f to Color(0xFFC9B6FF).copy(alpha = 0.92f * appear),
+                        startY = 55f, endY = 147f,
                     ),
+                    style = Stroke(21f, cap = StrokeCap.Round, join = StrokeJoin.Round),
                 )
-                // a light sweep across the letter, once, while it settles
-                clipPath(markA) {
-                    val cx = -40f + 280f * sheen
-                    drawRect(
-                        Brush.linearGradient(
-                            0f to Color.Transparent, 0.5f to Color(0xFF59C8FF).copy(alpha = 0.55f * (1f - sheen) * appear), 1f to Color.Transparent,
-                            start = Offset(cx - 40f, 28f), end = Offset(cx + 20f, 172f),
-                        ),
-                    )
-                }
-                drawPath(markA, Color.White.copy(alpha = 0.9f * appear), style = Stroke(1.1f, join = StrokeJoin.Round))
-                // the "X": one translucent glass stroke crossing the right leg
-                drawPath(markSlash, Color(0xFF2FA8FF).copy(alpha = 0.50f * appear), style = Stroke(11f, cap = StrokeCap.Round))
-                drawPath(markSlash, Color.White.copy(alpha = 0.85f * appear), style = Stroke(1.6f, cap = StrokeCap.Round))
+                drawLine(Color.White.copy(alpha = 0.95f * appear), barFrom, barTo, strokeWidth = 13f, cap = StrokeCap.Round)
+                // one light sweep up the letter, once, while it settles
+                val cx = -40f + 280f * sheen
+                drawPath(
+                    leg,
+                    Brush.linearGradient(
+                        0f to Color.Transparent, 0.5f to Color.White.copy(alpha = 0.55f * (1f - sheen) * appear), 1f to Color.Transparent,
+                        start = Offset(cx - 40f, 40f), end = Offset(cx + 20f, 160f),
+                    ),
+                    style = Stroke(21f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+                )
             }
         }
         Text(
