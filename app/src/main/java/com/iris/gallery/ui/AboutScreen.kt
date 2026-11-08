@@ -26,7 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -125,7 +125,7 @@ fun AboutScreen(
                 Box(
                     modifier = Modifier
                         .size(92.dp)
-                        .clip(RoundedCornerShape(22.dp))
+                        .clip(CutCornerShape(22.dp))
                         .background(
                             Brush.linearGradient(
                                 colors = listOf(
@@ -194,7 +194,7 @@ fun AboutScreen(
 
         item {
             OutlinedCard(
-                shape = RoundedCornerShape(16.dp),
+                shape = CutCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -247,7 +247,7 @@ fun AboutScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 ),
-                shape = RoundedCornerShape(16.dp),
+                shape = CutCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -343,7 +343,7 @@ fun MesopotamiaOpticsSheet(onClose: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
+                .clip(CutCornerShape(20.dp))
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
@@ -383,7 +383,7 @@ fun MesopotamiaOpticsSheet(onClose: () -> Unit) {
 
         // Feature: Al-Hasan Ibn al-Haytham (Alhazen)
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = CutCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ),
@@ -420,7 +420,7 @@ fun MesopotamiaOpticsSheet(onClose: () -> Unit) {
 
         // The Invention of Camera Obscura
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = CutCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
             ),
@@ -448,7 +448,7 @@ fun MesopotamiaOpticsSheet(onClose: () -> Unit) {
 
         // Debunking Ancient Greek Emission Theory
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = CutCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ),
@@ -470,7 +470,7 @@ fun MesopotamiaOpticsSheet(onClose: () -> Unit) {
 
         // Father of Modern Scientific Method
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = CutCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ),
@@ -492,7 +492,7 @@ fun MesopotamiaOpticsSheet(onClose: () -> Unit) {
 
         // Mesopotamian Legacy
         OutlinedCard(
-            shape = RoundedCornerShape(16.dp),
+            shape = CutCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

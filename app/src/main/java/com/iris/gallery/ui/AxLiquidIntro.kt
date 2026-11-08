@@ -3,6 +3,7 @@ package com.iris.gallery.ui
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -51,7 +52,7 @@ import kotlin.math.pow
 import kotlin.math.sin
 
 
-// ---- launch animation: blue liquid, then the chrome AX mark with a light sweep ----
+// ---- launch animation: black liquid, then the chrome AX mark with a light sweep ----
 
 /** One "drip": a column where the liquid runs further down than around it. All values are fractions of the screen. */
 private class Drip(val x: Float, val width: Float, val length: Float, val delay: Float)
@@ -164,13 +165,13 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
         }
         bodyPath.close()
 
-        // body: bright azure at the top of the screen, deep navy at the bottom
+        // body: near-black with a cold steel-blue lift at the bottom (the same black as the launcher icon)
         drawPath(
             bodyPath,
             Brush.verticalGradient(
-                0f to Color(0xFF6298FE),
-                0.48f to Color(0xFF0A2F79),
-                1f to Color(0xFF00011A),
+                0f to Color(0xFF030408),
+                0.55f to Color(0xFF060A14),
+                1f to Color(0xFF0B1A3A),
                 startY = 0f,
                 endY = h,
             ),
@@ -212,7 +213,7 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
             }
             // glowing rim on the leading edge
             drawPath(bottomPath, Color(0xFF7FA8FF).copy(alpha = 0.30f), style = Stroke(14.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-            drawPath(bottomPath, Color(0xFFDCE8FF).copy(alpha = 0.95f), style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(bottomPath, Color(0xFFE8F0FF).copy(alpha = 0.95f), style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
         // thin bright rim on the trailing edge while draining
         if (draining && q < 1f) {
@@ -239,7 +240,17 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
             contentDescription = null,
             contentScale = ContentScale.Fit,
             modifier = Modifier
-                .width(230.dp)
+                .width(250.dp)
+                .drawBehind {
+                    val a = smooth((cover.value - 0.72f) / 0.28f)
+                    drawCircle(
+                        Brush.radialGradient(
+                            listOf(Color(0xFF2F6BFF).copy(alpha = 0.30f * a), Color.Transparent),
+                            center = center, radius = size.width * 0.75f,
+                        ),
+                        radius = size.width * 0.75f, center = center,
+                    )
+                }
                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                 .drawWithContent {
                     drawContent()

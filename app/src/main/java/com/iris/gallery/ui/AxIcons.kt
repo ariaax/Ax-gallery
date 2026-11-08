@@ -10,27 +10,35 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 /**
- * Ax Gallery's own icon set: thin (1.7) rounded outlines on a 24 grid, one consistent style
- * (modern iOS-like line icons). Drawn as vectors, so they tint and scale like any other icon.
+ * Ax Gallery's own icon set: sharp (1.8) mitred outlines on a 24 grid with cut corners and octagon
+ * circles, one consistent angular style. Drawn as vectors, so they tint and scale like any other icon.
  */
 object AxIcons {
+    /** Octagon instead of a circle: the set is angular on purpose (sharp, cut-corner look). */
     private fun PathBuilder.circle(cx: Float, cy: Float, r: Float) {
-        moveTo(cx - r, cy)
-        arcTo(r, r, 0f, true, false, cx + r, cy)
-        arcTo(r, r, 0f, true, false, cx - r, cy)
+        val k = 0.4142f * r   // tan(22.5 deg) * r : a regular octagon with flat sides facing up/down/left/right
+        moveTo(cx - k, cy - r)
+        lineTo(cx + k, cy - r)
+        lineTo(cx + r, cy - k)
+        lineTo(cx + r, cy + k)
+        lineTo(cx + k, cy + r)
+        lineTo(cx - k, cy + r)
+        lineTo(cx - r, cy + k)
+        lineTo(cx - r, cy - k)
         close()
     }
 
+    /** Box with cut (chamfered) corners instead of rounded ones. */
     private fun PathBuilder.box(x: Float, y: Float, w: Float, h: Float, r: Float) {
-        moveTo(x + r, y)
-        lineTo(x + w - r, y)
-        arcTo(r, r, 0f, false, true, x + w, y + r)
-        lineTo(x + w, y + h - r)
-        arcTo(r, r, 0f, false, true, x + w - r, y + h)
-        lineTo(x + r, y + h)
-        arcTo(r, r, 0f, false, true, x, y + h - r)
-        lineTo(x, y + r)
-        arcTo(r, r, 0f, false, true, x + r, y)
+        val c = (r * 1.2f).coerceAtMost(minOf(w, h) / 2f)
+        moveTo(x + c, y)
+        lineTo(x + w - c, y)
+        lineTo(x + w, y + c)
+        lineTo(x + w, y + h - c)
+        lineTo(x + w - c, y + h)
+        lineTo(x + c, y + h)
+        lineTo(x, y + h - c)
+        lineTo(x, y + c)
         close()
     }
 
@@ -39,9 +47,10 @@ object AxIcons {
             path(
                 fill = null,
                 stroke = SolidColor(Color.Black),
-                strokeLineWidth = 1.7f,
-                strokeLineCap = StrokeCap.Round,
-                strokeLineJoin = StrokeJoin.Round,
+                strokeLineWidth = 1.8f,
+                strokeLineCap = StrokeCap.Butt,
+                strokeLineJoin = StrokeJoin.Miter,
+                strokeLineMiter = 6f,
                 pathBuilder = block,
             )
         }.build()

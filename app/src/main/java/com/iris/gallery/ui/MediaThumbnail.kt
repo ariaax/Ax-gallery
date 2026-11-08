@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
@@ -493,7 +493,7 @@ fun MediaThumbnail(
         if (image.isVideo && showVideoDuration) {
             Row(
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)
-                    .background(Color.Black.copy(alpha = .68f), RoundedCornerShape(4.dp))
+                    .background(Color.Black.copy(alpha = .68f), CutCornerShape(4.dp))
                     .padding(horizontal = 4.dp, vertical = 1.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -520,7 +520,7 @@ fun MediaThumbnail(
             if (badge != null) {
                 Box(
                     modifier = Modifier.align(Alignment.BottomStart).padding(4.dp)
-                        .background(Color.Black.copy(alpha = .68f), RoundedCornerShape(4.dp))
+                        .background(Color.Black.copy(alpha = .68f), CutCornerShape(4.dp))
                         .padding(horizontal = 4.dp, vertical = 1.dp),
                 ) {
                     Text(

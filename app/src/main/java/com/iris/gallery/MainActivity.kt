@@ -389,7 +389,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -1530,8 +1530,8 @@ private fun GalleryApp(
                     val pending = pendingVaultItems
                     AlertDialog(
                         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
-                        shape = RoundedCornerShape(28.dp),
-                        modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
+                        shape = CutCornerShape(28.dp),
+                        modifier = Modifier.axGlassBorder(CutCornerShape(28.dp)),
                         onDismissRequest = { showAllFilesAccessPromptDialog = false; pendingVaultItems = null },
                         icon = { Icon(AxIcons.Lock, null, tint = MaterialTheme.colorScheme.primary) },
                         title = { Text(stringResource(R.string.prompt_free_vault_title)) },
@@ -2423,7 +2423,7 @@ private fun GalleryScaffold(
                                 }
                             },
                             singleLine = true,
-                            shape = RoundedCornerShape(50),
+                            shape = CutCornerShape(50),
                             colors = OutlinedTextFieldDefaults.colors(
                                 unfocusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
                                 focusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
@@ -3112,7 +3112,7 @@ private fun GalleryScaffold(
                                                             .aspectRatio(1f)
                                                     ) {
                                                         Card(
-                                                            shape = RoundedCornerShape(settings.cornerStyle.dp.dp),
+                                                            shape = CutCornerShape(settings.cornerStyle.dp.dp),
                                                             modifier = Modifier.fillMaxSize()
                                                         ) {
                                                             MediaThumbnail(
@@ -3207,7 +3207,7 @@ private fun GalleryScaffold(
                                     exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically()
                                 ) {
                                     Card(
-                                        shape = RoundedCornerShape(16.dp),
+                                        shape = CutCornerShape(16.dp),
                                         colors = CardDefaults.cardColors(
                                             containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
                                         ),
@@ -3606,8 +3606,8 @@ private fun GalleryScaffold(
     if (confirmEmptyTrash) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
+            shape = CutCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(CutCornerShape(28.dp)),
             onDismissRequest = { confirmEmptyTrash = false },
             title = { Text(stringResource(R.string.empty_trash_dialog_title)) },
             text = { Text(stringResource(R.string.empty_trash_dialog_desc, trashed.size, if (trashed.size != 1) "s" else "")) },
@@ -3638,8 +3638,8 @@ private fun GalleryScaffold(
     pendingRestoreAlbum?.let { album ->
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
+            shape = CutCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(CutCornerShape(28.dp)),
             onDismissRequest = { pendingRestoreAlbum = null },
             title = { Text(stringResource(R.string.dialog_restore_album_title)) },
             text = { Text(stringResource(R.string.dialog_restore_album_desc, album.images.size, album.name)) },
@@ -3667,8 +3667,8 @@ private fun GalleryScaffold(
         var deletePermanently by remember { mutableStateOf(isPermanentMode) }
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
+            shape = CutCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(CutCornerShape(28.dp)),
             onDismissRequest = { pendingDeleteItems = null },
             title = {
                 Text(
@@ -3743,8 +3743,8 @@ private fun GalleryScaffold(
     pendingPermanentDeleteItems?.let { items ->
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
+            shape = CutCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(CutCornerShape(28.dp)),
             onDismissRequest = { pendingPermanentDeleteItems = null },
             title = {
                 Text(stringResource(R.string.delete_permanent_dialog_title, items.size))
@@ -4107,7 +4107,7 @@ private fun GalleryScaffold(
         ) {
             trashFeedback?.let { feedback ->
                 Surface(
-                    shape = RoundedCornerShape(24.dp),
+                    shape = CutCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f),
                     tonalElevation = 8.dp,
                     shadowElevation = 6.dp,
@@ -4282,13 +4282,13 @@ private fun DuplicateReviewScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(group.items, key = { it.id }) { media ->
                                 val selected = media.id in selectedIds
-                                Box(Modifier.size(126.dp).clip(RoundedCornerShape(16.dp))
+                                Box(Modifier.size(126.dp).clip(CutCornerShape(16.dp))
                                     .clickable { selectedIds = selectedIds.toMutableSet().apply {
                                         if (!add(media.id)) remove(media.id)
                                     } }) {
                                     MediaThumbnail(media, Modifier.fillMaxSize())
                                     Surface(Modifier.align(Alignment.TopEnd).padding(6.dp),
-                                        shape = RoundedCornerShape(50),
+                                        shape = CutCornerShape(50),
                                         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface.copy(alpha = .86f)) {
                                         Icon(if (selected) Icons.Filled.CheckCircle else AxIcons.Close,
                                             if (selected) stringResource(R.string.duplicates_remove) else stringResource(R.string.duplicates_keep), Modifier.padding(5.dp).size(18.dp),
@@ -4779,7 +4779,7 @@ private fun PhotoGrid(
                                 .weight(1f)
                                 .padding(start = 12.dp, end = 4.dp)
                                 .height(2.dp)
-                                .clip(RoundedCornerShape(50))
+                                .clip(CutCornerShape(50))
                                 .background(
                                     Brush.horizontalGradient(
                                         listOf(Color.White.copy(alpha = 0.70f), Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.06f))
@@ -4799,7 +4799,7 @@ private fun PhotoGrid(
                 val heroCell = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
                 Box(Modifier.aspectRatio(1f)
                     .onGloballyPositioned { heroCell[0] = it }
-                    .clip(RoundedCornerShape(if (selected) 20.dp else maxOf(cornerStyle.dp, 18).dp))
+                    .clip(CutCornerShape(if (selected) 20.dp else maxOf(cornerStyle.dp, 18).dp))
                     // thin glass rim around every tile (glowing accent ring when selected), drawn in this same node
                     // instead of an extra Box + border per tile
                     .drawWithContent {
@@ -4840,7 +4840,7 @@ private fun PhotoGrid(
                         Text(
                             dayLabel,
                             modifier = Modifier.align(Alignment.TopEnd).padding(top = 3.dp, end = 4.dp)
-                                .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+                                .background(Color.Black.copy(alpha = 0.45f), CutCornerShape(6.dp))
                                 .padding(horizontal = 4.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
@@ -5026,7 +5026,7 @@ private fun PhotoGrid(
                 exit = fadeOut(tween(120)) + scaleOut(tween(140), targetScale = .9f)
             ) {
                 Surface(
-                    shape = RoundedCornerShape(20.dp),
+                    shape = CutCornerShape(20.dp),
                     tonalElevation = 8.dp,
                     color = MaterialTheme.colorScheme.primaryContainer
                 ) {
@@ -5927,7 +5927,7 @@ private fun PhotoViewer(
                 Surface(
                     color = Color.Transparent,
                     contentColor = Color.White,
-                    shape = RoundedCornerShape(24.dp),
+                    shape = CutCornerShape(24.dp),
                     tonalElevation = 0.dp,
                     modifier = Modifier.widthIn(max = 540.dp).fillMaxWidth().axGlassPanel(viewerGlass, 24.dp),
                 ) {
@@ -5998,10 +5998,10 @@ private fun PhotoViewer(
                             Box(
                                 modifier = Modifier
                                     .size(thumbSize)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(CutCornerShape(8.dp))
                                     .then(
-                                        if (isSelected) Modifier.border(2.dp, viewerAccent, RoundedCornerShape(8.dp))
-                                        else Modifier.border(0.5.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                                        if (isSelected) Modifier.border(2.dp, viewerAccent, CutCornerShape(8.dp))
+                                        else Modifier.border(0.5.dp, Color.White.copy(alpha = 0.25f), CutCornerShape(8.dp))
                                     )
                                     .pointerInput(item.id) {
                                         awaitEachGesture {
@@ -6145,7 +6145,7 @@ private fun PhotoViewer(
                         .fillMaxWidth()
                         .clickable { showInfo = true },
                     color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = CutCornerShape(18.dp),
                     tonalElevation = 6.dp,
                     shadowElevation = 4.dp,
                 ) {
@@ -6176,7 +6176,7 @@ private fun PhotoViewer(
             if (showRotateTipBanner && !dismissedRotateTip) {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = CutCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                     tonalElevation = 4.dp,
                 ) {
@@ -6226,7 +6226,7 @@ private fun PhotoViewer(
                 if (!dismissedFilmstripTip) {
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = CutCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth(),
                         tonalElevation = 4.dp,
                     ) {
@@ -6276,7 +6276,7 @@ private fun PhotoViewer(
                 }
                 Surface(
                     color = Color.Transparent,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = CutCornerShape(16.dp),
                     modifier = Modifier.height(48.dp).axGlassPanel(viewerGlass, 16.dp),
                 ) {
                     LazyRow(
@@ -6296,7 +6296,7 @@ private fun PhotoViewer(
             if (!dismissedSecureSharingTip) {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = CutCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                     tonalElevation = 4.dp,
                 ) {
@@ -6310,7 +6310,7 @@ private fun PhotoViewer(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(CutCornerShape(8.dp))
                                 .clickable { showSecureSharingModePicker = true },
                         ) {
                             Icon(
@@ -6351,7 +6351,7 @@ private fun PhotoViewer(
                 modifier = Modifier.fillMaxWidth().axGlassPanel(viewerGlass, 32.dp),
                 color = Color.Transparent,
                 contentColor = Color.White,
-                shape = RoundedCornerShape(32.dp),
+                shape = CutCornerShape(32.dp),
                 tonalElevation = 0.dp,
             ) {
               // reel-style: the whole button row rolls up/down whenever you move to another photo or video
@@ -6417,7 +6417,7 @@ private fun PhotoViewer(
                     if (expanded) {
                         Surface(
                             color = Color.Transparent,
-                            shape = RoundedCornerShape(22.dp),
+                            shape = CutCornerShape(22.dp),
                             modifier = Modifier.width(50.dp).heightIn(max = 240.dp).axGlassPanel(viewerGlass, 22.dp).then(dockTouch),
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -6471,7 +6471,7 @@ private fun PhotoViewer(
                         Surface(
                             color = Color.Transparent,
                             contentColor = Color.White,
-                            shape = RoundedCornerShape(22.dp),
+                            shape = CutCornerShape(22.dp),
                             tonalElevation = 0.dp,
                             modifier = Modifier.axGlassPanel(viewerGlass, 22.dp).then(dockTouch),
                         ) {
@@ -6508,8 +6508,8 @@ private fun PhotoViewer(
                 Surface(
                     modifier = Modifier
                         .sizeIn(minWidth = 220.dp, maxWidth = 320.dp, minHeight = 220.dp, maxHeight = 340.dp)
-                        .clip(RoundedCornerShape(24.dp)),
-                    shape = RoundedCornerShape(24.dp),
+                        .clip(CutCornerShape(24.dp)),
+                    shape = CutCornerShape(24.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerHighest,
                     border = BorderStroke(2.dp, viewerAccent.copy(alpha = 0.7f)),
                     shadowElevation = 24.dp,
@@ -6660,8 +6660,8 @@ private fun PhotoViewer(
         var deletePermanently by remember { mutableStateOf(isPermanentlyDeleting) }
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
+            shape = CutCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(CutCornerShape(28.dp)),
             onDismissRequest = { confirmDelete = false },
             title = {
                 Text(
@@ -6726,8 +6726,8 @@ private fun PhotoViewer(
     if (directPermanentDelete) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
+            shape = CutCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(CutCornerShape(28.dp)),
             onDismissRequest = { directPermanentDelete = false },
             title = {
                 Text(
@@ -6814,8 +6814,8 @@ private fun PhotoViewer(
     if (showSecureSharingHintDialog) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
+            shape = CutCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(CutCornerShape(28.dp)),
             onDismissRequest = { showSecureSharingHintDialog = false },
             icon = {
                 Icon(
@@ -6833,11 +6833,11 @@ private fun PhotoViewer(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
+                        shape = CutCornerShape(10.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(CutCornerShape(10.dp))
                             .clickable {
                                 showSecureSharingHintDialog = false
                                 showSecureSharingModePicker = true
@@ -6894,8 +6894,8 @@ private fun PhotoViewer(
     if (showSecureSharingModePicker) {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
+            shape = CutCornerShape(28.dp),
+            modifier = Modifier.axGlassBorder(CutCornerShape(28.dp)),
             onDismissRequest = { showSecureSharingModePicker = false },
             icon = {
                 Icon(
@@ -6922,7 +6922,7 @@ private fun PhotoViewer(
                             SecureSharingMode.STRIP_ALL -> AxIcons.Shield
                         }
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
+                            shape = CutCornerShape(12.dp),
                             color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                             else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
                             border = BorderStroke(
@@ -6931,7 +6931,7 @@ private fun PhotoViewer(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(CutCornerShape(12.dp))
                                 .clickable {
                                     onSetSecureSharingMode(mode)
                                     showSecureSharingModePicker = false
@@ -7667,7 +7667,7 @@ private fun PhotoDetailsSheet(
     }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val screenHeightDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp
-    val glassSheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    val glassSheetShape = CutCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -7767,7 +7767,7 @@ private fun PhotoDetailsSheet(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = CutCornerShape(16.dp),
                 ) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -7844,7 +7844,7 @@ private fun PhotoDetailsSheet(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = CutCornerShape(16.dp),
                 ) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -7900,7 +7900,7 @@ private fun PhotoDetailsSheet(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = CutCornerShape(16.dp),
                     ) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -7949,7 +7949,7 @@ private fun PhotoDetailsSheet(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
-                shape = RoundedCornerShape(16.dp),
+                shape = CutCornerShape(16.dp),
             ) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -7995,7 +7995,7 @@ private fun PhotoDetailsSheet(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
-                shape = RoundedCornerShape(16.dp),
+                shape = CutCornerShape(16.dp),
             ) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -8087,7 +8087,7 @@ private fun PhotoDetailsSheet(
                 Button(
                     onClick = { editing = true },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = CutCornerShape(12.dp),
                 ) {
                     Icon(AxIcons.Edit, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
@@ -8169,8 +8169,8 @@ private fun RenameFileDialog(
     var newName by remember { mutableStateOf(nameWithoutExt) }
     AlertDialog(
         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.80f),
-        shape = RoundedCornerShape(28.dp),
-        modifier = Modifier.axGlassBorder(RoundedCornerShape(28.dp)),
+        shape = CutCornerShape(28.dp),
+        modifier = Modifier.axGlassBorder(CutCornerShape(28.dp)),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.rename_file_title)) },
         text = {

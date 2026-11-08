@@ -21,7 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Edit
@@ -81,7 +81,7 @@ fun DateFormatBottomSheet(
         dragHandle = { BottomSheetDefaults.DragHandle() },
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 6.dp,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        shape = CutCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
             modifier = Modifier
@@ -149,7 +149,7 @@ fun DateFormatBottomSheet(
                     }
 
                     Card(
-                        shape = RoundedCornerShape(16.dp),
+                        shape = CutCornerShape(16.dp),
                         onClick = {
                             if (isCustom) {
                                 onFormatSelected(TimelineDateFormat.CUSTOM)
@@ -193,7 +193,7 @@ fun DateFormatBottomSheet(
                                     if (isCustom) {
                                         Surface(
                                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
-                                            shape = RoundedCornerShape(6.dp)
+                                            shape = CutCornerShape(6.dp)
                                         ) {
                                             Text(
                                                 text = customPattern,
@@ -355,7 +355,7 @@ fun CustomDateFormatDialog(
                     label = { Text(stringResource(R.string.settings_date_format_custom_hint)) },
                     singleLine = true,
                     isError = !isValid && patternText.isNotBlank(),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = CutCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -370,7 +370,7 @@ fun CustomDateFormatDialog(
                 // Live Preview Card
                 if (isValid && previewSample.isNotBlank()) {
                     Card(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = CutCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                         ),
@@ -422,7 +422,7 @@ fun CustomDateFormatDialog(
                         SuggestionChip(
                             onClick = { patternText += token },
                             label = { Text(token.trim().ifEmpty { token }, style = MaterialTheme.typography.labelSmall) },
-                            shape = RoundedCornerShape(8.dp)
+                            shape = CutCornerShape(8.dp)
                         )
                     }
                 }
@@ -456,7 +456,7 @@ fun CustomDateFormatDialog(
                                 containerColor = if (patternText == preset) MaterialTheme.colorScheme.secondaryContainer
                                 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                             ),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = CutCornerShape(8.dp)
                         )
                     }
                 }

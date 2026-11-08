@@ -53,7 +53,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
@@ -462,7 +462,7 @@ fun EditorScreen(image: MediaImage, onClose: () -> Unit, onSaved: (saved: Boolea
                     if (canvasZoom > 1.05f) {
                         Surface(
                             onClick = { editorView?.resetZoom() },
-                            shape = RoundedCornerShape(16.dp),
+                            shape = CutCornerShape(16.dp),
                             color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
                             contentColor = MaterialTheme.colorScheme.onSurface,
                             tonalElevation = 4.dp,
@@ -766,7 +766,7 @@ private fun SaveAsDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = CutCornerShape(12.dp),
                     color = if (overwriteOriginal)
                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                     else
@@ -820,7 +820,7 @@ private fun SaveAsDialog(
                         selected = isSelected,
                         onClick = { if (!overwriteOriginal) onSelectFormat(format) },
                         enabled = !overwriteOriginal,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = CutCornerShape(12.dp),
                         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -850,7 +850,7 @@ private fun SaveAsDialog(
                                     if (format == originalFormat) {
                                         Surface(
                                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
-                                            shape = RoundedCornerShape(6.dp),
+                                            shape = CutCornerShape(6.dp),
                                         ) {
                                             Text(
                                                 text = stringResource(R.string.format_original_tag),
@@ -1830,7 +1830,7 @@ private fun TextControls(
             placeholder = { Text(stringResource(R.string.editor_text_hint)) },
             modifier = Modifier.weight(1f),
             singleLine = true,
-            shape = RoundedCornerShape(12.dp)
+            shape = CutCornerShape(12.dp)
         )
         Button(
             onClick = {

@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Info
@@ -81,7 +81,7 @@ fun ViewerHeaderBottomSheet(
         dragHandle = { BottomSheetDefaults.DragHandle() },
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 6.dp,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        shape = CutCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
             modifier = Modifier
@@ -133,7 +133,7 @@ fun ViewerHeaderBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
+                shape = CutCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF141416)),
             ) {
                 Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
@@ -200,7 +200,7 @@ fun ViewerHeaderBottomSheet(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(CutCornerShape(16.dp))
                             .clickable { onStyleSelected(style) },
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) {
@@ -209,7 +209,7 @@ fun ViewerHeaderBottomSheet(
                                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                             }
                         ),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = CutCornerShape(16.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -260,12 +260,12 @@ fun ViewerHeaderBottomSheet(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(CutCornerShape(16.dp))
                             .clickable { onShowPageCountChange(!showPageCount) },
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                         ),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = CutCornerShape(16.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -301,12 +301,12 @@ fun ViewerHeaderBottomSheet(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(CutCornerShape(16.dp))
                             .clickable { onShowTimeChange(!showTime) },
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                         ),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = CutCornerShape(16.dp)
                     ) {
                         Row(
                             modifier = Modifier

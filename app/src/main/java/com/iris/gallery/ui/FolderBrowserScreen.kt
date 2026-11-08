@@ -31,7 +31,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -308,7 +308,7 @@ fun FolderBrowserScreen(
                         }
                         items(directories, key = { it.file.absolutePath }) { item ->
                             Card(
-                                shape = RoundedCornerShape(cornerStyle.dp.dp),
+                                shape = CutCornerShape(cornerStyle.dp.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                 ),
@@ -378,7 +378,7 @@ fun FolderBrowserScreen(
                         }
                         items(mediaFiles, key = { it.id }) { image ->
                             Card(
-                                shape = RoundedCornerShape(cornerStyle.dp.dp),
+                                shape = CutCornerShape(cornerStyle.dp.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                                 ),
@@ -394,7 +394,7 @@ fun FolderBrowserScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     Card(
-                                        shape = RoundedCornerShape((cornerStyle.dp.dp / 2).coerceAtLeast(4.dp)),
+                                        shape = CutCornerShape((cornerStyle.dp.dp / 2).coerceAtLeast(4.dp)),
                                         modifier = Modifier.size(56.dp)
                                     ) {
                                         MediaThumbnail(
@@ -476,7 +476,7 @@ fun FolderBrowserScreen(
                         }
                         items(directories, key = { it.file.absolutePath }) { item ->
                             Card(
-                                shape = RoundedCornerShape(cornerStyle.dp.dp),
+                                shape = CutCornerShape(cornerStyle.dp.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                 ),
@@ -532,7 +532,7 @@ fun FolderBrowserScreen(
                                     .clickable { onOpenMedia(image, mediaFiles) }
                             ) {
                                 Card(
-                                    shape = RoundedCornerShape(cornerStyle.dp.dp),
+                                    shape = CutCornerShape(cornerStyle.dp.dp),
                                     modifier = Modifier.fillMaxSize()
                                 ) {
                                     MediaThumbnail(

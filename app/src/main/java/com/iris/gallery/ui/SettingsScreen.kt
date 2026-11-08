@@ -28,7 +28,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
@@ -204,9 +204,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = CutCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text("Timeline order", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -282,10 +282,10 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = CutCornerShape(24.dp),
                 onClick = { showLanguageDialog = true },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
             ) {
                 Row(
                     modifier = Modifier
@@ -333,9 +333,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = CutCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(stringResource(R.string.settings_theme_mode), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -395,7 +395,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         listOf(
-                            AccentColor.IRIS to Brush.linearGradient(listOf(Color(0xFF8A4AF3), Color(0xFF6C5CE7))),
+                            AccentColor.IRIS to Brush.linearGradient(listOf(Color(0xFF4E8DFF), Color(0xFF7FA8FF))),
                             AccentColor.LAPIS_MESOPOTAMIA to Brush.linearGradient(listOf(Color(0xFF1976D2), Color(0xFF0288D1))),
                             AccentColor.EMERALD to Brush.linearGradient(listOf(Color(0xFF00897B), Color(0xFF26A69A))),
                             AccentColor.ISHTAR_AMBER to Brush.linearGradient(listOf(Color(0xFFF57C00), Color(0xFFFFA726))),
@@ -437,9 +437,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = CutCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(stringResource(R.string.settings_corner_style), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -593,7 +593,7 @@ fun SettingsScreen(
                                 .animateContentSize(),
                             color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = CutCornerShape(14.dp),
                         ) {
                             val spacing = settings.gridSpacing.dp.dp
                             val numRows = if (photoColumns <= 3) 1 else 2
@@ -618,7 +618,7 @@ fun SettingsScreen(
                                                 modifier = Modifier
                                                     .weight(1f)
                                                     .aspectRatio(1f)
-                                                    .clip(RoundedCornerShape(settings.cornerStyle.dp.dp))
+                                                    .clip(CutCornerShape(settings.cornerStyle.dp.dp))
                                                     .background(Brush.linearGradient(gradient)),
                                                 contentAlignment = Alignment.Center,
                                             ) {
@@ -639,7 +639,7 @@ fun SettingsScreen(
                                                 if (index == 0 && settings.showVideoDurationBadge) {
                                                     Surface(
                                                         color = Color.Black.copy(alpha = 0.65f),
-                                                        shape = RoundedCornerShape(3.dp),
+                                                        shape = CutCornerShape(3.dp),
                                                         modifier = Modifier.align(Alignment.BottomStart).padding(if (photoColumns <= 2) 4.dp else 2.dp),
                                                     ) {
                                                         Row(
@@ -658,7 +658,7 @@ fun SettingsScreen(
                                                 } else if (index == 1 && settings.showMediaFormatBadge) {
                                                     Surface(
                                                         color = Color.Black.copy(alpha = 0.65f),
-                                                        shape = RoundedCornerShape(3.dp),
+                                                        shape = CutCornerShape(3.dp),
                                                         modifier = Modifier.align(Alignment.BottomStart).padding(if (photoColumns <= 2) 4.dp else 2.dp),
                                                     ) {
                                                         Text("RAW", color = Color.White, fontSize = if (photoColumns <= 2) 9.sp else 6.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp))
@@ -753,7 +753,7 @@ fun SettingsScreen(
                                 .height(98.dp),
                             color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = CutCornerShape(14.dp),
                         ) {
                             Row(
                                 modifier = Modifier
@@ -781,7 +781,7 @@ fun SettingsScreen(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .aspectRatio(1f, matchHeightConstraintsFirst = true)
-                                                .clip(RoundedCornerShape(settings.cornerStyle.dp.dp))
+                                                .clip(CutCornerShape(settings.cornerStyle.dp.dp))
                                                 .background(Brush.linearGradient(albumGrad)),
                                             contentAlignment = Alignment.Center,
                                         ) {
@@ -875,9 +875,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = CutCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     SettingsSwitchRow(
@@ -898,7 +898,7 @@ fun SettingsScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(CutCornerShape(8.dp))
                                     .clickable { showDateFormatDialog = true }
                                     .padding(vertical = 4.dp, horizontal = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -1014,15 +1014,15 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = CutCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(CutCornerShape(12.dp))
                             .clickable { showViewerHeaderDialog = true }
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -1149,9 +1149,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = CutCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     SettingsSwitchRow(
@@ -1206,7 +1206,7 @@ fun SettingsScreen(
                                     )
                                 }
                                 Surface(
-                                    shape = RoundedCornerShape(8.dp),
+                                    shape = CutCornerShape(8.dp),
                                     color = MaterialTheme.colorScheme.primaryContainer,
                                     modifier = Modifier.clickable { showTimePickerDialog = true }
                                 ) {
@@ -1231,9 +1231,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = CutCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(stringResource(R.string.settings_navigation_tabs_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -1597,7 +1597,7 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(CutCornerShape(12.dp))
                             .clickable { showSecureSharingDialog = true }
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1653,9 +1653,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = CutCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(
@@ -1704,10 +1704,10 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = CutCornerShape(24.dp),
                 onClick = onOpenAbout,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(RoundedCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
             ) {
                 Row(
                     modifier = Modifier
@@ -1910,7 +1910,7 @@ fun SettingsScreen(
                             SecureSharingMode.STRIP_ALL -> AxIcons.Shield
                         }
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
+                            shape = CutCornerShape(12.dp),
                             color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                             else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
                             border = BorderStroke(
@@ -1919,7 +1919,7 @@ fun SettingsScreen(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(CutCornerShape(12.dp))
                                 .clickable {
                                     preferences.setSecureSharingMode(mode)
                                     showSecureSharingDialog = false
@@ -2095,7 +2095,7 @@ fun ExcludedFoldersDialog(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Card(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = CutCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2131,7 +2131,7 @@ fun ExcludedFoldersDialog(
                     }
 
                     Card(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = CutCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2203,7 +2203,7 @@ fun ExcludedFoldersDialog(
                             }
 
                             Card(
-                                shape = RoundedCornerShape(12.dp),
+                                shape = CutCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (isAlreadyExcluded)
                                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
@@ -2227,7 +2227,7 @@ fun ExcludedFoldersDialog(
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     Card(
-                                        shape = RoundedCornerShape(8.dp),
+                                        shape = CutCornerShape(8.dp),
                                         modifier = Modifier.size(52.dp)
                                     ) {
                                         MediaThumbnail(album.cover, Modifier.fillMaxSize())

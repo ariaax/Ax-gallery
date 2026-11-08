@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import com.iris.gallery.data.AccentColor
 import com.iris.gallery.data.ThemeMode
@@ -32,24 +33,24 @@ private fun createLightPalette(primary: Color, secondary: Color, tertiary: Color
 
 private fun createDarkPalette(primary: Color, secondary: Color, tertiary: Color, amoled: Boolean) = darkColorScheme(
     primary = primary,
-    onPrimary = Color(0xFF381E72),
+    onPrimary = Color(0xFF061638),
     primaryContainer = primary.copy(alpha = 0.25f),
     onPrimaryContainer = primary,
     secondary = secondary,
-    onSecondary = Color(0xFF332D41),
+    onSecondary = Color(0xFF0B1A3A),
     secondaryContainer = secondary.copy(alpha = 0.25f),
     onSecondaryContainer = secondary,
     tertiary = tertiary,
-    background = if (amoled) Color.Black else Color(0xFF141218),
-    surface = if (amoled) Color.Black else Color(0xFF141218),
-    surfaceContainer = if (amoled) Color.Black else Color(0xFF1E1B24),
-    surfaceContainerLow = if (amoled) Color.Black else Color(0xFF19171D),
-    surfaceContainerLowest = if (amoled) Color.Black else Color(0xFF0F0D13),
-    surfaceContainerHigh = if (amoled) Color(0xFF161618) else Color(0xFF28252E),
-    surfaceContainerHighest = if (amoled) Color(0xFF201E26) else Color(0xFF332F39),
-    surfaceVariant = if (amoled) Color(0xFF161616) else Color(0xFF49454E),
-    onSurface = Color(0xFFE6E1E5),
-    onSurfaceVariant = Color(0xFFCAC4D0),
+    background = if (amoled) Color.Black else Color(0xFF05060A),
+    surface = if (amoled) Color.Black else Color(0xFF05060A),
+    surfaceContainer = if (amoled) Color.Black else Color(0xFF0C0F18),
+    surfaceContainerLow = if (amoled) Color.Black else Color(0xFF090B12),
+    surfaceContainerLowest = if (amoled) Color.Black else Color(0xFF030408),
+    surfaceContainerHigh = if (amoled) Color(0xFF161618) else Color(0xFF131826),
+    surfaceContainerHighest = if (amoled) Color(0xFF201E26) else Color(0xFF1A2032),
+    surfaceVariant = if (amoled) Color(0xFF12141A) else Color(0xFF1E2434),
+    onSurface = Color(0xFFE8ECF5),
+    onSurfaceVariant = Color(0xFFB5BDCF),
 )
 
 private fun createMonochromeLightPalette() = lightColorScheme(
@@ -130,12 +131,12 @@ fun IrisTheme(
         } else dynamicScheme
     } else {
         val (primary, secondary, tertiary) = when (accentColor) {
-            AccentColor.IRIS -> Triple(Color(0xFF8A4AF3), Color(0xFF6C5CE7), Color(0xFFD0BCFF))
+            AccentColor.IRIS -> Triple(Color(0xFF4E8DFF), Color(0xFF7FA8FF), Color(0xFFCFE0FF))
             AccentColor.LAPIS_MESOPOTAMIA -> Triple(Color(0xFF0A84FF), Color(0xFF5E9CFF), Color(0xFFFF9F0A))
             AccentColor.EMERALD -> Triple(Color(0xFF00897B), Color(0xFF26A69A), Color(0xFF80CBC4))
             AccentColor.ISHTAR_AMBER -> Triple(Color(0xFFF57C00), Color(0xFFFFA726), Color(0xFFFFD54F))
             AccentColor.ROSE -> Triple(Color(0xFFD81B60), Color(0xFFEC407A), Color(0xFFFF80AB))
-            AccentColor.MATERIAL_YOU, AccentColor.MONOCHROME -> Triple(Color(0xFF8A4AF3), Color(0xFF6C5CE7), Color(0xFFD0BCFF))
+            AccentColor.MATERIAL_YOU, AccentColor.MONOCHROME -> Triple(Color(0xFF4E8DFF), Color(0xFF7FA8FF), Color(0xFFCFE0FF))
         }
 
         if (isDark) {
@@ -157,5 +158,13 @@ fun IrisTheme(
         }
     }
 
-    MaterialTheme(colorScheme = colors, content = content)
+    // sharp, cut-corner shapes for every Material component (buttons, cards, dialogs, menus, fields)
+    val shapes = androidx.compose.material3.Shapes(
+        extraSmall = androidx.compose.foundation.shape.CutCornerShape(4.dp),
+        small = androidx.compose.foundation.shape.CutCornerShape(8.dp),
+        medium = androidx.compose.foundation.shape.CutCornerShape(12.dp),
+        large = androidx.compose.foundation.shape.CutCornerShape(16.dp),
+        extraLarge = androidx.compose.foundation.shape.CutCornerShape(24.dp),
+    )
+    MaterialTheme(colorScheme = colors, shapes = shapes, content = content)
 }

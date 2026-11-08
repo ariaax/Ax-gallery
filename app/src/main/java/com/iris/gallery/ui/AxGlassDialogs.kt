@@ -28,7 +28,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -62,7 +62,7 @@ fun ModalBottomSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(),
-    shape: Shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    shape: Shape = CutCornerShape(topStart = 28.dp, topEnd = 28.dp),
     containerColor: Color = BottomSheetDefaults.ContainerColor,
     contentColor: Color = contentColorFor(containerColor),
     tonalElevation: androidx.compose.ui.unit.Dp = BottomSheetDefaults.Elevation,
@@ -96,7 +96,7 @@ fun AlertDialog(
     icon: @Composable (() -> Unit)? = null,
     title: @Composable (() -> Unit)? = null,
     text: @Composable (() -> Unit)? = null,
-    shape: Shape = RoundedCornerShape(28.dp),
+    shape: Shape = CutCornerShape(28.dp),
     containerColor: Color = AlertDialogDefaults.containerColor,
     iconContentColor: Color = AlertDialogDefaults.iconContentColor,
     titleContentColor: Color = AlertDialogDefaults.titleContentColor,
@@ -148,7 +148,7 @@ fun DropdownMenu(
             offset = offset,
             scrollState = scrollState,
             properties = properties,
-            shape = RoundedCornerShape(22.dp),
+            shape = CutCornerShape(22.dp),
             containerColor = themed.surfaceContainer,
             border = if (AxGlass.enabled) androidx.compose.foundation.BorderStroke(
                 1.dp,
@@ -310,7 +310,7 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
 
 /** Icy-blue frosted glass, same look as the video control bar (works over video, where blur is impossible). */
 fun Modifier.axIcyPanel(corner: androidx.compose.ui.unit.Dp): Modifier {
-    val shape = RoundedCornerShape(corner)
+    val shape = CutCornerShape(corner)
     return this
         .clip(shape)
         .background(Color(0xFF0B0B0D).copy(alpha = 0.88f))
@@ -341,7 +341,7 @@ fun AxGlassChip(
     }
     val c = MaterialTheme.colorScheme.onSurface
     val tint = MaterialTheme.colorScheme.primary
-    val shape = RoundedCornerShape(50)
+    val shape = CutCornerShape(50)
     val top = if (selected) tint.copy(alpha = 0.38f) else c.copy(alpha = 0.16f)
     val bottom = if (selected) tint.copy(alpha = 0.16f) else c.copy(alpha = 0.06f)
     val src = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -384,7 +384,7 @@ fun AxGlassSearchField(
     modifier: Modifier = Modifier,
 ) {
     val c = MaterialTheme.colorScheme.onSurface
-    val shape = RoundedCornerShape(26.dp)
+    val shape = CutCornerShape(26.dp)
     val glass = AxGlass.enabled
     androidx.compose.material3.OutlinedTextField(
         value = value,

@@ -66,7 +66,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
@@ -744,7 +744,7 @@ fun VideoPage(
             val muted = lastMuteFeedback ?: (muteFeedbackEvent?.first == true)
             Row(
                 modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.72f), RoundedCornerShape(28.dp))
+                    .background(Color.Black.copy(alpha = 0.72f), CutCornerShape(28.dp))
                     .padding(horizontal = 22.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -790,9 +790,9 @@ fun VideoPage(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(horizontal = 28.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(CutCornerShape(24.dp))
                     .background(Color(0xFF0E1420).copy(alpha = 0.80f))
-                    .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(24.dp))
+                    .border(1.dp, Color.White.copy(alpha = 0.25f), CutCornerShape(24.dp))
                     .padding(horizontal = 20.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -801,13 +801,13 @@ fun VideoPage(
                 Box(
                     modifier = Modifier
                         .padding(top = 12.dp)
-                        .clip(RoundedCornerShape(50))
+                        .clip(CutCornerShape(50))
                         .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
                         .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
                         .border(
                             1.2.dp,
                             Brush.linearGradient(listOf(Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.50f))),
-                            RoundedCornerShape(50),
+                            CutCornerShape(50),
                         )
                         .clickable {
                             runCatching {
@@ -855,18 +855,18 @@ fun VideoPage(
                 .navigationBarsPadding()
                 .padding(start = 12.dp, end = 12.dp, top = if (compactLandscape) 4.dp else 128.dp,
                     bottom = if (compactLandscape) 10.dp else 122.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(CutCornerShape(24.dp))
                 .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
                 .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
                 .border(1.2.dp, Brush.linearGradient(listOf(
                     Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.50f))),
-                    RoundedCornerShape(24.dp))
+                    CutCornerShape(24.dp))
                 .padding(horizontal = 10.dp, vertical = 2.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             AnimatedVisibility(scrubbing && preview != null) {
                 preview?.let { Image(it.asImageBitmap(), null, Modifier.size(160.dp, 90.dp)
-                    .background(Color.Black, RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop) }
+                    .background(Color.Black, CutCornerShape(12.dp)), contentScale = ContentScale.Crop) }
             }
             AnimatedVisibility(scrubbing) {
                 Text(

@@ -38,7 +38,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.outlined.Fingerprint
@@ -265,7 +265,7 @@ fun AppLockScreen(
                             scaleX = logoScale
                             scaleY = logoScale
                         }
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(CutCornerShape(20.dp))
                         .background(
                             Brush.linearGradient(
                                 colors = if (isUnlockedSuccess) listOf(Color(0xFF00C853), Color(0xFF00E676))

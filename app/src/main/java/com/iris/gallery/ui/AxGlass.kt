@@ -30,7 +30,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
@@ -355,7 +355,7 @@ fun AxGlassNavBar(
         glint.snapTo(0f)
         glint.animateTo(1f, tween(750, easing = FastOutSlowInEasing))
     }
-    val shape = RoundedCornerShape(50)
+    val shape = CutCornerShape(50)
 
     // One highlight pill that GLIDES between tabs. It is driven by a single 0..1 progress and the tabs' live bounds, and
     // everything is read only while drawing, so a tab change costs no recomposition (that was the stutter).
@@ -480,7 +480,7 @@ fun AxGlassNavBar(
                     val itemSource = remember { MutableInteractionSource() }
                     val pressed by itemSource.collectIsPressedAsState()
                     val press by animateFloatAsState(if (pressed) 0.90f else 1f, spring(dampingRatio = 0.5f, stiffness = 520f), label = "dock press")
-                    val itemShape = RoundedCornerShape(50)
+                    val itemShape = CutCornerShape(50)
                     Row(
                         modifier = Modifier
                             .fillMaxHeight()
@@ -526,7 +526,7 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
         state.regions.add(region)
         onDispose { state.regions.remove(region) }
     }
-    val shape = RoundedCornerShape(corner)
+    val shape = CutCornerShape(corner)
     // One look for every viewer panel (top buttons, filmstrip, info, action bar): translucent frosted glass in the style of
     // Telegram. The tint is light enough that the picture's own colours (the ambient gradient) glow through it; a white
     // wash + a bright top-lit rim give the frosted edge. It stays the same with or without live blur, so all panels match.
@@ -562,7 +562,7 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
 /** Container look for pop-up menus over a picture: dark enough to read over any photo, still glassy. */
 object AxMenuGlass {
     val color: Color = Color(0xFF12151C).copy(alpha = 0.80f)
-    val shape = RoundedCornerShape(22.dp)
+    val shape = CutCornerShape(22.dp)
     val border = BorderStroke(
         1.dp,
         Brush.linearGradient(listOf(Color.White.copy(alpha = 0.38f), Color.White.copy(alpha = 0.05f), Color.White.copy(alpha = 0.22f))),

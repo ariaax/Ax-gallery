@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
@@ -86,7 +86,7 @@ fun TripsScreen(
                     Text("${trip.items.size} photos and videos", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(trip.items.take(12), key = { it.id }) { media ->
-                            MediaThumbnail(media, Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)))
+                            MediaThumbnail(media, Modifier.size(72.dp).clip(CutCornerShape(12.dp)))
                         }
                     }
                 }
@@ -154,11 +154,11 @@ fun CleanupScreen(
                     LazyRow(contentPadding = PaddingValues(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(group.items, key = { it.id }) { media ->
                             val isSelected = media.id in selectedIds
-                            Box(Modifier.size(120.dp).clip(RoundedCornerShape(16.dp)).clickable {
+                            Box(Modifier.size(120.dp).clip(CutCornerShape(16.dp)).clickable {
                                 selectedIds = if (isSelected) selectedIds - media.id else selectedIds + media.id
                             }) {
                                 MediaThumbnail(media, Modifier.fillMaxSize())
-                                Surface(Modifier.align(Alignment.TopEnd).padding(6.dp), shape = RoundedCornerShape(50),
+                                Surface(Modifier.align(Alignment.TopEnd).padding(6.dp), shape = CutCornerShape(50),
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface.copy(alpha = .86f)) {
                                     Icon(Icons.Filled.CheckCircle, null, Modifier.padding(5.dp).size(18.dp),
                                         tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)

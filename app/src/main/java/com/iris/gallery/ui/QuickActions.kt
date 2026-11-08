@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -28,7 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** One shortcut above the photo grid: a round glass icon with a short label. */
+/** One shortcut above the photo grid: a cut-corner chrome-rimmed icon with a short label. */
 class QuickAction(val icon: ImageVector, val label: String, val onClick: () -> Unit)
 
 /**
@@ -44,7 +45,7 @@ fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier) {
         actions.forEach { action ->
             Column(
                 Modifier
-                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+                    .clip(androidx.compose.foundation.shape.CutCornerShape(18.dp))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -53,22 +54,27 @@ fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier) {
                     .padding(horizontal = 6.dp, vertical = 2.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                val chip = CutCornerShape(14.dp)
                 Box(
-                    Modifier.size(54.dp).clip(CircleShape)
-                        .background(Color(0xFF12151C).copy(alpha = 0.78f))
-                        .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)), CircleShape),
+                    Modifier.size(54.dp).clip(chip)
+                        .background(Brush.verticalGradient(listOf(Color(0xFF151B2B).copy(alpha = 0.86f), Color(0xFF05070D).copy(alpha = 0.92f))))
+                        .border(
+                            BorderStroke(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color(0xFF4E8DFF).copy(alpha = 0.18f)))),
+                            chip,
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(action.icon, action.label, tint = Color.White.copy(alpha = 0.92f), modifier = Modifier.size(24.dp))
+                    Icon(action.icon, action.label, tint = Color(0xFFEAF1FF), modifier = Modifier.size(24.dp))
                 }
                 Text(
-                    action.label,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
+                    action.label.uppercase(),
+                    fontSize = 10.5.sp,
+                    letterSpacing = 1.2.sp,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Clip,
                     textAlign = TextAlign.Center,
-                    color = Color.White.copy(alpha = 0.78f),
+                    color = Color(0xFFCBD6EE).copy(alpha = 0.9f),
                     modifier = Modifier.padding(top = 6.dp).size(width = 64.dp, height = 16.dp),
                 )
             }
