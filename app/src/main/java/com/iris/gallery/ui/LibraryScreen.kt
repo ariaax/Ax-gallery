@@ -89,9 +89,12 @@ fun LibraryScreen(
         ) }
         item { BentoRow(
             BentoSpec(AxIcons.Copy, stringResource(R.string.library_duplicates_title), stringResource(R.string.library_duplicates_subtitle), 1f) { onOpen("duplicates") },
-            BentoSpec(AxIcons.Folder, "Trips", "Photos grouped by time and place", 1f) { onOpen("trips") },
-            BentoSpec(AxIcons.Trash, "Cleanup", "Suggestions you review before anything is removed", 1.45f) { onOpen("cleanup") },
             BentoSpec(AxIcons.Lock, stringResource(R.string.library_locked_title), stringResource(R.string.library_locked_subtitle, lockedCount), 1f) { onOpen("locked") },
+        ) }
+        // wide tiles on their own row so their titles never wrap letter by letter
+        item { BentoRow(
+            BentoSpec(AxIcons.Folder, "Trips", "Grouped by time", 1.45f) { onOpen("trips") },
+            BentoSpec(AxIcons.Trash, "Cleanup", "Review before removing", 1.45f) { onOpen("cleanup") },
         ) }
         item { BentoRow(
             BentoSpec(AxIcons.Trash, stringResource(R.string.library_trash_title), stringResource(R.string.library_trash_subtitle, trashCount), 1f) { onOpen("trash") },
