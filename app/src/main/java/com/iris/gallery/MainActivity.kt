@@ -323,6 +323,8 @@ import com.iris.gallery.data.isScreenshot
 import com.iris.gallery.data.isSvg
 import com.iris.gallery.ui.GalleryViewModel
 import com.iris.gallery.ui.DuplicateScanState
+import com.iris.gallery.ui.TripsScreen
+import com.iris.gallery.ui.CleanupScreen
 import com.iris.gallery.ui.MediaThumbnail
 import com.iris.gallery.ui.ThumbnailCache
 import com.iris.gallery.ui.AlbumsGrid
@@ -2436,6 +2438,8 @@ private fun GalleryScaffold(
                                 destination == 3 && librarySection == "trash" -> stringResource(R.string.section_trash) + " · " + formatFileSize(trashTotalBytes)
                                 destination == 3 && librarySection == "locked" -> if (selectedLockedAlbum != null) selectedLockedAlbum!! else stringResource(R.string.section_locked)
                                 destination == 3 && librarySection == "duplicates" -> stringResource(R.string.section_duplicates)
+                                destination == 3 && librarySection == "trips" -> "Trips"
+                                destination == 3 && librarySection == "cleanup" -> "Cleanup"
                                 destination == 3 && librarySection == "memories" -> stringResource(R.string.section_memories)
                                 destination == 3 && librarySection == "formats" -> stringResource(R.string.library_formats_title)
                                 destination == 3 && librarySection == "smart" -> stringResource(R.string.library_smart_title)
@@ -3408,6 +3412,17 @@ private fun GalleryScaffold(
                                 favorites = favorites,
                             ) { editorImage = it }
                         }
+                        "trips" -> TripsScreen(
+                            trips = remember(images) { com.iris.gallery.data.buildTrips(images) },
+                            padding = padding,
+                            onOpen = { trip -> viewerImages = trip.items; selectedId = trip.items.first().id },
+                        )
+                        "cleanup" -> CleanupScreen(
+                            groups = remember(images) { com.iris.gallery.data.buildCleanupGroups(images) },
+                            padding = padding,
+                            onOpen = { group, media -> viewerImages = group.items; selectedId = media.id },
+                            onTrash = { pendingDeleteItems = it },
+                        )
                         "duplicates" -> DuplicateReviewScreen(
                             state = duplicateState,
                             padding = padding,

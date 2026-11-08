@@ -89,6 +89,8 @@ fun LibraryScreen(
         ) }
         item { BentoRow(
             BentoSpec(AxIcons.Copy, stringResource(R.string.library_duplicates_title), stringResource(R.string.library_duplicates_subtitle), 1f) { onOpen("duplicates") },
+            BentoSpec(AxIcons.Folder, "Trips", "Photos grouped by time and place", 1f) { onOpen("trips") },
+            BentoSpec(AxIcons.Trash, "Cleanup", "Suggestions you review before anything is removed", 1.45f) { onOpen("cleanup") },
             BentoSpec(AxIcons.Lock, stringResource(R.string.library_locked_title), stringResource(R.string.library_locked_subtitle, lockedCount), 1f) { onOpen("locked") },
         ) }
         item { BentoRow(
