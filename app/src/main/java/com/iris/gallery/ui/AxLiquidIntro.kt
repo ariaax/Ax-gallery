@@ -57,6 +57,23 @@ private val DRIPS = arrayOf(
     Drip(0.94f, 0.085f, 0.30f, 0.21f),
 )
 
+private class Ribbon(
+    val path: Path, val width: Float, val c0: Color, val c1: Color,
+    val from: Offset, val to: Offset, val alpha: Float,
+) {
+    val measure = androidx.compose.ui.graphics.PathMeasure()
+    val dst = Path()
+}
+
+private val RIBBONS = listOf(
+    Ribbon(Path().apply { moveTo(50f, 150f); cubicTo(62f, 118f, 82f, 76f, 100f, 52f) }, 27f,
+        Color(0xFF5828EB), Color(0xFFBEA0FF), Offset(50f, 150f), Offset(100f, 52f), 0.93f),
+    Ribbon(Path().apply { moveTo(100f, 52f); cubicTo(120f, 82f, 138f, 116f, 152f, 150f) }, 27f,
+        Color(0xFFFF80BE), Color(0xFFB038FF), Offset(100f, 52f), Offset(152f, 150f), 0.93f),
+    Ribbon(Path().apply { moveTo(32f, 118f); cubicTo(70f, 142f, 130f, 146f, 170f, 104f) }, 25f,
+        Color(0xFF34BEFF), Color(0xFF7E60FF), Offset(32f, 118f), Offset(170f, 104f), 0.82f),
+)
+
 private fun smooth(t: Float): Float {
     val c = t.coerceIn(0f, 1f)
     return c * c * (3f - 2f * c)
@@ -231,37 +248,26 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
             withTransform({ scale(u, u, pivot = Offset.Zero) }) {
                 // soft violet glow behind the mark
                 drawCircle(
-                    Brush.radialGradient(listOf(Color(0xFF8B5CFF).copy(alpha = 0.45f * appear), Color.Transparent), center = Offset(100f, 100f), radius = 120f),
-                    radius = 120f, center = Offset(100f, 100f),
+                    Brush.radialGradient(listOf(Color(0xFF8B5CFF).copy(alpha = 0.45f * appear), Color.Transparent), center = Offset(100f, 100f), radius = 125f),
+                    radius = 125f, center = Offset(100f, 100f),
                 )
-                // the "A": the same geometry as the launcher icon, drawn as glass strokes
-                val leg = Path().apply { moveTo(48f, 147f); lineTo(100f, 55f); lineTo(152f, 147f) }
-                val barFrom = Offset(73f, 116f)
-                val barTo = Offset(127f, 116f)
-                withTransform({ translate(0f, 4f) }) {
-                    drawPath(leg, Color(0xFF1A0A40).copy(alpha = 0.40f * appear), style = Stroke(21f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                // three glass ribbons draw themselves one after another and overlap into the "A"
+                // (same geometry and colours as the launcher icon)
+                for ((i, r) in RIBBONS.withIndex()) {
+                    val prog = smooth((cv - (0.68f + 0.07f * i)) / 0.15f)
+                    if (prog <= 0.001f) continue
+                    r.measure.setPath(r.path, false)
+                    r.dst.reset()
+                    r.measure.getSegment(0f, r.measure.length * prog, r.dst, true)
+                    val a = r.alpha * appear.coerceAtLeast(prog * 0.9f)
+                    drawPath(r.dst, Color(0xFF8B5CFF).copy(alpha = 0.32f * a), style = Stroke(r.width + 22f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    drawPath(r.dst, Color.White.copy(alpha = 0.40f * a), style = Stroke(r.width + 3.2f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    drawPath(r.dst, Brush.linearGradient(0f to r.c0.copy(alpha = a), 1f to r.c1.copy(alpha = a), start = r.from, end = r.to),
+                        style = Stroke(r.width, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    withTransform({ translate(-3.2f, -3.2f) }) {
+                        drawPath(r.dst, Color.White.copy(alpha = 0.34f * a), style = Stroke(5.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    }
                 }
-                drawPath(leg, Color(0xFF8B5CFF).copy(alpha = 0.40f * appear), style = Stroke(30f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                drawPath(
-                    leg,
-                    Brush.verticalGradient(
-                        0f to Color.White.copy(alpha = 0.98f * appear),
-                        1f to Color(0xFFC9B6FF).copy(alpha = 0.92f * appear),
-                        startY = 55f, endY = 147f,
-                    ),
-                    style = Stroke(21f, cap = StrokeCap.Round, join = StrokeJoin.Round),
-                )
-                drawLine(Color.White.copy(alpha = 0.95f * appear), barFrom, barTo, strokeWidth = 13f, cap = StrokeCap.Round)
-                // one light sweep up the letter, once, while it settles
-                val cx = -40f + 280f * sheen
-                drawPath(
-                    leg,
-                    Brush.linearGradient(
-                        0f to Color.Transparent, 0.5f to Color.White.copy(alpha = 0.55f * (1f - sheen) * appear), 1f to Color.Transparent,
-                        start = Offset(cx - 40f, 40f), end = Offset(cx + 20f, 160f),
-                    ),
-                    style = Stroke(21f, cap = StrokeCap.Round, join = StrokeJoin.Round),
-                )
             }
         }
         Text(

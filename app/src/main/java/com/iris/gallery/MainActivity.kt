@@ -2881,10 +2881,8 @@ private fun GalleryScaffold(
                       actions = listOf(
                           QuickAction(AxIcons.Trash, "Trash") { openLibrarySection("trash") },
                           QuickAction(AxIcons.Video, "Videos") { openLibrarySection("videos") },
-                          QuickAction(AxIcons.Folder, "Trips") { openLibrarySection("trips") },
-                          QuickAction(AxIcons.Trash, "Cleanup") { openLibrarySection("cleanup") },
                           QuickAction(AxIcons.Lock, "Locked") { openLibrarySection("locked") },
-                          QuickAction(AxIcons.Sparkle, "Memories") { openLibrarySection("memories") },
+                          QuickAction(AxIcons.Folder, "Trips") { openLibrarySection("trips") },
                       ),
                       modifier = Modifier.padding(top = padding.calculateTopPadding() + 8.dp),
                   )
