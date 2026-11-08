@@ -2863,17 +2863,6 @@ private fun GalleryScaffold(
                 }
               ) {
                 CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
-                  if (destination == 0 && fileSearchQuery.isBlank()) QuickActionRow(
-                      actions = listOf(
-                          QuickAction(AxIcons.Trash, "Trash") { openLibrarySection("trash") },
-                          QuickAction(AxIcons.Video, "Videos") { openLibrarySection("videos") },
-                          QuickAction(AxIcons.Folder, "Trips") { openLibrarySection("trips") },
-                          QuickAction(AxIcons.Trash, "Cleanup") { openLibrarySection("cleanup") },
-                          QuickAction(AxIcons.Lock, "Locked") { openLibrarySection("locked") },
-                          QuickAction(AxIcons.Sparkle, "Memories") { openLibrarySection("memories") },
-                      ),
-                      modifier = Modifier.padding(top = padding.calculateTopPadding() + 8.dp),
-                  )
                   // quick shortcuts above the Media grid (Media tab only, not while searching)
                   val quickLibraryIndex = visibleTabs.indexOfFirst { it.destination == 3 }
                   fun openLibrarySection(section: String) {
@@ -2887,6 +2876,17 @@ private fun GalleryScaffold(
                       top = padding.calculateTopPadding() + if (destination == 0 && fileSearchQuery.isBlank()) 92.dp else 0.dp,
                       end = padding.calculateEndPadding(LocalLayoutDirection.current),
                       bottom = padding.calculateBottomPadding(),
+                  )
+                  if (destination == 0 && fileSearchQuery.isBlank()) QuickActionRow(
+                      actions = listOf(
+                          QuickAction(AxIcons.Trash, "Trash") { openLibrarySection("trash") },
+                          QuickAction(AxIcons.Video, "Videos") { openLibrarySection("videos") },
+                          QuickAction(AxIcons.Folder, "Trips") { openLibrarySection("trips") },
+                          QuickAction(AxIcons.Trash, "Cleanup") { openLibrarySection("cleanup") },
+                          QuickAction(AxIcons.Lock, "Locked") { openLibrarySection("locked") },
+                          QuickAction(AxIcons.Sparkle, "Memories") { openLibrarySection("memories") },
+                      ),
+                      modifier = Modifier.padding(top = padding.calculateTopPadding() + 8.dp),
                   )
                   if (displayedPhotos.isNotEmpty()) PhotoGrid(
                     displayedPhotos, if (destination == 0) quickPadding else padding, photoGridState, cellSize = photoCellSize, onCellSizeChange = onCellSizeChange,
