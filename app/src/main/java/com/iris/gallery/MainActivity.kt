@@ -5088,6 +5088,8 @@ private fun PhotoViewer(
     getAlbumDir: (MediaAlbum) -> File = { File("") },
     createAlbumDir: (String) -> File = { File("") },
 ) {
+    // the list can shrink for a frame (delete/restore); nothing to show then
+    if (images.isEmpty()) return
     val context = LocalContext.current
     val activity = remember(context) {
         generateSequence(context) { (it as? ContextWrapper)?.baseContext }
@@ -5171,7 +5173,7 @@ private fun PhotoViewer(
     var viewerAlbumAction by remember { mutableStateOf<AlbumAction?>(null) }
     var showSecureSharingHintDialog by remember { mutableStateOf(false) }
     var showSecureSharingModePicker by remember { mutableStateOf(false) }
-    val current = images[pagerState.currentPage]
+    val current = images[pagerState.currentPage.coerceIn(0, images.lastIndex)]
     androidx.compose.runtime.SideEffect { viewerGlass.blurEnabled = !current.isVideo }
     val doShare: (MediaImage) -> Unit = { media ->
         coroutineScope.launch {
@@ -5689,7 +5691,7 @@ private fun PhotoViewer(
                 scaleY = sc
             }
           ) {
-            val media = images[page]
+            val media = images[page.coerceIn(0, images.lastIndex)]
             if (media.isVideo) {
                 VideoPage(
                     media = media,
