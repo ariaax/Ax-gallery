@@ -244,10 +244,15 @@ fun AxBarButton(
     androidx.compose.foundation.layout.Box(
         modifier = modifier
             .padding(horizontal = if (grouped) 0.dp else 2.dp)
-            .size(36.dp)
+            .size(40.dp)
             .axPressScale(src, 0.86f)
-            // flat dark-grey disc, no rim (clean, like a modern gallery header)
-            .then(if (grouped) Modifier.clip(CircleShape) else Modifier.clip(CircleShape).background(c.copy(alpha = 0.12f), CircleShape))
+            // octagon chip with the same chrome rim as the shortcut row
+            .then(
+                if (grouped) Modifier.clip(CutCornerShape(30))
+                else Modifier.clip(CutCornerShape(30))
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF151B2B).copy(alpha = 0.86f), Color(0xFF05070D).copy(alpha = 0.92f))))
+                    .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color(0xFF4E8DFF).copy(alpha = 0.16f))), CutCornerShape(30))
+            )
             .clickable(
                 interactionSource = src,
                 indication = androidx.compose.foundation.LocalIndication.current,
@@ -287,8 +292,9 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
     // Telegram-style: the title sits in its own soft capsule
     androidx.compose.foundation.layout.Row(
         modifier = Modifier
-            .clip(CircleShape)
-            .background(c.copy(alpha = 0.12f), CircleShape)
+            .clip(CutCornerShape(30))
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF151B2B).copy(alpha = 0.86f), Color(0xFF05070D).copy(alpha = 0.92f))))
+            .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color(0xFF4E8DFF).copy(alpha = 0.16f))), CutCornerShape(30))
             .padding(start = if (badge != null && album != null) 6.dp else 14.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(7.dp),
@@ -341,7 +347,7 @@ fun AxGlassChip(
     }
     val c = MaterialTheme.colorScheme.onSurface
     val tint = MaterialTheme.colorScheme.primary
-    val shape = CutCornerShape(50)
+    val shape = CutCornerShape(30)
     val top = if (selected) tint.copy(alpha = 0.38f) else c.copy(alpha = 0.16f)
     val bottom = if (selected) tint.copy(alpha = 0.16f) else c.copy(alpha = 0.06f)
     val src = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }

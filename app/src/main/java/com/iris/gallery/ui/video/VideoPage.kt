@@ -801,13 +801,13 @@ fun VideoPage(
                 Box(
                     modifier = Modifier
                         .padding(top = 12.dp)
-                        .clip(CutCornerShape(50))
+                        .clip(CutCornerShape(30))
                         .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
                         .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
                         .border(
                             1.2.dp,
                             Brush.linearGradient(listOf(Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.50f))),
-                            CutCornerShape(50),
+                            CutCornerShape(30),
                         )
                         .clickable {
                             runCatching {
@@ -853,14 +853,14 @@ fun VideoPage(
         Column(
             modifier = Modifier.widthIn(max = if (compactLandscape) 500.dp else 460.dp).fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(start = 12.dp, end = 12.dp, top = if (compactLandscape) 4.dp else 128.dp,
+                .padding(start = 15.dp, end = 15.dp, top = if (compactLandscape) 4.dp else 128.dp,
                     bottom = if (compactLandscape) 10.dp else 122.dp)
-                .clip(CutCornerShape(24.dp))
+                .clip(CutCornerShape(14.dp))
                 .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
                 .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
                 .border(1.2.dp, Brush.linearGradient(listOf(
                     Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.50f))),
-                    CutCornerShape(24.dp))
+                    CutCornerShape(14.dp))
                 .padding(horizontal = 10.dp, vertical = 2.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

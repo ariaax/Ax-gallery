@@ -2415,7 +2415,7 @@ private fun GalleryScaffold(
                                 }
                             },
                             singleLine = true,
-                            shape = CutCornerShape(50),
+                            shape = CutCornerShape(30),
                             colors = OutlinedTextFieldDefaults.colors(
                                 unfocusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
                                 focusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
@@ -4280,7 +4280,7 @@ private fun DuplicateReviewScreen(
                                     } }) {
                                     MediaThumbnail(media, Modifier.fillMaxSize())
                                     Surface(Modifier.align(Alignment.TopEnd).padding(6.dp),
-                                        shape = CutCornerShape(50),
+                                        shape = CutCornerShape(30),
                                         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface.copy(alpha = .86f)) {
                                         Icon(if (selected) Icons.Filled.CheckCircle else AxIcons.Close,
                                             if (selected) stringResource(R.string.duplicates_remove) else stringResource(R.string.duplicates_keep), Modifier.padding(5.dp).size(18.dp),
@@ -4771,7 +4771,7 @@ private fun PhotoGrid(
                                 .weight(1f)
                                 .padding(start = 12.dp, end = 4.dp)
                                 .height(2.dp)
-                                .clip(CutCornerShape(50))
+                                .clip(CutCornerShape(30))
                                 .background(
                                     Brush.horizontalGradient(
                                         listOf(Color.White.copy(alpha = 0.70f), Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.06f))
@@ -5808,7 +5808,7 @@ private fun PhotoViewer(
             modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
           ) {
-            IconButton(onClick = { triggerAnimatedDismiss() }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(AxIcons.Back, stringResource(R.string.action_back), tint = Color.White) }
+            IconButton(onClick = { triggerAnimatedDismiss() }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 13.dp)) { Icon(AxIcons.Back, stringResource(R.string.action_back), tint = Color.White) }
             val currentLocale = rememberAppLocale()
             val headerDate = remember(current.dateTaken, currentLocale, timelineDateFormat, smartYearHiding, customTimelineDateFormat, showViewerTime) {
                 val localDate = Instant.ofEpochMilli(current.dateTaken).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -5874,10 +5874,10 @@ private fun PhotoViewer(
                         style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            IconButton(onClick = { showInfo = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(AxIcons.Info, stringResource(R.string.details_title), tint = Color.White) }
+            IconButton(onClick = { showInfo = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 13.dp)) { Icon(AxIcons.Info, stringResource(R.string.details_title), tint = Color.White) }
             if (!isLocked && !isInTrash && current.id > 0) {
                 Box {
-                    IconButton(onClick = { viewerMenuExpanded = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) {
+                    IconButton(onClick = { viewerMenuExpanded = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 13.dp)) {
                         Icon(AxIcons.Flower, stringResource(R.string.action_more), tint = Color.White)
                     }
                     val menuEntries = buildList {
@@ -5919,9 +5919,9 @@ private fun PhotoViewer(
                 Surface(
                     color = Color.Transparent,
                     contentColor = Color.White,
-                    shape = CutCornerShape(24.dp),
+                    shape = CutCornerShape(14.dp),
                     tonalElevation = 0.dp,
-                    modifier = Modifier.widthIn(max = 540.dp).fillMaxWidth().axGlassPanel(viewerGlass, 24.dp),
+                    modifier = Modifier.widthIn(max = 540.dp).fillMaxWidth().axGlassPanel(viewerGlass, 14.dp),
                 ) {
                     Column(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -6268,8 +6268,8 @@ private fun PhotoViewer(
                 }
                 Surface(
                     color = Color.Transparent,
-                    shape = CutCornerShape(16.dp),
-                    modifier = Modifier.height(48.dp).axGlassPanel(viewerGlass, 16.dp),
+                    shape = CutCornerShape(14.dp),
+                    modifier = Modifier.height(48.dp).axGlassPanel(viewerGlass, 14.dp),
                 ) {
                     LazyRow(
                         state = filmstripListState,
@@ -6340,10 +6340,10 @@ private fun PhotoViewer(
             }
 
             if (!isLandscapeViewer) Surface(
-                modifier = Modifier.fillMaxWidth().axGlassPanel(viewerGlass, 32.dp),
+                modifier = Modifier.fillMaxWidth().axGlassPanel(viewerGlass, 14.dp),
                 color = Color.Transparent,
                 contentColor = Color.White,
-                shape = CutCornerShape(32.dp),
+                shape = CutCornerShape(14.dp),
                 tonalElevation = 0.dp,
             ) {
               // reel-style: the whole button row rolls up/down whenever you move to another photo or video

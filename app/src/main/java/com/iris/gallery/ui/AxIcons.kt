@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
+import androidx.compose.ui.graphics.vector.PathNode
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
@@ -30,7 +31,7 @@ object AxIcons {
 
     /** Box with cut (chamfered) corners instead of rounded ones. */
     private fun PathBuilder.box(x: Float, y: Float, w: Float, h: Float, r: Float) {
-        val c = (r * 1.2f).coerceAtMost(minOf(w, h) / 2f)
+        val c = (r * 0.6f).coerceAtMost(minOf(w, h) / 2f)
         moveTo(x + c, y)
         lineTo(x + w - c, y)
         lineTo(x + w, y + c)
@@ -42,18 +43,63 @@ object AxIcons {
         close()
     }
 
-    private fun line(name: String, block: PathBuilder.() -> Unit): ImageVector =
-        ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f).apply {
-            path(
+    /** Turns every curve into straight cuts (long curves get one extra vertex): rounded corners become chamfers. */
+    private fun sharpen(nodes: List<PathNode>): List<PathNode> {
+        val out = ArrayList<PathNode>(nodes.size * 2)
+        var cx = 0f; var cy = 0f; var sx = 0f; var sy = 0f
+        for (n in nodes) when (n) {
+            is PathNode.MoveTo -> { out += n; cx = n.x; cy = n.y; sx = cx; sy = cy }
+            is PathNode.LineTo -> { out += n; cx = n.x; cy = n.y }
+            is PathNode.CurveTo -> {
+                val chord = Math.hypot((n.x3 - cx).toDouble(), (n.y3 - cy).toDouble()).toFloat()
+                if (chord > 5f) {
+                    out += PathNode.LineTo(
+                        0.125f * cx + 0.375f * n.x1 + 0.375f * n.x2 + 0.125f * n.x3,
+                        0.125f * cy + 0.375f * n.y1 + 0.375f * n.y2 + 0.125f * n.y3,
+                    )
+                }
+                out += PathNode.LineTo(n.x3, n.y3); cx = n.x3; cy = n.y3
+            }
+            PathNode.Close -> { out += n; cx = sx; cy = sy }
+            else -> out += n
+        }
+        return out
+    }
+
+    /** Centre of the drawn shape (end points only); null when arcs make that unreliable. */
+    private fun centre(nodes: List<PathNode>): Pair<Float, Float>? {
+        var minX = 1e9f; var minY = 1e9f; var maxX = -1e9f; var maxY = -1e9f
+        fun add(x: Float, y: Float) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y }
+        for (n in nodes) when (n) {
+            is PathNode.MoveTo -> add(n.x, n.y)
+            is PathNode.LineTo -> add(n.x, n.y)
+            is PathNode.ArcTo -> return null
+            else -> {}
+        }
+        if (maxX < minX) return null
+        return Pair((minX + maxX) / 2f, (minY + maxY) / 2f)
+    }
+
+    private fun line(name: String, block: PathBuilder.() -> Unit): ImageVector {
+        val nodes = sharpen(PathBuilder().apply(block).getNodes())
+        // optical centring: every glyph is centred on the 24 grid, so it sits in the middle of its chip
+        val c = centre(nodes)
+        val dx = if (c != null) 12f - c.first else 0f
+        val dy = if (c != null) 12f - c.second else 0f
+        return ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f).apply {
+            addGroup(translationX = dx, translationY = dy)
+            addPath(
+                pathData = nodes,
                 fill = null,
                 stroke = SolidColor(Color.Black),
                 strokeLineWidth = 1.8f,
                 strokeLineCap = StrokeCap.Butt,
                 strokeLineJoin = StrokeJoin.Miter,
                 strokeLineMiter = 6f,
-                pathBuilder = block,
             )
+            clearGroup()
         }.build()
+    }
 
     val Search: ImageVector by lazy {
         line("AxSearch") {

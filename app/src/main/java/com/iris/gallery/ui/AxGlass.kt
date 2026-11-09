@@ -355,7 +355,7 @@ fun AxGlassNavBar(
         glint.snapTo(0f)
         glint.animateTo(1f, tween(750, easing = FastOutSlowInEasing))
     }
-    val shape = CutCornerShape(50)
+    val shape = CutCornerShape(30)
 
     // One highlight pill that GLIDES between tabs. It is driven by a single 0..1 progress and the tabs' live bounds, and
     // everything is read only while drawing, so a tab change costs no recomposition (that was the stutter).
@@ -480,7 +480,7 @@ fun AxGlassNavBar(
                     val itemSource = remember { MutableInteractionSource() }
                     val pressed by itemSource.collectIsPressedAsState()
                     val press by animateFloatAsState(if (pressed) 0.90f else 1f, spring(dampingRatio = 0.5f, stiffness = 520f), label = "dock press")
-                    val itemShape = CutCornerShape(50)
+                    val itemShape = CutCornerShape(30)
                     Row(
                         modifier = Modifier
                             .fillMaxHeight()

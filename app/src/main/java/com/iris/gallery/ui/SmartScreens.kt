@@ -158,7 +158,7 @@ fun CleanupScreen(
                                 selectedIds = if (isSelected) selectedIds - media.id else selectedIds + media.id
                             }) {
                                 MediaThumbnail(media, Modifier.fillMaxSize())
-                                Surface(Modifier.align(Alignment.TopEnd).padding(6.dp), shape = CutCornerShape(50),
+                                Surface(Modifier.align(Alignment.TopEnd).padding(6.dp), shape = CutCornerShape(30),
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface.copy(alpha = .86f)) {
                                     Icon(Icons.Filled.CheckCircle, null, Modifier.padding(5.dp).size(18.dp),
                                         tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)

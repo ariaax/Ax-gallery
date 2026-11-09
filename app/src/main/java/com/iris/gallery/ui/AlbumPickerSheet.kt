@@ -192,7 +192,7 @@ fun AlbumPickerSheet(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Surface(
-                                    shape = CutCornerShape(50),
+                                    shape = CutCornerShape(30),
                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                                     modifier = Modifier.size(54.dp),
                                 ) {

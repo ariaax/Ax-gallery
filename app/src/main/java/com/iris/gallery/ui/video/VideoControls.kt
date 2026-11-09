@@ -307,7 +307,7 @@ internal fun BoxScope.SeekFeedbackOverlay(feedback: SeekFeedbackState?) {
             sweep.snapTo(0f)
             sweep.animateTo(1f, tween(340, easing = LinearEasing))
         }
-        val shape = CutCornerShape(50)
+        val shape = CutCornerShape(30)
         Row(
             modifier = Modifier
                 .graphicsLayer {
@@ -370,7 +370,7 @@ internal fun LevelHud(
         exit = fadeOut(tween(150)),
     ) {
         val p = progress().coerceIn(0f, 1f)
-        val shape = CutCornerShape(50)
+        val shape = CutCornerShape(30)
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 text = "${(p * 100f).roundToInt()}%",
