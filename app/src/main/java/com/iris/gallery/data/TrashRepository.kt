@@ -84,8 +84,8 @@ class TrashRepository(private val context: Context) {
         }
     }
 
-    fun autoPurgeOldItems(): Int {
-        val items = readIndex().toMutableList()
+    fun autoPurgeOldItems(): Int = synchronized(indexLock) {
+        val items = runCatching { readIndex().toMutableList() }.getOrNull() ?: return@synchronized 0
         val now = System.currentTimeMillis()
         var purgedCount = 0
         val iterator = items.iterator()
@@ -101,12 +101,12 @@ class TrashRepository(private val context: Context) {
         if (purgedCount > 0) {
             writeIndex(items)
         }
-        return purgedCount
+        purgedCount
     }
 
-    fun loadTrashItems(): List<MediaImage> {
+    fun loadTrashItems(): List<MediaImage> = synchronized(indexLock) {
         autoPurgeOldItems()
-        val items = readIndex()
+        val items = runCatching { readIndex() }.getOrNull() ?: return@synchronized _trashedMedia.value
         // newest trashed first (the index is stored oldest-first)
         val mediaList = items.sortedByDescending { it.dateTrashed }.mapNotNull { item ->
             val file = File(trashDir, item.trashFileName)
@@ -137,7 +137,7 @@ class TrashRepository(private val context: Context) {
             }
         }
         _trashedMedia.value = mediaList
-        return mediaList
+        mediaList
     }
 
     fun deleteFromStorage(item: MediaImage): Boolean {
@@ -203,7 +203,7 @@ class TrashRepository(private val context: Context) {
         return deleted
     }
 
-    suspend fun moveToTrash(mediaList: List<MediaImage>): TrashMoveResult = withContext(Dispatchers.IO) {
+    suspend fun moveToTrash(mediaList: List<MediaImage>): TrashMoveResult = withContext(Dispatchers.IO) { synchronized(indexLock) {
         val currentItems = readIndex().toMutableList()
         val trashedList = mutableListOf<MediaImage>()
         val originalList = mutableListOf<MediaImage>()
@@ -305,9 +305,9 @@ class TrashRepository(private val context: Context) {
         writeIndex(currentItems)
         loadTrashItems()
         TrashMoveResult(trashedMedia = trashedList, originalMedia = originalList, silentSuccess = silentSuccess)
-    }
+    } }
 
-    suspend fun rollbackTrash(trashedItems: List<MediaImage>) = withContext(Dispatchers.IO) {
+    suspend fun rollbackTrash(trashedItems: List<MediaImage>) = withContext(Dispatchers.IO) { synchronized(indexLock) {
         val currentItems = readIndex().toMutableList()
         val idsToRemove = trashedItems.map { abs(it.id) }.toSet()
 
@@ -322,9 +322,9 @@ class TrashRepository(private val context: Context) {
         }
         writeIndex(currentItems)
         loadTrashItems()
-    }
+    } }
 
-    suspend fun restoreFromTrash(mediaList: List<MediaImage>): List<MediaImage> = withContext(Dispatchers.IO) {
+    suspend fun restoreFromTrash(mediaList: List<MediaImage>): List<MediaImage> = withContext(Dispatchers.IO) { synchronized(indexLock) {
         val currentItems = readIndex().toMutableList()
         val restoredList = mutableListOf<MediaImage>()
         val idsToRemove = mediaList.map { abs(it.id) }.toSet()
@@ -369,9 +369,9 @@ class TrashRepository(private val context: Context) {
         writeIndex(currentItems)
         loadTrashItems()
         restoredList
-    }
+    } }
 
-    suspend fun deletePermanently(mediaList: List<MediaImage>) = withContext(Dispatchers.IO) {
+    suspend fun deletePermanently(mediaList: List<MediaImage>) = withContext(Dispatchers.IO) { synchronized(indexLock) {
         val currentItems = readIndex().toMutableList()
         val idsToRemove = mediaList.map { abs(it.id) }.toSet()
         val pathsToRemove = mediaList.map { it.path }.toSet()
@@ -394,9 +394,9 @@ class TrashRepository(private val context: Context) {
         }
 
         loadTrashItems()
-    }
+    } }
 
-    suspend fun emptyTrash() = withContext(Dispatchers.IO) {
+    suspend fun emptyTrash() = withContext(Dispatchers.IO) { synchronized(indexLock) {
         trashDir.listFiles()?.forEach { file ->
             if (file.name != ".nomedia") {
                 runCatching { file.delete() }
@@ -404,7 +404,7 @@ class TrashRepository(private val context: Context) {
         }
         writeIndex(emptyList())
         loadTrashItems()
-    }
+    } }
 
     private fun restoreFileToStorage(item: TrashItem, trashFile: File): Boolean {
         return try {
@@ -543,6 +543,8 @@ class TrashRepository(private val context: Context) {
         return name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
     }
 
+    private val indexLock = Any()
+
     private fun readIndex(): List<TrashItem> {
         val file = indexFile.baseFile
         if (!file.exists()) return emptyList()
@@ -578,7 +580,8 @@ class TrashRepository(private val context: Context) {
             }
             list
         } catch (e: Exception) {
-            emptyList()
+            // Never pretend the index is empty: the caller would write that back and wipe the trash.
+            throw IllegalStateException("trash index unreadable", e)
         }
     }
 

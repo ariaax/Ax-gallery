@@ -78,8 +78,8 @@ class VaultRepository(private val context: Context) {
         }
     }
 
-    fun loadVaultItems(): List<MediaImage> {
-        val items = readIndex()
+    fun loadVaultItems(): List<MediaImage> = synchronized(indexLock) {
+        val items = runCatching { readIndex() }.getOrNull() ?: return@synchronized emptyList<MediaImage>()
         val mediaList = items.mapNotNull { item ->
             val file = File(vaultDir, item.vaultFileName)
             if (file.exists()) {
@@ -110,7 +110,7 @@ class VaultRepository(private val context: Context) {
         return mediaList
     }
 
-    suspend fun moveToVault(mediaList: List<MediaImage>): VaultMoveResult = withContext(Dispatchers.IO) {
+    suspend fun moveToVault(mediaList: List<MediaImage>): VaultMoveResult = withContext(Dispatchers.IO) { synchronized(indexLock) {
         val currentItems = readIndex().toMutableList()
         val vaultedList = mutableListOf<MediaImage>()
         val originalList = mutableListOf<MediaImage>()
@@ -238,9 +238,9 @@ class VaultRepository(private val context: Context) {
         writeIndex(currentItems)
         loadVaultItems()
         VaultMoveResult(vaultedMedia = vaultedList, originalMedia = originalList, silentSuccess = silentSuccess)
-    }
+    } }
 
-    suspend fun rollbackVault(vaultedItems: List<MediaImage>) = withContext(Dispatchers.IO) {
+    suspend fun rollbackVault(vaultedItems: List<MediaImage>) = withContext(Dispatchers.IO) { synchronized(indexLock) {
         val currentItems = readIndex().toMutableList()
         val idsToRemove = vaultedItems.map { abs(it.id) }.toSet()
 
@@ -255,9 +255,9 @@ class VaultRepository(private val context: Context) {
         }
         writeIndex(currentItems)
         loadVaultItems()
-    }
+    } }
 
-    suspend fun restoreFromVault(mediaList: List<MediaImage>): List<MediaImage> = withContext(Dispatchers.IO) {
+    suspend fun restoreFromVault(mediaList: List<MediaImage>): List<MediaImage> = withContext(Dispatchers.IO) { synchronized(indexLock) {
         val currentItems = readIndex().toMutableList()
         val restoredList = mutableListOf<MediaImage>()
         val idsToRemove = mediaList.map { abs(it.id) }.toSet()
@@ -300,9 +300,9 @@ class VaultRepository(private val context: Context) {
         writeIndex(currentItems)
         loadVaultItems()
         restoredList
-    }
+    } }
 
-    suspend fun deletePermanently(mediaList: List<MediaImage>) = withContext(Dispatchers.IO) {
+    suspend fun deletePermanently(mediaList: List<MediaImage>) = withContext(Dispatchers.IO) { synchronized(indexLock) {
         val currentItems = readIndex().toMutableList()
         val idsToRemove = mediaList.map { abs(it.id) }.toSet()
 
@@ -317,7 +317,7 @@ class VaultRepository(private val context: Context) {
         }
         writeIndex(currentItems)
         loadVaultItems()
-    }
+    } }
 
     private fun restoreFileToStorage(item: VaultItem, vaultFile: File): Boolean {
         return try {
@@ -447,6 +447,8 @@ class VaultRepository(private val context: Context) {
         return name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
     }
 
+    private val indexLock = Any()
+
     private fun readIndex(): List<VaultItem> {
         val file = indexFile.baseFile
         if (!file.exists()) return emptyList()
@@ -480,7 +482,8 @@ class VaultRepository(private val context: Context) {
             }
             list
         } catch (e: Exception) {
-            emptyList()
+            // an unreadable index must not look empty: callers would write it back and lose the vault
+            throw IllegalStateException("vault index unreadable", e)
         }
     }
 
