@@ -463,6 +463,19 @@ class MediaRepository(private val context: Context) {
                         val itemOrientation = cursor.getInt(orientation)
                         val itemTitle = libraryPreferences.getCustomTitle(mediaId) ?: cursor.getString(title).orEmpty()
 
+                        // Ghost rows (file already gone, MediaStore row not cleaned yet) must be dropped BEFORE the
+                        // cache shortcut below, otherwise a cached ghost is shown again on every reload.
+                        if (!trashed && filePath.startsWith("/storage/emulated/")) {
+                            val seenAt = verifiedPathsCache[filePath]
+                            if (seenAt == null || now - seenAt > 300_000L) {
+                                if (!File(filePath).exists()) {
+                                    inMemoryCache.remove(mediaId)
+                                    continue
+                                }
+                                verifiedPathsCache[filePath] = now
+                            }
+                        }
+
                         val existing = inMemoryCache[mediaId]
                         if (!trashed && existing != null &&
                             existing.name == displayName &&

@@ -115,13 +115,13 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
         val restoredIds = result.map { it.id }.toSet()
         val restoredPaths = result.map { it.path }.filter { it.isNotBlank() }.toSet()
         repository.clearRecentMovedOrDeleted(restoredIds, restoredPaths)
-        refresh()
+        refresh(forceClearCache = true)
         return result
     }
 
     suspend fun deletePermanently(mediaList: List<MediaImage>) {
         trashRepository.deletePermanently(mediaList)
-        refresh()
+        refresh(forceClearCache = true)
     }
 
     suspend fun emptyTrash() {
