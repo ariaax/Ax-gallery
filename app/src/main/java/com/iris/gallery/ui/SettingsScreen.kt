@@ -370,12 +370,12 @@ fun SettingsScreen(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .clip(CircleShape)
+                                    .clip(CutCornerShape(30))
                                     .background(brush)
                                     .clickable { preferences.setAccentColor(accent) }
                                     .then(
-                                        if (isSelected) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                                        else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), CircleShape)
+                                        if (isSelected) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CutCornerShape(30))
+                                        else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), CutCornerShape(30))
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
