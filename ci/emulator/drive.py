@@ -638,6 +638,87 @@ def s15_viewer_menu():
     shot("15_bars_toggled")
 
 
+
+def tap_text(pattern, tag, min_y=0.0, max_y=1.0, exact=False):
+    """Tap the first UI node whose text/description matches. Returns True when found."""
+    nodes = dump(tag)
+    rx = rf"^{pattern}$" if exact else pattern
+    hit = [n for n in find(nodes, rx) if H * min_y <= n["cy"] <= H * max_y]
+    if not hit:
+        return False
+    touch.tap(hit[0]["cx"], hit[0]["cy"])
+    return True
+
+
+def s20_tour():
+    """Walk through every screen and take a picture of each, so look-and-feel problems show up in one run."""
+    launch()
+    tab_tap("Media", 0.20)
+    time.sleep(1.5)
+    shot("20_media")
+    # settings
+    if tap_text("Settings", "20_find_settings", max_y=0.2):
+        time.sleep(1.5)
+        shot("20_settings_0")
+        for i in range(1, 9):
+            touch.swipe(W * 0.5, H * 0.78, W * 0.5, H * 0.25, ms=350)
+            time.sleep(0.7)
+            shot(f"20_settings_{i}")
+        sh("input keyevent KEYCODE_BACK")
+        time.sleep(1.0)
+    # selection mode
+    touch.long_press(W * 0.18, H * 0.40) if hasattr(touch, "long_press") else touch.swipe(W * 0.18, H * 0.40, W * 0.18, H * 0.40, ms=900)
+    time.sleep(1.2)
+    shot("20_selection")
+    sh("input keyevent KEYCODE_BACK")
+    time.sleep(0.8)
+    # search
+    if tap_text("Search", "20_find_search", max_y=0.2):
+        time.sleep(1.0)
+        sh("input text 1")
+        time.sleep(1.2)
+        shot("20_search")
+        sh("input keyevent KEYCODE_BACK")
+        sh("input keyevent KEYCODE_BACK")
+        time.sleep(0.8)
+    # top-bar menu
+    if tap_text("More", "20_find_more", max_y=0.2):
+        time.sleep(1.0)
+        shot("20_topmenu")
+        sh("input keyevent KEYCODE_BACK")
+        time.sleep(0.8)
+    # albums and favourites
+    for label, fx in (("Albums", 0.40), ("Favorites", 0.62)):
+        tab_tap(label, fx)
+        time.sleep(1.5)
+        shot(f"20_tab_{label}")
+    tab_tap("Albums", 0.40)
+    time.sleep(1.0)
+    touch.tap(W * 0.5, H * 0.42)
+    time.sleep(1.5)
+    shot("20_album_open")
+    sh("input keyevent KEYCODE_BACK")
+    time.sleep(0.8)
+    # library sections
+    for sec in ("Videos", "Memories", "Duplicates", "Locked", "Trips", "Cleanup", "Trash", "Editor", "Smart groups",
+                "Media formats", "Folders", "Excluded", "Rescan"):
+        tab_tap("Library", 0.88)
+        time.sleep(1.2)
+        found = tap_text(sec, f"20_find_{sec}", min_y=0.12, max_y=0.9)
+        if not found:
+            touch.swipe(W * 0.5, H * 0.75, W * 0.5, H * 0.25, ms=350)
+            time.sleep(0.6)
+            found = tap_text(sec, f"20_find2_{sec}", min_y=0.12, max_y=0.9)
+        time.sleep(1.8)
+        shot("20_lib_" + sec.replace(" ", "_") + ("" if found else "_NOTFOUND"))
+        sh("input keyevent KEYCODE_BACK")
+        time.sleep(0.8)
+    # rotation sanity on the library
+    tab_tap("Library", 0.88)
+    time.sleep(1.0)
+    shot("20_library_end")
+
+
 def s09_monkey():
     launch()
     gfx_reset()
@@ -670,7 +751,7 @@ def main():
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     allfns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s09_monkey)
+              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s09_monkey)
     # the fresh emulator often shows a launcher ANR dialog; restart the launcher before the first scenario
     sh("am force-stop com.google.android.apps.nexuslauncher; am force-stop com.google.android.apps.nexuslauncher")
     time.sleep(12)
