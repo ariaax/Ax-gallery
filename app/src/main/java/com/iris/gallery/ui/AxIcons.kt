@@ -5,10 +5,21 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.PathNode
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
+
+/** Minimal path recorder with the same calls as Compose's PathBuilder, so the icon code can post-process the nodes. */
+class Pen {
+    val nodes = ArrayList<PathNode>()
+    fun moveTo(x: Float, y: Float) { nodes += PathNode.MoveTo(x, y) }
+    fun lineTo(x: Float, y: Float) { nodes += PathNode.LineTo(x, y) }
+    fun curveTo(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) { nodes += PathNode.CurveTo(x1, y1, x2, y2, x3, y3) }
+    fun arcTo(rx: Float, ry: Float, theta: Float, isMoreThanHalf: Boolean, isPositiveArc: Boolean, x: Float, y: Float) {
+        nodes += PathNode.ArcTo(rx, ry, theta, isMoreThanHalf, isPositiveArc, x, y)
+    }
+    fun close() { nodes += PathNode.Close }
+}
 
 /**
  * Ax Gallery's own icon set: sharp (1.8) mitred outlines on a 24 grid with cut corners and octagon
@@ -16,7 +27,7 @@ import androidx.compose.ui.unit.dp
  */
 object AxIcons {
     /** Octagon instead of a circle: the set is angular on purpose (sharp, cut-corner look). */
-    private fun PathBuilder.circle(cx: Float, cy: Float, r: Float) {
+    private fun Pen.circle(cx: Float, cy: Float, r: Float) {
         val k = 0.4142f * r   // tan(22.5 deg) * r : a regular octagon with flat sides facing up/down/left/right
         moveTo(cx - k, cy - r)
         lineTo(cx + k, cy - r)
@@ -30,7 +41,7 @@ object AxIcons {
     }
 
     /** Box with cut (chamfered) corners instead of rounded ones. */
-    private fun PathBuilder.box(x: Float, y: Float, w: Float, h: Float, r: Float) {
+    private fun Pen.box(x: Float, y: Float, w: Float, h: Float, r: Float) {
         val c = (r * 0.6f).coerceAtMost(minOf(w, h) / 2f)
         moveTo(x + c, y)
         lineTo(x + w - c, y)
@@ -80,8 +91,8 @@ object AxIcons {
         return Pair((minX + maxX) / 2f, (minY + maxY) / 2f)
     }
 
-    private fun line(name: String, block: PathBuilder.() -> Unit): ImageVector {
-        val nodes = sharpen(PathBuilder().apply(block).getNodes())
+    private fun line(name: String, block: Pen.() -> Unit): ImageVector {
+        val nodes = sharpen(Pen().apply(block).nodes)
         // optical centring: every glyph is centred on the 24 grid, so it sits in the middle of its chip
         val c = centre(nodes)
         val dx = if (c != null) 12f - c.first else 0f
@@ -328,7 +339,7 @@ object AxIcons {
         }
     }
 
-    private fun PathBuilder.speaker() {
+    private fun Pen.speaker() {
         moveTo(3.8f, 9.6f); lineTo(7.4f, 9.6f); lineTo(11.8f, 5.8f); lineTo(11.8f, 18.2f)
         lineTo(7.4f, 14.4f); lineTo(3.8f, 14.4f); close()
     }
@@ -349,7 +360,7 @@ object AxIcons {
         }
     }
 
-    private fun PathBuilder.loopArrows() {
+    private fun Pen.loopArrows() {
         moveTo(17f, 3.6f); lineTo(20f, 6.6f); lineTo(17f, 9.6f)
         moveTo(4f, 11.4f); lineTo(4f, 10.6f)
         curveTo(4f, 8.4f, 5.8f, 6.6f, 8f, 6.6f); lineTo(20f, 6.6f)
@@ -437,7 +448,7 @@ object AxIcons {
         }
     }
 
-    private fun PathBuilder.folderBody() {
+    private fun Pen.folderBody() {
         moveTo(3.5f, 7.5f)
         curveTo(3.5f, 6.1f, 4.6f, 5f, 6f, 5f); lineTo(9.6f, 5f); lineTo(11.6f, 7.3f); lineTo(18f, 7.3f)
         curveTo(19.4f, 7.3f, 20.5f, 8.4f, 20.5f, 9.8f); lineTo(20.5f, 17f)
@@ -518,7 +529,7 @@ object AxIcons {
         }
     }
 
-    private fun PathBuilder.dropPin() {
+    private fun Pen.dropPin() {
         moveTo(12f, 20.5f)
         curveTo(12f, 20.5f, 5.5f, 14.6f, 5.5f, 10f); curveTo(5.5f, 6.4f, 8.4f, 3.6f, 12f, 3.6f)
         curveTo(15.6f, 3.6f, 18.5f, 6.4f, 18.5f, 10f); curveTo(18.5f, 14.6f, 12f, 20.5f, 12f, 20.5f); close()
