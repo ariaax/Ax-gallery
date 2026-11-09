@@ -108,12 +108,10 @@ fun IrisTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
-    val isSystemDark = isSystemInDarkTheme()
-    val isDark = when (themeMode) {
-        ThemeMode.SYSTEM -> isSystemDark
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-    }
+    // The app is always black (see the design: sharp chrome on black), whatever the system or old settings say.
+    @Suppress("UNUSED_VARIABLE", "NAME_SHADOWING") val themeMode = ThemeMode.DARK
+    @Suppress("NAME_SHADOWING") val amoledBlack = true
+    val isDark = true
 
     val colors = if (accentColor == AccentColor.MONOCHROME) {
         if (isDark) createMonochromeDarkPalette(amoledBlack) else createMonochromeLightPalette()

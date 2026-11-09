@@ -461,13 +461,9 @@ class MainActivity : ComponentActivity() {
         }
         val settingsPreferences = SettingsPreferences.get(this)
         val initialSettings = settingsPreferences.state.value
-        val isDark = when (initialSettings.themeMode) {
-            com.iris.gallery.data.ThemeMode.LIGHT -> false
-            com.iris.gallery.data.ThemeMode.DARK -> true
-            com.iris.gallery.data.ThemeMode.SYSTEM -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-        }
+        val isDark = true
         val bgColor = when {
-            isDark && initialSettings.amoledBlack -> android.graphics.Color.BLACK
+            isDark -> android.graphics.Color.BLACK
             isDark -> 0xFF141218.toInt()
             else -> 0xFFFFF8FF.toInt()
         }
@@ -2352,12 +2348,8 @@ private fun GalleryScaffold(
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val isWideScreen = configuration.screenWidthDp >= 600
-    val isDarkTheme = when (settings.themeMode) {
-        com.iris.gallery.data.ThemeMode.LIGHT -> false
-        com.iris.gallery.data.ThemeMode.DARK -> true
-        com.iris.gallery.data.ThemeMode.SYSTEM -> isSystemInDarkTheme()
-    }
-    val isAmoled = isDarkTheme && settings.amoledBlack
+    val isDarkTheme = true
+    val isAmoled = true
 
     val handleTabSelected: (Int) -> Unit = { index ->
         tabScope.launch {
