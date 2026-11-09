@@ -338,42 +338,6 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text(stringResource(R.string.settings_theme_mode), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ThemeMode.values().forEach { mode ->
-                            FilterChip(
-                                modifier = Modifier.weight(1f),
-                                selected = settings.themeMode == mode,
-                                onClick = { preferences.setThemeMode(mode) },
-                                label = {
-                                    Text(
-                                        when (mode) {
-                                            ThemeMode.SYSTEM -> stringResource(R.string.settings_theme_system)
-                                            ThemeMode.LIGHT -> stringResource(R.string.settings_theme_light)
-                                            ThemeMode.DARK -> stringResource(R.string.settings_theme_dark)
-                                        },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            )
-                        }
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-                    SettingsSwitchRow(
-                        title = stringResource(R.string.settings_amoled_black_title),
-                        subtitle = stringResource(R.string.settings_amoled_black_desc),
-                        checked = settings.amoledBlack,
-                        onCheckedChange = { preferences.setAmoledBlack(it) }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
                     // Material You dynamic color selector
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         SettingsSwitchRow(
