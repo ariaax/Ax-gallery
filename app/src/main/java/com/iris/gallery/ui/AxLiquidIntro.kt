@@ -165,13 +165,13 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
         }
         bodyPath.close()
 
-        // body: near-black with a cold steel-blue lift at the bottom (the same black as the launcher icon)
+        // body: cold steel-blue light at the top fading to near-black at the bottom (no dead-black strip under the status bar)
         drawPath(
             bodyPath,
             Brush.verticalGradient(
-                0f to Color(0xFF030408),
-                0.55f to Color(0xFF060A14),
-                1f to Color(0xFF0B1A3A),
+                0f to Color(0xFF12254B),
+                0.45f to Color(0xFF09112A),
+                1f to Color(0xFF05070F),
                 startY = 0f,
                 endY = h,
             ),
