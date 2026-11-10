@@ -4431,7 +4431,8 @@ private fun PhotoGrid(
     }
 
     val spacingPx = remember(gridSpacing, density) { with(density) { (gridSpacing.dp).dp.roundToPx() } }
-    val topPaddingPx = remember(gridSpacing, density) { with(density) { (gridSpacing.dp + 3).dp.roundToPx() } }
+    // the grid now runs under the (glass) top bars; its first row starts below them via contentPadding
+    val topPaddingPx = remember(gridSpacing, density, topPadding) { with(density) { ((gridSpacing.dp + 3).dp + topPadding).roundToPx() } }
     val bottomPaddingPx = remember(gridSpacing, bottomPadding, density) { with(density) { ((gridSpacing.dp + 3).dp + bottomPadding).roundToPx() } }
 
     val estimatedPhotoHeight = remember(actualColumns, screenWidthDp, cellSize, gridSpacing, density, startPadding, endPadding) {
@@ -4605,7 +4606,7 @@ private fun PhotoGrid(
     Box(
         Modifier
             .fillMaxSize()
-            .padding(start = startPadding, top = topPadding, end = endPadding, bottom = 0.dp)
+            .padding(start = startPadding, top = 0.dp, end = endPadding, bottom = 0.dp)
             .pointerInput(Unit) {
                 if (currentOnCellSizeChange == null) return@pointerInput
                 awaitEachGesture {
@@ -4742,7 +4743,7 @@ private fun PhotoGrid(
             },
             contentPadding = PaddingValues(
                 start = gridSpacing.dp.dp,
-                top = (gridSpacing.dp + 3).dp,
+                top = (gridSpacing.dp + 3).dp + topPadding,
                 end = gridSpacing.dp.dp,
                 bottom = (gridSpacing.dp + 3).dp + bottomPadding
             ),
