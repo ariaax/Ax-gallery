@@ -256,6 +256,8 @@ def record(name, ok, detail=""):
 def scenario(fn):
     name = fn.__name__
     log("=== scenario", name)
+    if "PermissionActivity" in focus():
+        confirm_system_delete()
     if not foreground_ok():
         log("WARN app not in foreground before", name, "->", focus())
         results.append(("WARN", f"{name}: app was not in the foreground at the start", focus()))
@@ -572,6 +574,21 @@ def s08_rotation():
     sh("settings put system accelerometer_rotation 1")
 
 
+def confirm_system_delete():
+    """Android asks 'Allow Ax Gallery to delete this photo?' in a system dialog (PermissionActivity). Press Allow."""
+    for _ in range(4):
+        time.sleep(1.5)
+        if "PermissionActivity" not in focus():
+            return True
+        nodes = dump("system_delete_dialog")
+        b = find(nodes, r"^(allow|ok|delete|move to trash|yes)$")
+        if b:
+            touch_input_tap(b[-1]["cx"], b[-1]["cy"])
+        else:
+            sh("input keyevent KEYCODE_ENTER")
+    return "PermissionActivity" not in focus()
+
+
 def s10_favorite_and_delete():
     """Viewer actions that change data: favourite toggle, then delete. Reports what really happened to the file."""
     launch()
@@ -590,7 +607,8 @@ def s10_favorite_and_delete():
     log("delete dialog buttons:", [(n["text"] or n["desc"]) for n in btn])
     if btn:
         touch_input_tap(btn[-1]["cx"], btn[-1]["cy"])
-        time.sleep(2.5)
+        time.sleep(1.0)
+        record("delete: system confirmation closed", confirm_system_delete(), "")
     shot("10_after_delete")
     dismiss_system_dialogs()
     after = sh("content query --uri content://media/external/images/media --projection _id:_display_name --where \"_display_name='IMG_001.jpg'\"")
@@ -748,7 +766,8 @@ def s21_fold_and_trash():
     btn = find(nodes, r"^(delete|move to trash|trash|remove|ok|allow|yes)$")
     if btn:
         touch_input_tap(btn[-1]["cx"], btn[-1]["cy"])
-        time.sleep(2.5)
+        time.sleep(1.0)
+        record("delete: system confirmation closed", confirm_system_delete(), "")
     shot("21_after_delete")
     sh("input keyevent KEYCODE_BACK")
     time.sleep(0.8)
