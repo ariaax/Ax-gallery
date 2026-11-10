@@ -271,7 +271,8 @@ def scenario(fn):
         results.append(("WARN", f"{name}: app left the foreground during the scenario", focus()))
         shot(name + "_left_foreground")
     hits = crash_lines()
-    if hits or not alive():
+    # monkey presses Back at the root now and then, which closes the app normally: only a real crash report counts there
+    if hits or (not alive() and not name.startswith("s09")):
         record(name + " -> app alive", False, "; ".join(hits) or "process is gone")
         save_log(name + "_crash")
         shot(name + "_after_crash")
