@@ -721,7 +721,7 @@ def s20_tour():
     # library sections
     for sec in ("Videos", "Memories", "Duplicates", "Locked", "Trips", "Cleanup", "Trash", "Editor", "Smart groups",
                 "Media formats", "Folders", "Excluded", "Rescan"):
-        tab_tap("Library", 0.88)
+        tab_tap("Library", 0.78)
         time.sleep(1.2)
         found = tap_text(sec, f"20_find_{sec}", min_y=0.12, max_y=0.9)
         if not found:
@@ -733,7 +733,7 @@ def s20_tour():
         sh("input keyevent KEYCODE_BACK")
         time.sleep(0.8)
     # rotation sanity on the library
-    tab_tap("Library", 0.88)
+    tab_tap("Library", 0.78)
     time.sleep(1.0)
     shot("20_library_end")
 
@@ -770,8 +770,12 @@ def s21_fold_and_trash():
         time.sleep(1.0)
         record("delete: system confirmation closed", confirm_system_delete(), "")
     shot("21_after_delete")
-    sh("input keyevent KEYCODE_BACK")
-    time.sleep(0.8)
+    # make sure we are back on the Media tab (a viewer or a dialog may still be on top)
+    for _ in range(3):
+        sh("input keyevent KEYCODE_BACK")
+        time.sleep(0.8)
+        if "com.ax.gallery" in focus():
+            break
     tab_tap("Media", 0.20)
     time.sleep(1.0)
     if tap_text("Trash", "21_find_trash", min_y=0.12, max_y=0.5):

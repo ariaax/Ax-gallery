@@ -391,7 +391,7 @@ class SettingsPreferences(context: Context) {
             videoGestureControls = prefs.getBoolean("video_gesture_controls", true),
             showViewerUserComments = prefs.getBoolean("show_viewer_user_comments", true),
             viewerHeaderStyle = runCatching { ViewerHeaderStyle.valueOf(prefs.getString("viewer_header_style", null).orEmpty()) }.getOrDefault(ViewerHeaderStyle.DATE),
-            showViewerPageCount = prefs.getBoolean("show_viewer_page_count", true),
+            showViewerPageCount = prefs.getBoolean("show_viewer_page_count", false),
             showViewerTime = prefs.getBoolean("show_viewer_time", true),
             showFilmstrip = prefs.getBoolean("show_filmstrip", true),
             dismissedFilmstripTip = prefs.getBoolean("dismissed_filmstrip_tip", false),
