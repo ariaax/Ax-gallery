@@ -719,6 +719,52 @@ def s20_tour():
     shot("20_library_end")
 
 
+def s21_fold_and_trash():
+    """Icon row folds away on scroll (photos must move up), comes back at the top; then trash -> restore -> delete forever."""
+    launch()
+    tab_tap("Media", 0.20)
+    time.sleep(1.5)
+    shot("21_top")
+    for i in range(3):
+        touch.swipe(W * 0.5, H * 0.75, W * 0.5, H * 0.35, ms=300)
+        time.sleep(0.5)
+    time.sleep(0.6)
+    shot("21_folded")
+    gap = sh("echo ok")
+    for i in range(4):
+        touch.swipe(W * 0.5, H * 0.3, W * 0.5, H * 0.8, ms=250)
+        time.sleep(0.4)
+    time.sleep(1.2)
+    shot("21_back_top")
+    # trash flow through the Library
+    tab_tap("Media", 0.20)
+    time.sleep(1.0)
+    touch.tap(W * 0.17, H * 0.36)
+    time.sleep(2.0)
+    shot("21_viewer")
+    touch.tap(W * 0.84, H * 0.94)
+    time.sleep(1.5)
+    nodes = dump("21_delete_dialog")
+    btn = find(nodes, r"^(delete|move to trash|trash|remove|ok|allow|yes)$")
+    if btn:
+        touch_input_tap(btn[-1]["cx"], btn[-1]["cy"])
+        time.sleep(2.5)
+    shot("21_after_delete")
+    sh("input keyevent KEYCODE_BACK")
+    time.sleep(0.8)
+    tab_tap("Media", 0.20)
+    time.sleep(1.0)
+    if tap_text("Trash", "21_find_trash", min_y=0.12, max_y=0.5):
+        time.sleep(1.8)
+        shot("21_trash")
+        touch.tap(W * 0.17, H * 0.22)
+        time.sleep(1.5)
+        shot("21_trash_item")
+        sh("input keyevent KEYCODE_BACK")
+        time.sleep(0.8)
+    record("fold/trash: info only (see shots 21_*); crash check runs after the scenario", True, "")
+
+
 def s09_monkey():
     launch()
     gfx_reset()
@@ -751,7 +797,7 @@ def main():
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     allfns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s09_monkey)
+              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s09_monkey)
     # the fresh emulator often shows a launcher ANR dialog; restart the launcher before the first scenario
     sh("am force-stop com.google.android.apps.nexuslauncher; am force-stop com.google.android.apps.nexuslauncher")
     time.sleep(12)

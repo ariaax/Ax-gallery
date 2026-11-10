@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:
-      SCENARIOS: ${{ github.event_name == 'push' && 's20' || '' }}
+      SCENARIOS: ${{ github.event_name == 'push' && 's20,s21' || '' }}
     steps:
       - uses: actions/checkout@v4
 
