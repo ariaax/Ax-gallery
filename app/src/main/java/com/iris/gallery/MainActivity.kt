@@ -5413,7 +5413,8 @@ private fun PhotoViewer(
     val dismissOffsetY = remember { Animatable(0f) }
     // Hero open: grows out of the thumbnail that was tapped (when we know where it is);
     // otherwise a soft fade + scale. No bounce either way.
-    val heroStartRect = remember<androidx.compose.ui.geometry.Rect?> { null } // hero animation disabled: plain quick fade
+    // the photo grows out of the tapped thumbnail (rect captured when the viewer is first composed)
+    val heroStartRect = remember(initialPage) { AxHero.rectFor(images.getOrNull(initialPage)?.id) }
     var heroRect by remember { mutableStateOf(heroStartRect) }
     val heroP = remember { Animatable(if (heroStartRect != null) 0f else 1f) }
     val openAnim = remember { Animatable(if (heroStartRect != null) 1f else 0f) }
