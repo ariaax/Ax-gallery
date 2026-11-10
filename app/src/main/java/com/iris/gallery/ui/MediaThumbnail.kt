@@ -147,7 +147,66 @@ fun getThumbnailTargetSizePx(cellSizeDp: Float, density: Float = 2.5f): Int {
     }
 }
 
+/**
+ * Persistent thumbnail cache on disk (the part a cold start was missing: the memory cache is empty after every
+ * app start, so every tile had to be decoded from the full-size file again). Small WebP files, keyed by
+ * id + size + modification stamp, so an edited photo gets a fresh thumbnail. Trimmed to ~256 MB, oldest first.
+ */
+private object ThumbDiskCache {
+    private const val MAX_BYTES = 256L * 1024 * 1024
+    @Volatile private var dir: java.io.File? = null
+    private val writes = java.util.concurrent.atomic.AtomicInteger()
+
+    private fun dir(context: Context): java.io.File =
+        dir ?: java.io.File(context.cacheDir, "ax_thumbs").also { it.mkdirs(); dir = it }
+
+    private fun file(context: Context, image: MediaImage, size: Int) =
+        java.io.File(dir(context), "${image.id}_${size}_${image.dateModified}_${image.sizeBytes}.w")
+
+    fun read(context: Context, image: MediaImage, size: Int): Bitmap? = runCatching {
+        val f = file(context, image, size)
+        if (!f.exists() || f.length() == 0L) return null
+        android.graphics.BitmapFactory.decodeFile(f.absolutePath)?.also { f.setLastModified(System.currentTimeMillis()) }
+    }.getOrNull()
+
+    fun write(context: Context, image: MediaImage, size: Int, bitmap: Bitmap) {
+        runCatching {
+            val f = file(context, image, size)
+            val tmp = java.io.File(f.parentFile, f.name + ".tmp")
+            java.io.FileOutputStream(tmp).use { out ->
+                @Suppress("DEPRECATION")
+                val fmt = if (Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else Bitmap.CompressFormat.WEBP
+                bitmap.compress(fmt, 82, out)
+            }
+            if (!tmp.renameTo(f)) tmp.delete()
+            if (writes.incrementAndGet() % 300 == 0) trim(context)
+        }
+    }
+
+    private fun trim(context: Context) {
+        val files = dir(context).listFiles() ?: return
+        var total = files.sumOf { it.length() }
+        if (total <= MAX_BYTES) return
+        for (f in files.sortedBy { it.lastModified() }) {
+            if (total <= MAX_BYTES * 8 / 10) break
+            total -= f.length()
+            f.delete()
+        }
+    }
+}
+
 private fun loadThumbnail(context: Context, image: MediaImage, targetSizePx: Int = 320): Bitmap? {
+    val key = (image.id shl 16) xor (targetSizePx.toLong() and 0xFFFFL)
+    ThumbnailCache.get(key)?.let { return it }
+    if (image.id > 0 && image.dateModified > 0L) {
+        ThumbDiskCache.read(context, image, targetSizePx)?.let { ThumbnailCache.put(key, it); return it }
+    }
+    val bmp = loadThumbnailRaw(context, image, targetSizePx)
+    if (bmp != null && image.id > 0 && image.dateModified > 0L) ThumbDiskCache.write(context, image, targetSizePx, bmp)
+    return bmp
+}
+
+private fun loadThumbnailRaw(context: Context, image: MediaImage, targetSizePx: Int = 320): Bitmap? {
     val cacheKey = (image.id shl 16) xor (targetSizePx.toLong() and 0xFFFFL)
     ThumbnailCache.get(cacheKey)?.let { return it }
 

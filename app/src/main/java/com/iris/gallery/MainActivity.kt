@@ -2869,7 +2869,11 @@ private fun GalleryScaffold(
                       end = padding.calculateEndPadding(LocalLayoutDirection.current),
                       bottom = padding.calculateBottomPadding(),
                   )
+                  val quickCollapsed by remember {
+                      derivedStateOf { photoGridState.firstVisibleItemIndex > 0 || photoGridState.firstVisibleItemScrollOffset > 140 }
+                  }
                   if (destination == 0 && fileSearchQuery.isBlank()) QuickActionRow(
+                      collapsed = quickCollapsed,
                       actions = listOf(
                           QuickAction(AxIcons.Trash, "Trash") { openLibrarySection("trash") },
                           QuickAction(AxIcons.Video, "Videos") { openLibrarySection("videos") },

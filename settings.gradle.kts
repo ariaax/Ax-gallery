@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Iris Gallery"
+rootProject.name = "Ax Gallery"
 include(":app")

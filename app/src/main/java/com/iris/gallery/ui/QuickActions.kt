@@ -15,7 +15,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,9 +43,50 @@ class QuickAction(val icon: ImageVector, val label: String, val onClick: () -> U
  * are centred under their icons. Same glass look as the rest of the app (dark tint + thin light rim).
  */
 @Composable
-fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier) {
+fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, collapsed: Boolean = false) {
+    // 0 = open, 1 = folded into a drop at the top centre. A soft spring gives the liquid feel.
+    val fold by animateFloatAsState(
+        targetValue = if (collapsed) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 240f),
+        label = "quickFold",
+    )
+    if (fold < 0.002f && collapsed) return
+    val ink = Color(0xFF0A0E18)
+    val rim = Color(0xFFBFD3FF)
+    Box(
+        modifier
+            .fillMaxWidth()
+            .drawBehind {
+                // the drop: swells while the row is being drawn in, is gone again when fully folded
+                val k = kotlin.math.sin(Math.PI.toFloat() * fold.coerceIn(0f, 1f))
+                if (k > 0.02f) {
+                    val r = 11.dp.toPx() * k
+                    val cx = size.width / 2f
+                    val y0 = 2.dp.toPx()
+                    val path = Path().apply {
+                        moveTo(cx, y0)
+                        cubicTo(cx + r * 0.12f, y0 + r * 0.9f, cx + r, y0 + r * 1.1f, cx + r, y0 + r * 2.0f)
+                        arcTo(androidx.compose.ui.geometry.Rect(cx - r, y0 + r, cx + r, y0 + r * 3f), 0f, 180f, false)
+                        cubicTo(cx - r, y0 + r * 1.1f, cx - r * 0.12f, y0 + r * 0.9f, cx, y0)
+                        close()
+                    }
+                    drawPath(path, ink)
+                    drawPath(path, rim.copy(alpha = 0.7f * k), style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+                }
+            },
+    ) {
     Row(
-        modifier.fillMaxWidth().padding(horizontal = 12.dp),
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .graphicsLayer {
+                transformOrigin = TransformOrigin(0.5f, 0f)
+                val sc = 1f - 0.94f * fold
+                scaleX = sc
+                scaleY = sc
+                translationY = -size.height * 0.10f * fold
+                alpha = (1f - (fold - 0.35f).coerceAtLeast(0f) / 0.5f).coerceIn(0f, 1f)
+            },
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         actions.forEach { action ->
@@ -49,7 +96,7 @@ fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier) {
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = action.onClick,
+                        onClick = { if (fold < 0.5f) action.onClick() },
                     )
                     .padding(horizontal = 6.dp, vertical = 2.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -79,5 +126,6 @@ fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
     }
 }

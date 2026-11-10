@@ -71,17 +71,17 @@ jobs:
               --ks-key-alias "$KEY_ALIAS" \
               --ks-pass "pass:$KEYSTORE_PASSWORD" \
               --key-pass "pass:$KEY_PASSWORD" \
-              --out "build-artifacts/Iris-Gallery-v${{ env.APP_VERSION }}.apk" \
+              --out "build-artifacts/Ax-Gallery-v${{ env.APP_VERSION }}.apk" \
               "$RAW_APK"
-            $BUILD_TOOLS/apksigner verify --verbose "build-artifacts/Iris-Gallery-v${{ env.APP_VERSION }}.apk"
+            $BUILD_TOOLS/apksigner verify --verbose "build-artifacts/Ax-Gallery-v${{ env.APP_VERSION }}.apk"
           else
-            cp "$RAW_APK" "build-artifacts/Iris-Gallery-v${{ env.APP_VERSION }}-unsigned.apk"
+            cp "$RAW_APK" "build-artifacts/Ax-Gallery-v${{ env.APP_VERSION }}-unsigned.apk"
           fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Iris-Gallery-v${{ env.APP_VERSION }}-CI
+          name: Ax-Gallery-v${{ env.APP_VERSION }}-CI
           path: build-artifacts/*.apk
           retention-days: 14
 
@@ -90,7 +90,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: build-artifacts/*.apk
-          name: Iris Gallery v${{ env.APP_VERSION }}
+          name: Ax Gallery v${{ env.APP_VERSION }}
           draft: false
           prerelease: false
           generate_release_notes: true
