@@ -195,6 +195,8 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
 
     private var contentObserver: ContentObserver? = null
     private var liveReloadJob: Job? = null
+    @Volatile private var exifWriting = false
+    @Volatile private var exifWritingUntil = 0L
 
     fun registerObserver() {
         if (contentObserver != null) return
@@ -202,6 +204,10 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
             val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
                 override fun onChange(selfChange: Boolean, uri: Uri?) {
                     super.onChange(selfChange, uri)
+                    if (exifWriting || System.currentTimeMillis() < exifWritingUntil) {
+                        com.iris.gallery.data.LatencyLog.add("1 ignored: our own EXIF write (" + (uri?.lastPathSegment ?: "?") + ")")
+                        return
+                    }
                     com.iris.gallery.data.LatencyLog.add("1 MediaStore notified (" + (uri?.lastPathSegment ?: "?") + ")")
                     liveReloadJob?.cancel()
                     liveReloadJob = viewModelScope.launch {
@@ -314,9 +320,14 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
     private fun startExifEnrichment(list: List<MediaImage>) {
         if (!com.iris.gallery.data.ExifDateStore.enabled || exifJob?.isActive == true) return
         exifJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            // Our own EXIF date writes make MediaStore notify us again. Those notifications must not start
+            // another reload (the log showed ~20 of them, each one rebuilding the whole list).
+            exifWriting = true
             val changed = runCatching { repository.enrichExifDates(list) }.getOrDefault(0)
+            exifWriting = false
+            exifWritingUntil = System.currentTimeMillis() + 1500L
             if (changed > 0) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { refresh(showLoading = false) }
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { refresh(showLoading = false, light = true) }
             }
         }
     }
