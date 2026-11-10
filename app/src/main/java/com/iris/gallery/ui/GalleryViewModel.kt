@@ -204,8 +204,11 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                     super.onChange(selfChange, uri)
                     liveReloadJob?.cancel()
                     liveReloadJob = viewModelScope.launch {
-                        delay(350)
-                        refresh(showLoading = false)
+                        delay(120)
+                        // keep a running reload alive (cancelling it on every notification starves new files);
+                        // a second, light pass picks up whatever changed meanwhile
+                        while (refreshJob?.isActive == true) delay(60)
+                        refresh(showLoading = false, light = true)
                     }
                 }
             }
@@ -317,7 +320,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun refresh(showLoading: Boolean = true, forceClearCache: Boolean = false) {
+    fun refresh(showLoading: Boolean = true, forceClearCache: Boolean = false, light: Boolean = false) {
         val current = refreshJob
         if (current?.isActive == true) {
             current.cancel()
@@ -328,6 +331,8 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
         refreshJob = viewModelScope.launch {
             try {
                 kotlinx.coroutines.withTimeout(20_000) {
+                    // A light reload (a new photo/video appeared) only needs the media list; trash and vault are unchanged.
+                    val trashList = if (light) _uiState.value.trashed else {
                     vaultRepository.loadVaultItems()
                     val internalTrash = trashRepository.loadTrashItems()
                     val systemTrash = if (android.os.Build.VERSION.SDK_INT >= 30 && settingsPreferences.state.value.useSystemTrash) {
@@ -338,7 +343,8 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                             emptyList()
                         }
                     } else emptyList()
-                    val trashList = (internalTrash + systemTrash).distinctBy { it.id }
+                    (internalTrash + systemTrash).distinctBy { it.id }
+                    }
                     if (showLoading) {
                         _uiState.update { it.copy(loading = true, trashed = trashList, error = null) }
                     }

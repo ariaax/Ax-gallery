@@ -723,7 +723,7 @@ private fun GalleryApp(
                 lastBackgroundTimestamp = System.currentTimeMillis()
             } else if (event == Lifecycle.Event.ON_RESUME) {
                 if (permitted) {
-                    viewModel.refresh(showLoading = false)
+                    viewModel.refresh(showLoading = false, light = true)
                 }
                 if (lastBackgroundTimestamp > 0L && System.currentTimeMillis() - lastBackgroundTimestamp > 300_000L) {
                     lockedAuthorized = false
