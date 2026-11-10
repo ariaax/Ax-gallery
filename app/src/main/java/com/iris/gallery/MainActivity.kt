@@ -2863,17 +2863,23 @@ private fun GalleryScaffold(
                       }
                       librarySection = section
                   }
-                  val quickPadding = PaddingValues(
-                      start = padding.calculateStartPadding(LocalLayoutDirection.current),
-                      top = padding.calculateTopPadding() + if (destination == 0 && fileSearchQuery.isBlank()) 92.dp else 0.dp,
-                      end = padding.calculateEndPadding(LocalLayoutDirection.current),
-                      bottom = padding.calculateBottomPadding(),
-                  )
                   val quickCollapsed by remember {
                       derivedStateOf { photoGridState.firstVisibleItemIndex > 0 || photoGridState.firstVisibleItemScrollOffset > 140 }
                   }
+                  // 0 = icon row shown, 1 = folded away: the space it took is given back to the photos
+                  val quickFold by androidx.compose.animation.core.animateFloatAsState(
+                      targetValue = if (quickCollapsed) 1f else 0f,
+                      animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 260f),
+                      label = "quickFold",
+                  )
+                  val quickPadding = PaddingValues(
+                      start = padding.calculateStartPadding(LocalLayoutDirection.current),
+                      top = padding.calculateTopPadding() + if (destination == 0 && fileSearchQuery.isBlank()) (92.dp * (1f - quickFold)) else 0.dp,
+                      end = padding.calculateEndPadding(LocalLayoutDirection.current),
+                      bottom = padding.calculateBottomPadding(),
+                  )
                   if (destination == 0 && fileSearchQuery.isBlank()) QuickActionRow(
-                      collapsed = quickCollapsed,
+                      fold = quickFold,
                       actions = listOf(
                           QuickAction(AxIcons.Trash, "Trash") { openLibrarySection("trash") },
                           QuickAction(AxIcons.Video, "Videos") { openLibrarySection("videos") },

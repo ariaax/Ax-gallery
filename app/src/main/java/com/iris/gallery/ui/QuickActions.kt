@@ -44,14 +44,8 @@ class QuickAction(val icon: ImageVector, val label: String, val onClick: () -> U
  * are centred under their icons. Same glass look as the rest of the app (dark tint + thin light rim).
  */
 @Composable
-fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, collapsed: Boolean = false) {
-    // 0 = open, 1 = folded into a drop at the top centre. A soft spring gives the liquid feel.
-    val fold by animateFloatAsState(
-        targetValue = if (collapsed) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 240f),
-        label = "quickFold",
-    )
-    if (fold < 0.002f && collapsed) return
+fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, fold: Float = 0f) {
+    if (fold > 0.998f) return
     val ink = Color(0xFF0A0E18)
     val rim = Color(0xFFBFD3FF)
     Box(
