@@ -31,6 +31,9 @@ class MediaRepository(private val context: Context) {
     private val recentMovedOrDeletedIds = java.util.concurrent.ConcurrentHashMap<Long, Long>()
     private val recentMovedOrDeletedPaths = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val verifiedPathsCache = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    // Stat-ing every cached row costs seconds on a big library (it kept the spinner up for 10-20 s after install),
+    // so cached rows are only re-checked once, right after something was restored or deleted.
+    @Volatile private var verifyCachedRows = false
 
     fun loadSnapshot(): List<MediaImage> = runCatching {
         DataInputStream(snapshot.openRead().buffered()).use { input ->
@@ -93,6 +96,7 @@ class MediaRepository(private val context: Context) {
 
     fun clearVerifiedPathsCache() {
         verifiedPathsCache.clear()
+        verifyCachedRows = true
     }
 
     fun purgeGhostMedia(id: Long, path: String, uri: Uri) {
@@ -465,7 +469,7 @@ class MediaRepository(private val context: Context) {
 
                         // Ghost rows (file already gone, MediaStore row not cleaned yet) must be dropped BEFORE the
                         // cache shortcut below, otherwise a cached ghost is shown again on every reload.
-                        if (!trashed && filePath.startsWith("/storage/emulated/")) {
+                        if (verifyCachedRows && !trashed && filePath.startsWith("/storage/emulated/")) {
                             val seenAt = verifiedPathsCache[filePath]
                             if (seenAt == null || now - seenAt > 300_000L) {
                                 if (!File(filePath).exists()) {
@@ -614,6 +618,7 @@ class MediaRepository(private val context: Context) {
                 .thenByDescending { it.id }
         )
         if (!trashed) {
+            verifyCachedRows = false
             val validIds = sorted.mapTo(HashSet(sorted.size)) { it.id }
             inMemoryCache.keys.retainAll(validIds)
             saveSnapshot(sorted)
