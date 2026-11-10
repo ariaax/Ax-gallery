@@ -202,6 +202,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
             val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
                 override fun onChange(selfChange: Boolean, uri: Uri?) {
                     super.onChange(selfChange, uri)
+                    com.iris.gallery.data.LatencyLog.add("1 MediaStore notified (" + (uri?.lastPathSegment ?: "?") + ")")
                     liveReloadJob?.cancel()
                     liveReloadJob = viewModelScope.launch {
                         delay(120)
@@ -370,6 +371,10 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                             loaded
                         }
                         _uiState.update { it.copy(images = combined, loading = false, trashed = trashList, error = null) }
+                        run {
+                            val newest = combined.maxOfOrNull { it.dateAdded } ?: 0L
+                            com.iris.gallery.data.LatencyLog.add("2 on screen: " + combined.size + " items, newest MediaStore dateAdded=" + com.iris.gallery.data.LatencyLog.time(newest * 1000L))
+                        }
                         startExifEnrichment(combined)
                         if (_duplicateState.value.hasScanned) _duplicateState.value = DuplicateScanState()
                     } catch (e: Exception) {

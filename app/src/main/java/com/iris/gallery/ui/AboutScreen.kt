@@ -78,6 +78,8 @@ fun AboutScreen(
 ) {
     val context = LocalContext.current
     var eggClicks by remember { mutableIntStateOf(0) }
+    var versionTaps by remember { mutableIntStateOf(0) }
+    var showLatency by remember { mutableStateOf(false) }
     var activeToast by remember { mutableStateOf<Toast?>(null) }
     var showEasterEggSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -170,8 +172,28 @@ fun AboutScreen(
                         com.iris.gallery.BuildConfig.VERSION_CODE
                     ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable {
+                        versionTaps++
+                        if (versionTaps >= 5) { versionTaps = 0; showLatency = true }
+                    }
                 )
+                if (showLatency) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { showLatency = false },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton(onClick = { showLatency = false }) { Text("Close") }
+                        },
+                        title = { Text("Latency log") },
+                        text = {
+                            Text(
+                                com.iris.gallery.data.LatencyLog.dump(),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            )
+                        },
+                    )
+                }
                 Text(
                     androidx.compose.ui.res.stringResource(R.string.app_description),
                     style = MaterialTheme.typography.bodySmall,
