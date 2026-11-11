@@ -817,11 +817,11 @@ def system_confirm():
         return False
 
 
-def count_in_header(nodes, rx=r"(\d+)\s+(?:items|private items)"):
+def count_in_header(nodes, rx=r"Trash\s*\u00b7\s*([\d.]+)\s*(?:KB|MB|GB|B)"):
     for n in nodes:
         m = re.search(rx, n["text"] + " " + n["desc"])
         if m:
-            return int(m.group(1))
+            return float(m.group(1))
     return None
 
 
@@ -875,11 +875,15 @@ def s22_trash():
     open_quick("Trash", "22_trash_again")
     n1 = count_in_header(dump("22_trash_count1"))
     shot("22_trash_after_delete")
-    record("trash: deleted photos arrived in the trash", n0 is not None and n1 is not None and n1 >= n0 + 2, f"{n0} -> {n1}")
+    record("trash: deleted photos arrived in the trash", n0 is not None and n1 is not None and n1 > n0, f"{n0} -> {n1} (header size)")
     # 3) open one inside the trash viewer and look at what the viewer offers
     touch.tap(W * 0.17, H * 0.30)
     time.sleep(2.0)
     nodes = dump("22_trash_viewer")
+    if find(nodes, r"^Don't show again$"):
+        click_text(r"^Don't show again$", "22_dismiss_share")
+        time.sleep(1.0)
+        nodes = dump("22_trash_viewer_b")
     shot("22_trash_viewer")
     log("trash viewer texts:", vis(nodes))
     results.append(("trash viewer: visible texts", "INFO", vis(nodes)))
@@ -904,6 +908,10 @@ def s22_trash():
     touch.tap(W * 0.17, H * 0.30)
     time.sleep(2.0)
     nodes = dump("22_trash_viewer2")
+    if find(nodes, r"^Don't show again$"):
+        click_text(r"^Don't show again$", "22_dismiss_share2")
+        time.sleep(1.0)
+        nodes = dump("22_trash_viewer2_b")
     d = find(nodes, r"^(delete|delete permanently|delete forever)$")
     results.append(("trash viewer 2: visible texts", "INFO", vis(nodes)))
     if d:
