@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.shape.CutCornerShape
+import dev.shayxo.liquidglass.GlassStyle
+import dev.shayxo.liquidglass.liquidGlass
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -149,6 +151,9 @@ object AxPerf {
 object AxGlass {
     /** Compose state, so flipping the setting updates the UI immediately. */
     var enabled: Boolean by mutableStateOf(true)
+    /** Shader-based glass (library) on the bottom bar; Android 13+ only, set from Settings. */
+    var real: Boolean by mutableStateOf(false)
+    val realSupported: Boolean get() = Build.VERSION.SDK_INT >= 33
 }
 
 /**
@@ -330,6 +335,7 @@ object AxNavCollapse {
 @Composable
 fun AxGlassNavBar(
     state: AxGlassState,
+    realGlass: dev.shayxo.liquidglass.LiquidGlassState? = null,
     count: Int,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
@@ -405,7 +411,10 @@ fun AxGlassNavBar(
                 }
                 .shadow(14.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.30f), spotColor = Color.Black.copy(alpha = 0.40f))
                 .clip(shape)
-                .background(tint)
+                .then(
+                    if (realGlass != null) Modifier.liquidGlass(realGlass, shape, GlassStyle.DarkChrome)
+                    else Modifier.background(tint)
+                )
                 .drawBehind {
                     drawRect(
                         brush = Brush.verticalGradient(

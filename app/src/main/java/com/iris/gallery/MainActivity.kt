@@ -250,6 +250,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.shape.CutCornerShape
+import dev.shayxo.liquidglass.liquidGlassSource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -2375,6 +2376,8 @@ private fun GalleryScaffold(
     val showFloatingBar = (isLandscape || AxGlass.enabled) && selectedIds.isEmpty() && selectedId == null && editorImage == null && activeOverlayScreen == null && externalMedia == null
 
     val axGlass = rememberAxGlassState()
+    val useRealGlass = com.iris.gallery.ui.AxGlass.real && com.iris.gallery.ui.AxGlass.realSupported && com.iris.gallery.ui.AxGlass.enabled
+    val realGlassState = dev.shayxo.liquidglass.rememberLiquidGlassState(background = androidx.compose.ui.graphics.Color(0xFF05070F))
     Box(Modifier.fillMaxSize()) {
         Scaffold(
         containerColor = Color.Transparent,
@@ -2818,7 +2821,8 @@ private fun GalleryScaffold(
           state = tabPagerState,
           beyondViewportPageCount = (visibleTabs.size - 1).coerceIn(0, 3),
           userScrollEnabled = selectedIds.isEmpty() && selectedAlbum == null && (destination != 3 || librarySection == null),
-          modifier = Modifier.fillMaxSize().nestedScroll(com.iris.gallery.ui.AxNavCollapse.connection).axGlassSource(axGlass),
+          modifier = Modifier.fillMaxSize().nestedScroll(com.iris.gallery.ui.AxNavCollapse.connection).axGlassSource(axGlass)
+            .then(if (useRealGlass) Modifier.liquidGlassSource(realGlassState) else Modifier),
         ) { page ->
           val activeTab = visibleTabs.getOrElse(page) { GalleryTab.PHOTOS }
           when (activeTab) {
@@ -3575,6 +3579,7 @@ private fun GalleryScaffold(
     ) {
         AxGlassNavBar(
             state = axGlass,
+            realGlass = if (useRealGlass) realGlassState else null,
             count = visibleTabs.size,
             selectedIndex = visibleTabs.indexOf(currentVisibleTab).coerceAtLeast(0),
             onSelect = { handleTabSelected(it) },

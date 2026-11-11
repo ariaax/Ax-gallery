@@ -185,6 +185,7 @@ data class SettingsState(
     val dateSortMode: DateSortMode = DateSortMode.HYBRID,
     val recentWindowDays: Int = 7,
     val glassEnabled: Boolean = true,
+    val realGlass: Boolean = false,
     val backgroundExifDates: Boolean = true,
 ) {
     val hasPin: Boolean get() = appLockPinHash.isNotEmpty()
@@ -217,12 +218,14 @@ class SettingsPreferences(context: Context) {
         TimelineSort.mode = s.dateSortMode
         TimelineSort.recentWindowDays = s.recentWindowDays
         com.iris.gallery.ui.AxGlass.enabled = s.glassEnabled
+        com.iris.gallery.ui.AxGlass.real = s.realGlass
         ExifDateStore.enabled = s.backgroundExifDates
     }
 
     fun setDateSortMode(mode: DateSortMode) = update { copy(dateSortMode = mode) }
     fun setRecentWindowDays(days: Int) = update { copy(recentWindowDays = days.coerceIn(1, 90)) }
     fun setGlassEnabled(enabled: Boolean) = update { copy(glassEnabled = enabled) }
+    fun setRealGlass(enabled: Boolean) = update { copy(realGlass = enabled) }
     fun setBackgroundExifDates(enabled: Boolean) = update { copy(backgroundExifDates = enabled) }
 
     fun setThemeMode(mode: ThemeMode) = update { copy(themeMode = mode) }
@@ -428,6 +431,7 @@ class SettingsPreferences(context: Context) {
             dateSortMode = runCatching { DateSortMode.valueOf(prefs.getString("ax_date_sort_mode", null).orEmpty()) }.getOrDefault(DateSortMode.HYBRID),
             recentWindowDays = prefs.getInt("ax_recent_window_days", 7).coerceIn(1, 90),
             glassEnabled = prefs.getBoolean("ax_glass_enabled", true),
+            realGlass = prefs.getBoolean("ax_real_glass", false),
             backgroundExifDates = prefs.getBoolean("ax_background_exif_dates", true),
         )
     }
@@ -494,6 +498,7 @@ class SettingsPreferences(context: Context) {
             .putString("ax_date_sort_mode", state.dateSortMode.name)
             .putInt("ax_recent_window_days", state.recentWindowDays)
             .putBoolean("ax_glass_enabled", state.glassEnabled)
+            .putBoolean("ax_real_glass", state.realGlass)
             .putBoolean("ax_background_exif_dates", state.backgroundExifDates)
             .apply()
     }

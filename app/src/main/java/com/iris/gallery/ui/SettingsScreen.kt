@@ -263,6 +263,15 @@ fun SettingsScreen(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
+                    SettingsSwitchRow(
+                        title = "Real liquid glass (experimental)",
+                        subtitle = "Light bends through the bottom bar like real glass (Android 13+). Turn off if the bar looks wrong or the app feels slower.",
+                        checked = settings.realGlass,
+                        onCheckedChange = { preferences.setRealGlass(it) }
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
 
                     SettingsSwitchRow(
                         title = "Read photo dates in background",
