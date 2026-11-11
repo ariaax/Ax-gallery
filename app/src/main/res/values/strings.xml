@@ -798,7 +798,7 @@
     <string name="no_albums_to_exclude">No albums found</string>
 
     <string name="section_videos">Videos</string>
-    <string name="section_videos_desc">%1$d videos in your library</string>
+    <string name="section_videos_desc">In your library: %1$d</string>
     <string name="filter_videos">Videos</string>
     <string name="empty_videos">No videos found</string>
     <string name="filter_videos_count">%1$d Videos</string>
