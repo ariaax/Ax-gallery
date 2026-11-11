@@ -1120,7 +1120,7 @@ def s27_app_lock():
     touch.tap(W * 0.93, H * 0.088)
     time.sleep(2.0)
     found = False
-    for _ in range(8):
+    for _ in range(18):
         nodes = dump("27_settings")
         hit = [n for n in find(nodes, r"(?i)app lock|lock the app|pin|biometric|security|privacy") if H * 0.12 < n["cy"] < H * 0.86]
         if hit:
