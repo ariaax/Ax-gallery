@@ -2878,16 +2878,6 @@ private fun GalleryScaffold(
                       end = padding.calculateEndPadding(LocalLayoutDirection.current),
                       bottom = padding.calculateBottomPadding(),
                   )
-                  if (destination == 0 && fileSearchQuery.isBlank()) QuickActionRow(
-                      fold = quickFold,
-                      actions = listOf(
-                          QuickAction(AxIcons.Trash, "Trash") { openLibrarySection("trash") },
-                          QuickAction(AxIcons.Video, "Videos") { openLibrarySection("videos") },
-                          QuickAction(AxIcons.Lock, "Locked") { openLibrarySection("locked") },
-                          QuickAction(AxIcons.Folder, "Trips") { openLibrarySection("trips") },
-                      ),
-                      modifier = Modifier.padding(top = padding.calculateTopPadding() + 8.dp),
-                  )
                   if (displayedPhotos.isNotEmpty()) PhotoGrid(
                     displayedPhotos, if (destination == 0) quickPadding else padding, photoGridState, cellSize = photoCellSize, onCellSizeChange = onCellSizeChange,
                     showTimeline = settings.showTimelineHeaders && fileSearchQuery.isBlank(),
@@ -2910,6 +2900,17 @@ private fun GalleryScaffold(
                   ) { if (selectedIds.isNotEmpty()) toggleSelection(it.id) else if (onPick != null) onPick(it) else { viewerImages = displayedPhotos; selectedId = it.id } }
                   else if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding)
                   else EmptyState(stringResource(R.string.empty_photos), padding)
+                  // drawn AFTER the grid: the grid now runs under it, so the row must be on top to get the touches
+                  if (destination == 0 && fileSearchQuery.isBlank()) QuickActionRow(
+                      fold = quickFold,
+                      actions = listOf(
+                          QuickAction(AxIcons.Trash, "Trash") { openLibrarySection("trash") },
+                          QuickAction(AxIcons.Video, "Videos") { openLibrarySection("videos") },
+                          QuickAction(AxIcons.Lock, "Locked") { openLibrarySection("locked") },
+                          QuickAction(AxIcons.Folder, "Trips") { openLibrarySection("trips") },
+                      ),
+                      modifier = Modifier.padding(top = padding.calculateTopPadding() + 8.dp),
+                  )
                 }
               }
             }
