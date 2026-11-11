@@ -1035,7 +1035,7 @@ def sweep_screen(tag, header_rx, rounds=6, cap=28, skip_rx=r"(?i)^(delete|reset|
         shot(f"{tag}_page{rnd}")
         for n in nodes:
             label = (n["text"] or n["desc"]).strip()
-            if not (n["click"] and label and len(label) < 70) or label in seen:
+            if not (label and 3 <= len(label) < 45) or label in seen:
                 continue
             if not (H * 0.12 < n["cy"] < H * 0.86) or re.search(skip_rx, label):
                 continue
@@ -1096,7 +1096,7 @@ def s26_editor():
     results.append(("editor texts", "INFO", vis(nodes)))
     record("editor: opens (or offers a choice)", alive() and len(nodes) > 5, vis(nodes)[:120])
     # a chooser ('edit a copy' / 'edit original') may come first
-    for pat in (r"edit copy|save as copy|create copy|copy", r"^continue$|^edit$|^ok$"):
+    for pat in (r"^Ax Editor$", r"edit copy|save as copy|create copy", r"^continue$|^edit$|^ok$"):
         if find(nodes, pat) and not find(nodes, r"^(crop|filters|adjust)$"):
             click_text(pat, "26_choice")
             time.sleep(2.0)
