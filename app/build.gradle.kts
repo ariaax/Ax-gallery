@@ -13,9 +13,15 @@ android {
         targetSdk = 35
         versionCode = 18
         versionName = "0.9.5"
-        // Phones are 64-bit: shipping only arm64 keeps the app small (no libmpv any more).
-        // -PallAbis adds x86_64 so the CI emulator can run the app; normal builds stay arm64 only.
-        ndk { abiFilters += if (project.hasProperty("allAbis")) listOf("arm64-v8a", "x86_64") else listOf("arm64-v8a") }
+        // Default: arm64 only (small APK). -Parm32 builds a separate 32-bit ARM APK for old phones;
+        // -PallAbis adds x86_64 so the CI emulator can run the app.
+        ndk {
+            abiFilters += when {
+                project.hasProperty("allAbis") -> listOf("arm64-v8a", "x86_64")
+                project.hasProperty("arm32") -> listOf("armeabi-v7a")
+                else -> listOf("arm64-v8a")
+            }
+        }
     }
 
     buildFeatures {

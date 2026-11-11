@@ -39,10 +39,18 @@ jobs:
             sed -i '/android.aapt2FromMavenOverride/d' gradle.properties
           fi
 
-      - name: Build Release APK
+      - name: Build Release APK (64-bit)
         run: |
           set -o pipefail
           ./gradlew assembleRelease 2>&1 | tee build.log
+          mkdir -p /tmp/raw
+          cp "$(find app/build/outputs/apk/release/ -name '*.apk' | head -n 1)" /tmp/raw/arm64.apk
+
+      - name: Build Release APK (32-bit ARM)
+        run: |
+          set -o pipefail
+          ./gradlew assembleRelease -Parm32 2>&1 | tee -a build.log
+          cp "$(find app/build/outputs/apk/release/ -name '*.apk' | head -n 1)" /tmp/raw/arm32.apk
 
       - name: Show compile errors
         if: failure()
@@ -62,21 +70,26 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           mkdir -p build-artifacts
-          RAW_APK=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+          BUILD_TOOLS=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
-            BUILD_TOOLS=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
-            $BUILD_TOOLS/apksigner sign \
-              --ks /tmp/release.jks \
-              --ks-key-alias "$KEY_ALIAS" \
-              --ks-pass "pass:$KEYSTORE_PASSWORD" \
-              --key-pass "pass:$KEY_PASSWORD" \
-              --out "build-artifacts/Ax-Gallery-v${{ env.APP_VERSION }}.apk" \
-              "$RAW_APK"
-            $BUILD_TOOLS/apksigner verify --verbose "build-artifacts/Ax-Gallery-v${{ env.APP_VERSION }}.apk"
-          else
-            cp "$RAW_APK" "build-artifacts/Ax-Gallery-v${{ env.APP_VERSION }}-unsigned.apk"
           fi
+          for ABI in arm64 arm32; do
+            RAW_APK=/tmp/raw/$ABI.apk
+            SUFFIX=""; [ "$ABI" = arm32 ] && SUFFIX="-arm32"
+            if [ -n "$KEYSTORE_BASE64" ]; then
+              $BUILD_TOOLS/apksigner sign \
+                --ks /tmp/release.jks \
+                --ks-key-alias "$KEY_ALIAS" \
+                --ks-pass "pass:$KEYSTORE_PASSWORD" \
+                --key-pass "pass:$KEY_PASSWORD" \
+                --out "build-artifacts/Ax-Gallery-v${{ env.APP_VERSION }}$SUFFIX.apk" \
+                "$RAW_APK"
+              $BUILD_TOOLS/apksigner verify --verbose "build-artifacts/Ax-Gallery-v${{ env.APP_VERSION }}$SUFFIX.apk"
+            else
+              cp "$RAW_APK" "build-artifacts/Ax-Gallery-v${{ env.APP_VERSION }}$SUFFIX-unsigned.apk"
+            fi
+          done
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

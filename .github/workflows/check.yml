@@ -35,6 +35,13 @@ jobs:
           set -o pipefail
           ./gradlew assembleRelease 2>&1 | tee build.log
 
+      - name: Build 32-bit ARM APK and list its native libs
+        run: |
+          set -o pipefail
+          ./gradlew assembleRelease -Parm32 2>&1 | tee -a build.log
+          unzip -l "$(find app/build/outputs/apk/release/ -name '*.apk' | head -n 1)" | grep -E "lib/|\.apk" | head -20
+          ls -la app/build/outputs/apk/release/
+
       - name: Show compile errors
         if: failure()
         run: |

@@ -154,6 +154,17 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
         }.apply { name = "prefs-prewarm"; isDaemon = true }.start()
     }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        runCatching {
+            val cache = SingletonImageLoader.get(this).memoryCache ?: return
+            when {
+                level >= TRIM_MEMORY_RUNNING_CRITICAL || level >= TRIM_MEMORY_BACKGROUND -> cache.clear()
+                level >= TRIM_MEMORY_UI_HIDDEN -> cache.trimToSize(cache.size / 2)
+            }
+        }
+    }
+
     override fun newImageLoader(context: PlatformContext): ImageLoader {
         return ImageLoader.Builder(context)
             .components {
@@ -165,6 +176,14 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
                 } else {
                     add(GifDecoder.Factory())
                 }
+            }
+            .memoryCache {
+                // Weak phones: keep the in-memory bitmap cache small so Android doesn't kill the app in the background.
+                val am = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                val weak = am.isLowRamDevice || am.memoryClass <= 128
+                coil3.memory.MemoryCache.Builder()
+                    .maxSizePercent(context, if (weak) 0.10 else 0.20)
+                    .build()
             }
             .diskCache {
                 coil3.disk.DiskCache.Builder()
