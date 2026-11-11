@@ -250,7 +250,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.shape.CutCornerShape
-import dev.shayxo.liquidglass.liquidGlassSource
+import com.wexpa.liquidglass.liquidGlassSource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -2377,7 +2377,7 @@ private fun GalleryScaffold(
 
     val axGlass = rememberAxGlassState()
     val useRealGlass = com.iris.gallery.ui.AxGlass.real && com.iris.gallery.ui.AxGlass.realSupported && com.iris.gallery.ui.AxGlass.enabled
-    val realGlassState = dev.shayxo.liquidglass.rememberLiquidGlassState(background = androidx.compose.ui.graphics.Color(0xFF05070F))
+    val realGlassState = com.wexpa.liquidglass.rememberLiquidGlassState(background = androidx.compose.ui.graphics.Color(0xFF05070F))
     Box(Modifier.fillMaxSize()) {
         Scaffold(
         containerColor = Color.Transparent,

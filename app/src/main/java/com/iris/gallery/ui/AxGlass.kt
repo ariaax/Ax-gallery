@@ -22,8 +22,8 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.shape.CutCornerShape
-import dev.shayxo.liquidglass.GlassStyle
-import dev.shayxo.liquidglass.liquidGlass
+import com.wexpa.liquidglass.GlassStyle
+import com.wexpa.liquidglass.liquidGlass
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -335,7 +335,7 @@ object AxNavCollapse {
 @Composable
 fun AxGlassNavBar(
     state: AxGlassState,
-    realGlass: dev.shayxo.liquidglass.LiquidGlassState? = null,
+    realGlass: com.wexpa.liquidglass.LiquidGlassState? = null,
     count: Int,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
