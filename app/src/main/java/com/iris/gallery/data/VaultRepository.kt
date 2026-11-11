@@ -66,6 +66,8 @@ class VaultRepository(private val context: Context) {
     // Until it finishes the list is simply empty.
     private val initScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
 
+    private val indexLock = Any()
+
     init {
         initScope.launch { loadVaultItems() }
     }
@@ -447,7 +449,6 @@ class VaultRepository(private val context: Context) {
         return name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
     }
 
-    private val indexLock = Any()
 
     private fun readIndex(): List<VaultItem> {
         val file = indexFile.baseFile
