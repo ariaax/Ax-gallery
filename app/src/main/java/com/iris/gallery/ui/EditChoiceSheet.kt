@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
@@ -271,7 +270,7 @@ fun EditChoiceBottomSheet(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(CircleShape)
+                            .clip(CutCornerShape(30))
                             .background(
                                 Brush.linearGradient(
                                     colors = listOf(Color(0xFF9D34F5), Color(0xFF4F16D8))
@@ -320,7 +319,7 @@ fun EditChoiceBottomSheet(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(CircleShape)
+                            .clip(CutCornerShape(30))
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {

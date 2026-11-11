@@ -52,7 +52,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -1569,12 +1568,12 @@ private fun DrawControls(
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(Color(c), CircleShape)
+                    .background(Color(c), CutCornerShape(30))
                     .then(
                         if (brushColor == c && !erasing) {
-                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CutCornerShape(30))
                         } else {
-                            Modifier.border(1.dp, Color.Gray.copy(alpha = 0.4f), CircleShape)
+                            Modifier.border(1.dp, Color.Gray.copy(alpha = 0.4f), CutCornerShape(30))
                         }
                     )
                     .clickable {
@@ -1724,12 +1723,12 @@ private fun ShapeControls(
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(Color(c), CircleShape)
+                    .background(Color(c), CutCornerShape(30))
                     .then(
                         if (color == c && !erasing) {
-                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CutCornerShape(30))
                         } else {
-                            Modifier.border(1.dp, Color.Gray.copy(alpha = 0.4f), CircleShape)
+                            Modifier.border(1.dp, Color.Gray.copy(alpha = 0.4f), CutCornerShape(30))
                         }
                     )
                     .clickable {
@@ -1874,12 +1873,12 @@ private fun TextControls(
             Box(
                 modifier = Modifier
                     .size(28.dp)
-                    .background(Color(c), CircleShape)
+                    .background(Color(c), CutCornerShape(30))
                     .then(
                         if (textColor == c) {
-                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CutCornerShape(30))
                         } else {
-                            Modifier.border(1.dp, Color.Gray.copy(alpha = 0.4f), CircleShape)
+                            Modifier.border(1.dp, Color.Gray.copy(alpha = 0.4f), CutCornerShape(30))
                         }
                     )
                     .clickable {

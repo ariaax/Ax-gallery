@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -312,7 +311,7 @@ fun ExifEditorSheet(
                                 modifier = Modifier.size(18.dp),
                             )
                         },
-                        shape = CircleShape,
+                        shape = CutCornerShape(30),
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                             labelColor = MaterialTheme.colorScheme.onSurfaceVariant,

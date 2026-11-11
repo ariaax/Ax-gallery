@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Backspace
@@ -370,7 +369,7 @@ fun PinDotsIndicator(
                 modifier = Modifier
                     .size(16.dp)
                     .graphicsLayer(scaleX = dotScale, scaleY = dotScale)
-                    .clip(CircleShape)
+                    .clip(CutCornerShape(30))
                     .background(dotColor)
             )
         }
@@ -415,7 +414,7 @@ fun PinKeypad(
                 Box(
                     modifier = Modifier
                         .size(72.dp)
-                        .clip(CircleShape)
+                        .clip(CutCornerShape(30))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = ripple(bounded = true, radius = 36.dp),
@@ -439,7 +438,7 @@ fun PinKeypad(
             Box(
                 modifier = Modifier
                     .size(72.dp)
-                    .clip(CircleShape)
+                    .clip(CutCornerShape(30))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = ripple(bounded = true, radius = 36.dp),
@@ -466,7 +465,7 @@ private fun KeypadButton(
     Box(
         modifier = Modifier
             .size(72.dp)
-            .clip(CircleShape)
+            .clip(CutCornerShape(30))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -587,7 +586,7 @@ fun PinSetupBottomSheet(
             Box(
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(CircleShape)
+                    .clip(CutCornerShape(30))
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
@@ -766,7 +765,7 @@ fun PinChangeBottomSheet(
             Box(
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(CircleShape)
+                    .clip(CutCornerShape(30))
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
@@ -927,7 +926,7 @@ fun PinDisableBottomSheet(
             Box(
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(CircleShape)
+                    .clip(CutCornerShape(30))
                     .background(MaterialTheme.colorScheme.errorContainer),
                 contentAlignment = Alignment.Center
             ) {

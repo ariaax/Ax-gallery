@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -537,7 +536,7 @@ fun MediaThumbnail(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(5.dp)
-                    .background(Color.Black.copy(alpha = 0.55f), CircleShape)
+                    .background(Color.Black.copy(alpha = 0.55f), CutCornerShape(30))
                     .padding(3.dp),
                 contentAlignment = Alignment.Center
             ) {

@@ -249,7 +249,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -389,7 +389,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -6597,7 +6596,7 @@ private fun PhotoViewer(
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.Center)
-                                    .background(Color.Black.copy(alpha = 0.55f), CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.55f), CutCornerShape(30))
                                     .padding(12.dp),
                             ) {
                                 Icon(
@@ -7546,7 +7545,7 @@ private fun ZoomablePhoto(
                 contentAlignment = Alignment.BottomEnd,
             ) {
                 Surface(
-                    shape = CircleShape,
+                    shape = CutCornerShape(30),
                     color = Color.Black.copy(alpha = 0.55f),
                     tonalElevation = 0.dp,
                     modifier = Modifier
@@ -7610,7 +7609,7 @@ private fun ViewerIconButton(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .size(6.dp)
-                        .background(badgeColor, CircleShape)
+                        .background(badgeColor, CutCornerShape(30))
                 )
             }
         }

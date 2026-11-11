@@ -65,7 +65,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
@@ -771,8 +770,8 @@ fun VideoPage(
             val isPlay = lastPlayPauseFeedback ?: (playPauseFeedbackEvent?.first == true)
             Box(
                 modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.46f), CircleShape)
-                    .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
+                    .background(Color.Black.copy(alpha = 0.46f), CutCornerShape(30))
+                    .border(1.dp, Color.White.copy(alpha = 0.18f), CutCornerShape(30))
                     .padding(16.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -911,20 +910,20 @@ fun VideoPage(
                     Box(Modifier.size(34.dp), contentAlignment = Alignment.Center) {
                         val core by animateDpAsState(if (scrubbing) 24.dp else 13.dp, spring(dampingRatio = 0.55f, stiffness = 600f), label = "thumb")
                         val halo by animateDpAsState(if (scrubbing) 34.dp else 22.dp, spring(dampingRatio = 0.6f, stiffness = 500f), label = "thumbHalo")
-                        Box(Modifier.size(halo).background(Color.White.copy(alpha = if (scrubbing) 0.30f else 0.18f), CircleShape))
-                        Box(Modifier.size(core).background(Color.White, CircleShape))
+                        Box(Modifier.size(halo).background(Color.White.copy(alpha = if (scrubbing) 0.30f else 0.18f), CutCornerShape(30)))
+                        Box(Modifier.size(core).background(Color.White, CutCornerShape(30)))
                     }
                 },
                 track = { sliderState ->
                     val fraction = sliderState.value.coerceIn(0f, 1f)
                     Box(
                         Modifier.fillMaxWidth().height(trackH)
-                            .clip(CircleShape)
+                            .clip(CutCornerShape(30))
                             .background(Color.White.copy(alpha = 0.30f))
                     ) {
                         Box(
                             Modifier.fillMaxWidth(fraction).fillMaxHeight()
-                                .clip(CircleShape)
+                                .clip(CutCornerShape(30))
                                 .background(Brush.horizontalGradient(listOf(Color(0xFFB9D4FF), Color.White)))
                         )
                     }
@@ -1049,7 +1048,7 @@ private fun AxVideoGlassButton(
         modifier = Modifier
             .size(size)
             .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
-            .clip(CircleShape)
+            .clip(CutCornerShape(30))
             .then(
                 if (plain) Modifier else Modifier
                     .background(Color.White.copy(alpha = if (active) 0.30f else 0.14f))
@@ -1057,7 +1056,7 @@ private fun AxVideoGlassButton(
                     .border(
                         1.dp,
                         Brush.linearGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.3f))),
-                        CircleShape,
+                        CutCornerShape(30),
                     )
             )
             .clickable(interactionSource = interaction, indication = null, onClick = onClick),

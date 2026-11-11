@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -673,7 +672,7 @@ fun SettingsScreen(
                                             fontWeight = if (isCurrentCol) FontWeight.Bold else FontWeight.Medium,
                                         )
                                     },
-                                    shape = CircleShape,
+                                    shape = CutCornerShape(30),
                                 )
                             }
                         }
@@ -685,7 +684,7 @@ fun SettingsScreen(
                         ) {
                             Surface(
                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = CircleShape,
+                                shape = CutCornerShape(30),
                             ) {
                                 Text(
                                     "${currentPhotoSize.roundToInt()} dp · $photoColumns ${if (photoColumns == 1) "col" else "cols"}",
@@ -798,7 +797,7 @@ fun SettingsScreen(
                                             fontWeight = if (isCurrentCol) FontWeight.Bold else FontWeight.Medium,
                                         )
                                     },
-                                    shape = CircleShape,
+                                    shape = CutCornerShape(30),
                                 )
                             }
                         }
@@ -810,7 +809,7 @@ fun SettingsScreen(
                         ) {
                             Surface(
                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = CircleShape,
+                                shape = CutCornerShape(30),
                             ) {
                                 Text(
                                     "${currentAlbumSize.roundToInt()} dp · $albumColumns ${if (albumColumns == 1) "col" else "cols"}",
@@ -1408,7 +1407,7 @@ fun SettingsScreen(
                             }
                             if (hasAllFiles) {
                                 Surface(
-                                    shape = CircleShape,
+                                    shape = CutCornerShape(30),
                                     color = MaterialTheme.colorScheme.primaryContainer,
                                     modifier = Modifier.size(32.dp)
                                 ) {

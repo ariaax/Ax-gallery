@@ -33,7 +33,6 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -523,9 +522,9 @@ fun AlbumsGrid(
                                     // top-right keeps it clear of a video's duration pill (bottom-right); pin / reorder buttons own that corner
                                     .align(if ((sort != AlbumSort.CUSTOM && isPinned) || (sort == AlbumSort.CUSTOM && isEditingOrder)) Alignment.BottomEnd else Alignment.TopEnd)
                                     .padding(if (narrow) 3.dp else 6.dp)
-                                    .clip(CircleShape)
+                                    .clip(CutCornerShape(30))
                                     .background(Color.Black.copy(alpha = 0.38f))
-                                    .border(0.8.dp, Color.White.copy(alpha = 0.30f), CircleShape)
+                                    .border(0.8.dp, Color.White.copy(alpha = 0.30f), CutCornerShape(30))
                                     .padding(horizontal = 8.dp, vertical = 2.dp),
                             )
                         }
@@ -533,7 +532,7 @@ fun AlbumsGrid(
                         // Floating Pin Badge on top-right of pinned album image
                         if (sort != AlbumSort.CUSTOM && isPinned) {
                             Surface(
-                                shape = CircleShape,
+                                shape = CutCornerShape(30),
                                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f),
                                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                                 shadowElevation = 2.dp,
@@ -563,7 +562,7 @@ fun AlbumsGrid(
                                 val buttonContentColor = MaterialTheme.colorScheme.onSurface
                                 if (index > 0) {
                                     Surface(
-                                        shape = CircleShape,
+                                        shape = CutCornerShape(30),
                                         color = buttonColor,
                                         contentColor = buttonContentColor,
                                         shadowElevation = 2.dp,
@@ -578,7 +577,7 @@ fun AlbumsGrid(
                                         }
                                     }
                                     Surface(
-                                        shape = CircleShape,
+                                        shape = CutCornerShape(30),
                                         color = buttonColor,
                                         contentColor = buttonContentColor,
                                         shadowElevation = 2.dp,
@@ -595,7 +594,7 @@ fun AlbumsGrid(
                                 }
                                 if (index in 0 until effectiveOrder.lastIndex) {
                                     Surface(
-                                        shape = CircleShape,
+                                        shape = CutCornerShape(30),
                                         color = buttonColor,
                                         contentColor = buttonContentColor,
                                         shadowElevation = 2.dp,
@@ -610,7 +609,7 @@ fun AlbumsGrid(
                                         }
                                     }
                                     Surface(
-                                        shape = CircleShape,
+                                        shape = CutCornerShape(30),
                                         color = buttonColor,
                                         contentColor = buttonContentColor,
                                         shadowElevation = 2.dp,
@@ -750,7 +749,7 @@ fun AlbumsGrid(
                             Box(
                                 modifier = Modifier
                                     .size(42.dp)
-                                    .clip(CircleShape)
+                                    .clip(CutCornerShape(30))
                                     .background(MaterialTheme.colorScheme.primaryContainer),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -799,7 +798,7 @@ fun AlbumsGrid(
                             Box(
                                 modifier = Modifier
                                 .size(42.dp)
-                                .clip(CircleShape)
+                                .clip(CutCornerShape(30))
                                 .background(MaterialTheme.colorScheme.errorContainer),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -848,7 +847,7 @@ fun AlbumsGrid(
                             Box(
                                 modifier = Modifier
                                     .size(42.dp)
-                                    .clip(CircleShape)
+                                    .clip(CutCornerShape(30))
                                     .background(MaterialTheme.colorScheme.secondaryContainer),
                                 contentAlignment = Alignment.Center
                             ) {
