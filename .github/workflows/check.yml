@@ -42,6 +42,14 @@ jobs:
           unzip -l "$(find app/build/outputs/apk/release/ -name '*.apk' | head -n 1)" | grep -E "lib/|\.apk" | head -20
           ls -la app/build/outputs/apk/release/
 
+      - name: Where is the glass library (package names)
+        if: always()
+        run: |
+          for f in $(find ~/.gradle /home/runner/.gradle -iname 'liquidglass*' \( -name '*.jar' -o -name '*.aar' \) 2>/dev/null | head -6); do
+            echo "== $f"; unzip -l "$f" | awk '{print $4}' | grep -i "class$\|jar$" | head -40
+          done
+          find ~/.gradle -path '*transforms*' -name 'liquidglass-api.jar' 2>/dev/null | head -2 | while read j; do unzip -l "$j" | awk '{print $4}' | head -60; done
+
       - name: Show compile errors
         if: failure()
         run: |

@@ -90,9 +90,10 @@ fun isBiometricHardwareAvailable(context: Context): Boolean {
                 android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG
             ) == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            @Suppress("DEPRECATION")
-            val fm = context.getSystemService(android.hardware.fingerprint.FingerprintManager::class.java)
-            fm?.isHardwareDetected == true && fm.hasEnrolledFingerprints()
+            // FingerprintManager is gone from the newest SDK stubs, so it is reached by name (only runs on Android 6-9)
+            val fm = context.getSystemService("fingerprint")
+            fm != null && (fm.javaClass.getMethod("isHardwareDetected").invoke(fm) as? Boolean == true) &&
+                (fm.javaClass.getMethod("hasEnrolledFingerprints").invoke(fm) as? Boolean == true)
         } else {
             false
         }
