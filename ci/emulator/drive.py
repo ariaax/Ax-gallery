@@ -789,6 +789,245 @@ def s21_fold_and_trash():
     record("fold/trash: info only (see shots 21_*); crash check runs after the scenario", True, "")
 
 
+def vis(nodes, n=45):
+    """Short list of the texts/descriptions currently visible (for the report)."""
+    out = []
+    for x in nodes:
+        t = (x["text"] or x["desc"]).strip().replace("\n", " ")
+        if t and t not in out:
+            out.append(t)
+    return " / ".join(out)[:n * 12]
+
+
+def click_text(pattern, tag, min_y=0.0, max_y=1.0, pick=0):
+    nodes = dump(tag)
+    hit = [n for n in find(nodes, pattern) if H * min_y <= n["cy"] <= H * max_y]
+    if not hit:
+        return False
+    n = hit[pick] if pick < len(hit) else hit[-1]
+    touch.tap(n["cx"], n["cy"])
+    return True
+
+
+def system_confirm():
+    """Android's own 'allow this app to move/delete these files?' dialog."""
+    try:
+        return confirm_system_delete()
+    except Exception:
+        return False
+
+
+def count_in_header(nodes, rx=r"(\d+)\s+(?:items|private items)"):
+    for n in nodes:
+        m = re.search(rx, n["text"] + " " + n["desc"])
+        if m:
+            return int(m.group(1))
+    return None
+
+
+def open_quick(label, tag):
+    """Media tab -> tap one of the four icon-row shortcuts."""
+    tab_tap("Media", 0.20)
+    time.sleep(1.2)
+    ok = click_text(rf"^{label}$", tag, min_y=0.10, max_y=0.45)
+    time.sleep(2.0)
+    return ok
+
+
+def s22_trash():
+    """Trash, end to end: delete from the viewer, restore, delete forever from the trash (the user's crash)."""
+    launch()
+    ok = open_quick("Trash", "22_trash_start")
+    record("trash: shortcut opens something", ok, "")
+    n0 = count_in_header(dump("22_trash_count0"))
+    shot("22_trash_before")
+    record("trash: header shows a count", n0 is not None, f"count={n0}")
+    sh("input keyevent KEYCODE_BACK")
+    time.sleep(1.2)
+    # 1) delete two photos from the viewer
+    for i in range(2):
+        tab_tap("Media", 0.20)
+        time.sleep(1.0)
+        touch.tap(W * (0.17 + 0.33 * i), H * 0.40)
+        time.sleep(2.0)
+        shot(f"22_viewer_{i}")
+        nodes = dump(f"22_viewer_nodes_{i}")
+        b = find(nodes, r"^(delete|move to trash|trash)$")
+        if b:
+            touch.tap(b[-1]["cx"], b[-1]["cy"])
+        else:
+            touch.tap(W * 0.84, H * 0.94)
+        time.sleep(1.5)
+        nodes = dump(f"22_delete_dialog_{i}")
+        b = find(nodes, r"^(delete|move to trash|trash|remove|ok|yes)$")
+        if b:
+            touch.tap(b[-1]["cx"], b[-1]["cy"])
+        time.sleep(1.0)
+        system_confirm()
+        time.sleep(1.5)
+        shot(f"22_after_delete_{i}")
+        for _ in range(2):
+            if "MainActivity" in focus():
+                break
+            sh("input keyevent KEYCODE_BACK")
+            time.sleep(0.8)
+    # 2) trash now has two more
+    open_quick("Trash", "22_trash_again")
+    n1 = count_in_header(dump("22_trash_count1"))
+    shot("22_trash_after_delete")
+    record("trash: deleted photos arrived in the trash", n0 is not None and n1 is not None and n1 >= n0 + 2, f"{n0} -> {n1}")
+    # 3) open one inside the trash viewer and look at what the viewer offers
+    touch.tap(W * 0.17, H * 0.30)
+    time.sleep(2.0)
+    nodes = dump("22_trash_viewer")
+    shot("22_trash_viewer")
+    log("trash viewer texts:", vis(nodes))
+    results.append(("trash viewer: visible texts", "INFO", vis(nodes)))
+    # 3a) restore from the trash viewer, if the viewer offers it
+    r = find(nodes, r"^restore$")
+    if r:
+        touch.tap(r[-1]["cx"], r[-1]["cy"])
+        time.sleep(1.2)
+        system_confirm()
+        time.sleep(2.0)
+        shot("22_after_restore")
+        record("trash: restore from viewer did not crash", alive(), "")
+    else:
+        results.append(("trash: no 'Restore' control found in the trash viewer", "WARN", vis(nodes)))
+        sh("input keyevent KEYCODE_BACK")
+        time.sleep(1.0)
+    # 4) delete forever from the trash (the crash the user hit)
+    if "MainActivity" not in focus():
+        launch()
+    open_quick("Trash", "22_trash_third")
+    n2 = count_in_header(dump("22_trash_count2"))
+    touch.tap(W * 0.17, H * 0.30)
+    time.sleep(2.0)
+    nodes = dump("22_trash_viewer2")
+    d = find(nodes, r"^(delete|delete permanently|delete forever)$")
+    results.append(("trash viewer 2: visible texts", "INFO", vis(nodes)))
+    if d:
+        touch.tap(d[-1]["cx"], d[-1]["cy"])
+        time.sleep(1.5)
+        nodes = dump("22_perm_dialog")
+        b = find(nodes, r"^(delete|delete permanently|delete forever|ok|yes|empty)$")
+        if b:
+            touch.tap(b[-1]["cx"], b[-1]["cy"])
+        time.sleep(1.0)
+        system_confirm()
+        time.sleep(2.5)
+        shot("22_after_perm_delete")
+        record("trash: delete forever from the trash viewer did not crash", alive() and not crash_lines(), "; ".join(crash_lines()))
+    else:
+        results.append(("trash: no 'Delete' control found in the trash viewer", "WARN", vis(nodes)))
+    # 5) 'Empty' on the trash screen
+    if "MainActivity" not in focus():
+        launch()
+    open_quick("Trash", "22_trash_fourth")
+    if click_text(r"^empty$", "22_empty", min_y=0.0, max_y=0.35):
+        time.sleep(1.2)
+        click_text(r"^empty trash$|^empty$|^delete$|^ok$", "22_empty_dialog", min_y=0.3, max_y=0.9)
+        time.sleep(1.0)
+        system_confirm()
+        time.sleep(2.5)
+        shot("22_after_empty")
+        record("trash: Empty did not crash", alive() and not crash_lines(), "; ".join(crash_lines()))
+    else:
+        results.append(("trash: no 'Empty' control found", "WARN", ""))
+
+
+def s23_library_buttons():
+    """Every icon-row shortcut must open its screen; then the Library tab (Cleanup, Trips, Locked ...)."""
+    launch()
+    expect = {"Trash": r"trash", "Videos": r"video", "Locked": r"locked|unlock|private", "Trips": r"trips|trip"}
+    for label, want in expect.items():
+        tab_tap("Media", 0.20)
+        time.sleep(1.2)
+        before = shot(f"23_{label}_before")
+        ok = click_text(rf"^{label}$", f"23_find_{label}", min_y=0.10, max_y=0.45)
+        time.sleep(2.2)
+        nodes = dump(f"23_{label}_screen")
+        shot(f"23_{label}_screen")
+        txt = vis(nodes)
+        still_media = bool(find(nodes, r"^TRASH$")) and bool(find(nodes, r"^VIDEOS$")) and bool(find(nodes, r"^TRIPS$"))
+        record(f"icon row: '{label}' button opens its screen", ok and not still_media and bool(re.search(want, txt, re.I)),
+               f"found={ok} still_on_media={still_media} texts={txt[:160]}")
+        for _ in range(2):
+            sh("input keyevent KEYCODE_BACK")
+            time.sleep(0.8)
+            if "MainActivity" not in focus():
+                launch()
+    # Library tab: list everything it offers, then open Cleanup / Trips / Locked
+    tab_tap("Library", 0.78)
+    time.sleep(2.0)
+    nodes = dump("23_library_tab")
+    shot("23_library_tab")
+    results.append(("library tab texts", "INFO", vis(nodes)))
+    for label in ("Cleanup", "Trips", "Locked", "Screenshots", "Large videos"):
+        nodes = dump(f"23_lib_find_{label}")
+        if find(nodes, rf"{label}"):
+            click_text(rf"{label}", f"23_lib_tap_{label}", min_y=0.08, max_y=0.9)
+            time.sleep(2.0)
+            n2 = dump(f"23_lib_{label}")
+            shot(f"23_lib_{label}")
+            results.append((f"library '{label}' texts", "INFO", vis(n2)))
+            record(f"library: '{label}' opens without crash", alive() and not crash_lines(), "")
+            sh("input keyevent KEYCODE_BACK")
+            time.sleep(1.0)
+            if "MainActivity" not in focus():
+                launch()
+                tab_tap("Library", 0.78)
+                time.sleep(1.5)
+        else:
+            results.append((f"library: '{label}' not visible on the Library tab", "WARN", ""))
+
+
+def device_ms():
+    return int(sh("date +%s%3N").strip())
+
+
+def s24_new_photo_latency():
+    """Adds new photos while the app is open, like the camera does, and measures MediaStore->notify->on screen."""
+    launch()
+    tab_tap("Media", 0.20)
+    time.sleep(1.5)
+    adb("logcat", "-c")
+    latencies = []
+    for i in range(3):
+        img = Image.new("RGB", (1600, 1200), (40 + i * 60, 90, 200 - i * 50))
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=88)
+        local = OUT / f"ax_new_{i}.jpg"
+        local.write_bytes(buf.getvalue())
+        remote = f"/sdcard/DCIM/Camera/ax_new_{int(time.time())}_{i}.jpg"
+        sh("mkdir -p /sdcard/DCIM/Camera")
+        adb("push", str(local), remote, check=True)
+        t0 = device_ms()
+        sh(f"am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://{remote} >/dev/null 2>&1")
+        seen = None
+        for _ in range(60):  # up to 30 s
+            time.sleep(0.5)
+            lg = adb("logcat", "-d", "-v", "epoch", "-s", "AxLatency")
+            for line in lg.splitlines():
+                m = re.match(r"\s*(\d+)\.(\d+)\s+\S+\s+\S+\s+\S+\s+AxLatency: (.*)", line) or re.match(r"\s*(\d+)\.(\d+)\s+.*?AxLatency\s*: (.*)", line)
+                if not m:
+                    continue
+                ts = int(m.group(1)) * 1000 + int(m.group(2).ljust(3, "0")[:3])
+                if ts >= t0 and m.group(3).startswith("2 on screen"):
+                    seen = (ts - t0, m.group(3))
+                    break
+            if seen:
+                break
+        latencies.append(seen[0] if seen else None)
+        record(f"new photo {i + 1}: appears in the grid", seen is not None, f"{seen[0]} ms after the scan ({seen[1][:70]})" if seen else "never showed up within 30 s")
+        shot(f"24_after_new_{i}")
+    metrics["new_photo_latency_ms"] = latencies
+    lg = adb("logcat", "-d", "-v", "epoch", "-s", "AxLatency")
+    (OUT / "logs" / "s24_axlatency.txt").write_text(lg)
+    ok = [x for x in latencies if x is not None]
+    record("new photos: median latency under 4 s", bool(ok) and sorted(ok)[len(ok) // 2] < 4000, f"{latencies}")
+
+
 def s09_monkey():
     launch()
     gfx_reset()
@@ -821,7 +1060,7 @@ def main():
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     allfns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s09_monkey)
+              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s09_monkey)
     # the fresh emulator often shows a launcher ANR dialog; restart the launcher before the first scenario
     sh("am force-stop com.google.android.apps.nexuslauncher; am force-stop com.google.android.apps.nexuslauncher")
     time.sleep(12)

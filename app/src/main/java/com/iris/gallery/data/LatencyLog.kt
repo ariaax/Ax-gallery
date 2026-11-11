@@ -14,6 +14,7 @@ object LatencyLog {
     @Synchronized
     fun add(message: String) {
         lines.addLast("${fmt.format(System.currentTimeMillis())}  $message")
+        android.util.Log.i("AxLatency", message)
         while (lines.size > 40) lines.removeFirst()
     }
 
