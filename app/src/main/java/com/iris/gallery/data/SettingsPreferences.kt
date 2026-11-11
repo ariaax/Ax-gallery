@@ -148,7 +148,7 @@ data class SettingsState(
     val videoGestureControls: Boolean = true,
     val showViewerUserComments: Boolean = true,
     val viewerHeaderStyle: ViewerHeaderStyle = ViewerHeaderStyle.DATE,
-    val showViewerPageCount: Boolean = true,
+    val showViewerPageCount: Boolean = false,
     val showViewerTime: Boolean = true,
     val showFilmstrip: Boolean = true,
     val dismissedFilmstripTip: Boolean = false,
@@ -391,7 +391,7 @@ class SettingsPreferences(context: Context) {
             videoGestureControls = prefs.getBoolean("video_gesture_controls", true),
             showViewerUserComments = prefs.getBoolean("show_viewer_user_comments", true),
             viewerHeaderStyle = runCatching { ViewerHeaderStyle.valueOf(prefs.getString("viewer_header_style", null).orEmpty()) }.getOrDefault(ViewerHeaderStyle.DATE),
-            showViewerPageCount = prefs.getBoolean("show_viewer_page_count", false),
+            showViewerPageCount = prefs.getBoolean("show_viewer_page_count_v2", false),
             showViewerTime = prefs.getBoolean("show_viewer_time", true),
             showFilmstrip = prefs.getBoolean("show_filmstrip", true),
             dismissedFilmstripTip = prefs.getBoolean("dismissed_filmstrip_tip", false),
@@ -457,7 +457,7 @@ class SettingsPreferences(context: Context) {
             .putBoolean("video_gesture_controls", state.videoGestureControls)
             .putBoolean("show_viewer_user_comments", state.showViewerUserComments)
             .putString("viewer_header_style", state.viewerHeaderStyle.name)
-            .putBoolean("show_viewer_page_count", state.showViewerPageCount)
+            .putBoolean("show_viewer_page_count_v2", state.showViewerPageCount)
             .putBoolean("show_viewer_time", state.showViewerTime)
             .putBoolean("show_filmstrip", state.showFilmstrip)
             .putBoolean("dismissed_filmstrip_tip", state.dismissedFilmstripTip)
