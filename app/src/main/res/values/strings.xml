@@ -823,4 +823,16 @@
     <string name="dialog_overwrite_original_title">Overwrite original</string>
     <string name="dialog_overwrite_original_desc">Replace original file instead of saving a copy</string>
     <string name="toast_edited_overwritten">Original image replaced</string>
+    <string name="trips_empty">No trips found yet. A trip needs at least 8 photos taken close in time and place.</string>
+    <string name="trips_item_count">%1$d photos and videos</string>
+    <string name="cleanup_title">Cleanup suggestions</string>
+    <string name="cleanup_desc">Nothing is removed automatically. Select what you want, then move it to Trash. You can restore it from Trash.</string>
+    <string name="cleanup_move_to_trash">Move to Trash</string>
+    <string name="cleanup_empty">Nothing to clean up right now.</string>
+    <string name="cleanup_screenshots">Screenshots</string>
+    <string name="cleanup_large_videos">Large videos</string>
+    <string name="cleanup_clear_group">Clear this group</string>
+    <string name="cleanup_select_group">Select this group</string>
+    <string name="cleanup_preview">Preview</string>
+    <string name="cleanup_selected">%1$d selected</string>
 </resources>

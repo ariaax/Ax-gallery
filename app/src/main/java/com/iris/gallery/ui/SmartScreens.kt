@@ -28,6 +28,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.iris.gallery.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,7 +73,7 @@ fun TripsScreen(
     ) {
         if (trips.isEmpty()) {
             item {
-                Text("No trips found yet. A trip needs at least 8 photos taken close in time and place.",
+                Text(stringResource(R.string.trips_empty),
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(12.dp))
             }
         }
@@ -83,7 +85,7 @@ fun TripsScreen(
                         else "${shortDate(trip.start)} – ${shortDate(trip.end)}",
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                     )
-                    Text("${trip.items.size} photos and videos", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.trips_item_count, trip.items.size), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(trip.items.take(12), key = { it.id }) { media ->
                             MediaThumbnail(media, Modifier.size(72.dp).clip(CutCornerShape(12.dp)))
@@ -121,26 +123,26 @@ fun CleanupScreen(
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Cleanup suggestions", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Text("Nothing is removed automatically. Select what you want, then move it to Trash. You can restore it from Trash.",
+                    Text(stringResource(R.string.cleanup_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.cleanup_desc),
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("${selected.size} selected · ${sizeLabel(selected.sumOf { it.sizeBytes })}",
+                        Text("${stringResource(R.string.cleanup_selected, selected.size)} · ${sizeLabel(selected.sumOf { it.sizeBytes })}",
                             modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-                        Button(enabled = selected.isNotEmpty(), onClick = { onTrash(selected) }) { Text("Move to Trash") }
+                        Button(enabled = selected.isNotEmpty(), onClick = { onTrash(selected) }) { Text(stringResource(R.string.cleanup_move_to_trash)) }
                     }
                 }
             }
         }
         if (groups.isEmpty()) {
-            item { Text("Nothing to clean up right now.", modifier = Modifier.padding(12.dp),
+            item { Text(stringResource(R.string.cleanup_empty), modifier = Modifier.padding(12.dp),
                 style = MaterialTheme.typography.titleMedium) }
         }
         items(groups, key = { it.kind }) { group ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(if (group.kind == CleanupKind.SCREENSHOTS) "Screenshots" else "Large videos",
+                        Text(if (group.kind == CleanupKind.SCREENSHOTS) stringResource(R.string.cleanup_screenshots) else stringResource(R.string.cleanup_large_videos),
                             fontWeight = FontWeight.SemiBold)
                         Text("${group.items.size} · ${sizeLabel(group.items.sumOf { it.sizeBytes })}",
                             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
@@ -149,7 +151,7 @@ fun CleanupScreen(
                         val ids = group.items.map { it.id }
                         selectedIds = if (ids.all { it in selectedIds }) selectedIds - ids.toSet() else selectedIds + ids
                     }, modifier = Modifier.padding(horizontal = 6.dp)) {
-                        Text(if (group.items.all { it.id in selectedIds }) "Clear this group" else "Select this group")
+                        Text(if (group.items.all { it.id in selectedIds }) stringResource(R.string.cleanup_clear_group) else stringResource(R.string.cleanup_select_group))
                     }
                     LazyRow(contentPadding = PaddingValues(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(group.items, key = { it.id }) { media ->
@@ -165,7 +167,7 @@ fun CleanupScreen(
                                 }
                                 TextButton(onClick = { onOpen(group, media) },
                                     modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.surface.copy(alpha = .82f))) { Text("Preview") }
+                                        .background(MaterialTheme.colorScheme.surface.copy(alpha = .82f))) { Text(stringResource(R.string.cleanup_preview)) }
                             }
                         }
                     }
