@@ -5874,11 +5874,8 @@ private fun PhotoViewer(
                     if (current.sizeBytes > 0) add(android.text.format.Formatter.formatShortFileSize(context, current.sizeBytes))
                 }.joinToString(" \u00B7 ")
             }
-            val secondaryHeaderFull = when {
-                viewerMeta.isBlank() -> secondaryHeaderText
-                secondaryHeaderText.isBlank() -> viewerMeta
-                else -> "$viewerMeta \u00B7 $secondaryHeaderText"
-            }
+            // file name intentionally not shown in the compact header (it is in the details sheet)
+            val secondaryHeaderFull = viewerMeta
             Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
                 if (primaryHeaderText.isNotBlank()) {
                     Text(primaryHeaderText, color = Color.White, style = MaterialTheme.typography.titleMedium,
