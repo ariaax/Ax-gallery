@@ -1036,6 +1036,39 @@ def s24_new_photo_latency():
     record("new photos: median latency under 4 s", bool(ok) and sorted(ok)[len(ok) // 2] < 4000, f"{latencies}")
 
 
+def s28_real_glass():
+    """Turns the experimental 'Real liquid glass' switch on, then looks at the screens that carry the glass bar."""
+    launch()
+    shot("28_before")
+    tab_tap("Library", 0.78)
+    time.sleep(1.5)
+    touch.tap(W * 0.93, H * 0.088)
+    time.sleep(2.0)
+    found = False
+    for _ in range(14):
+        nodes = dump("28_settings")
+        hit = [n for n in find(nodes, r"Real liquid glass") if H * 0.12 < n["cy"] < H * 0.88]
+        if hit:
+            touch.tap(hit[0]["cx"], hit[0]["cy"])
+            found = True
+            break
+        touch.swipe(W * 0.5, H * 0.78, W * 0.5, H * 0.28, ms=350)
+        time.sleep(0.6)
+    time.sleep(1.0)
+    shot("28_switch")
+    record("real glass: switch found in Settings", found, "")
+    sh("input keyevent KEYCODE_BACK")
+    time.sleep(1.2)
+    for name, x in (("media", 0.20), ("library", 0.78)):
+        tab_tap("Media" if name == "media" else "Library", x)
+        time.sleep(2.0)
+        shot(f"28_glass_{name}")
+    touch.swipe(W * 0.5, H * 0.75, W * 0.5, H * 0.25, ms=300)
+    time.sleep(1.0)
+    shot("28_glass_scrolled")
+    record("real glass: no crash with the shader bar", alive() and not crash_lines(), "; ".join(crash_lines()))
+
+
 def s09_monkey():
     launch()
     gfx_reset()
