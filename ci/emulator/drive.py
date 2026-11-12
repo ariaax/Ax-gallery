@@ -1191,6 +1191,38 @@ def s28_real_glass():
     record("real glass: no crash with the shader bar", alive() and not crash_lines(), "; ".join(crash_lines()))
 
 
+def s29_select_hit():
+    """Long-press a tile: the selection mark must appear on the tile that was touched, not on the row below it."""
+    from PIL import ImageChops
+    launch()
+    tab_tap("Media", 0.20)
+    time.sleep(2.0)
+    bad = 0
+    for k, (fx, fy) in enumerate(((0.17, 0.42), (0.50, 0.55), (0.83, 0.68), (0.17, 0.80))):
+        before = shot(f"29_before_{k}")
+        touch.hold(W * fx, H * fy, 1.3)
+        time.sleep(1.2)
+        after = shot(f"29_after_{k}")
+        if before is None or after is None:
+            continue
+        diff = ImageChops.difference(before, after).convert("L").point(lambda v: 255 if v > 40 else 0)
+        # ignore the header (selection bar replaces it) and the bottom nav
+        box = diff.crop((0, int(H * 0.17), W, int(H * 0.86))).getbbox()
+        if not box:
+            results.append((f"select hit {k}", "WARN", "nothing changed after the long press"))
+            continue
+        top = box[1] + int(H * 0.17); bot = box[3] + int(H * 0.17)
+        cy = (top + bot) / 2
+        dy = cy - H * fy
+        tile = W / 3
+        ok = abs(dy) < tile * 0.6
+        bad += 0 if ok else 1
+        record(f"select hit {k}: mark lands on the touched tile", ok, f"touched y={int(H * fy)} changed y={top}-{bot} dy={int(dy)}px (tile~{int(tile)}px)")
+        sh("input keyevent KEYCODE_BACK")
+        time.sleep(1.0)
+    record("select hit: no mismatch", bad == 0, f"{bad} of 4 off")
+
+
 def s09_monkey():
     launch()
     gfx_reset()
@@ -1223,7 +1255,7 @@ def main():
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     allfns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s09_monkey)
+              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s29_select_hit, s09_monkey)
     # the fresh emulator often shows a launcher ANR dialog; restart the launcher before the first scenario
     sh("am force-stop com.google.android.apps.nexuslauncher; am force-stop com.google.android.apps.nexuslauncher")
     time.sleep(12)
