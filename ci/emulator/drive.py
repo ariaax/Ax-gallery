@@ -834,32 +834,33 @@ def open_quick(label, tag):
     return ok
 
 
+def dismiss_tips():
+    nodes = dump("tips")
+    if find(nodes, r"^Don't show again$"):
+        click_text(r"^Don't show again$", "tips_dismiss")
+        time.sleep(0.8)
+
+
 def s22_trash():
-    """Trash, end to end: delete from the viewer, restore, delete forever from the trash (the user's crash)."""
+    """Trash, end to end: delete two photos from the viewer, restore one, delete the other forever (the user's crash), then Empty."""
     launch()
-    ok = open_quick("Trash", "22_trash_start")
-    record("trash: shortcut opens something", ok, "")
+    open_quick("Trash", "22_trash_start")
     n0 = count_in_header(dump("22_trash_count0"))
-    shot("22_trash_before")
-    record("trash: header shows a count", n0 is not None, f"count={n0}")
+    record("trash: header shows a size", n0 is not None, f"{n0}")
     sh("input keyevent KEYCODE_BACK")
     time.sleep(1.2)
-    # 1) delete two photos from the viewer
     for i in range(2):
         tab_tap("Media", 0.20)
         time.sleep(1.0)
-        touch.tap(W * (0.17 + 0.33 * i), H * 0.40)
-        time.sleep(2.0)
+        touch.tap(W * (0.17 + 0.33 * i), H * 0.66)  # photo tiles, well below the video row
+        time.sleep(2.2)
+        dismiss_tips()
         shot(f"22_viewer_{i}")
-        nodes = dump(f"22_viewer_nodes_{i}")
-        b = find(nodes, r"^(delete|move to trash|trash)$")
-        if b:
-            touch.tap(b[-1]["cx"], b[-1]["cy"])
-        else:
-            touch.tap(W * 0.84, H * 0.94)
+        touch.tap(W * 0.84, H * 0.94)  # trash button of the viewer bar
         time.sleep(1.5)
         nodes = dump(f"22_delete_dialog_{i}")
-        b = find(nodes, r"^(delete|move to trash|trash|remove|ok|yes)$")
+        b = find(nodes, r"^(delete|move to trash|trash|remove|ok|yes|move)$")
+        results.append((f"delete dialog {i}", "INFO", vis(nodes)))
         if b:
             touch.tap(b[-1]["cx"], b[-1]["cy"])
         time.sleep(1.0)
@@ -867,81 +868,70 @@ def s22_trash():
         time.sleep(1.5)
         shot(f"22_after_delete_{i}")
         for _ in range(2):
-            if "MainActivity" in focus():
+            if "MainActivity" in focus() and find(dump("22_back_check"), r"^Media$"):
                 break
             sh("input keyevent KEYCODE_BACK")
             time.sleep(0.8)
-    # 2) trash now has two more
     open_quick("Trash", "22_trash_again")
     n1 = count_in_header(dump("22_trash_count1"))
     shot("22_trash_after_delete")
-    record("trash: deleted photos arrived in the trash", n0 is not None and n1 is not None and n1 > n0, f"{n0} -> {n1} (header size)")
-    # 3) open one inside the trash viewer and look at what the viewer offers
-    touch.tap(W * 0.17, H * 0.30)
+    record("trash: deleted photos arrived in the trash", n0 is not None and n1 is not None and n1 > n0, f"{n0} -> {n1}")
+    # restore the first one from the trash viewer
+    touch.tap(W * 0.17, H * 0.22)
     time.sleep(2.0)
+    dismiss_tips()
     nodes = dump("22_trash_viewer")
-    if find(nodes, r"^Don't show again$"):
-        click_text(r"^Don't show again$", "22_dismiss_share")
-        time.sleep(1.0)
-        nodes = dump("22_trash_viewer_b")
     shot("22_trash_viewer")
-    log("trash viewer texts:", vis(nodes))
-    results.append(("trash viewer: visible texts", "INFO", vis(nodes)))
-    # 3a) restore from the trash viewer, if the viewer offers it
-    r = find(nodes, r"^restore$")
+    results.append(("trash viewer texts", "INFO", vis(nodes)))
+    r = find(nodes, r"restore")
     if r:
         touch.tap(r[-1]["cx"], r[-1]["cy"])
-        time.sleep(1.2)
-        system_confirm()
-        time.sleep(2.0)
-        shot("22_after_restore")
-        record("trash: restore from viewer did not crash", alive(), "")
     else:
-        results.append(("trash: no 'Restore' control found in the trash viewer", "WARN", vis(nodes)))
-        sh("input keyevent KEYCODE_BACK")
-        time.sleep(1.0)
-    # 4) delete forever from the trash (the crash the user hit)
+        touch.tap(W * 0.30, H * 0.94)
+    time.sleep(1.5)
+    system_confirm()
+    time.sleep(2.0)
+    shot("22_after_restore")
+    record("trash: restore from the viewer did not crash", alive() and not crash_lines(), "; ".join(crash_lines()))
+    # delete the remaining one forever
     if "MainActivity" not in focus():
         launch()
     open_quick("Trash", "22_trash_third")
     n2 = count_in_header(dump("22_trash_count2"))
-    touch.tap(W * 0.17, H * 0.30)
+    record("trash: restore shrank the trash", n1 is not None and n2 is not None and n2 < n1, f"{n1} -> {n2}")
+    touch.tap(W * 0.17, H * 0.22)
     time.sleep(2.0)
+    dismiss_tips()
     nodes = dump("22_trash_viewer2")
-    if find(nodes, r"^Don't show again$"):
-        click_text(r"^Don't show again$", "22_dismiss_share2")
-        time.sleep(1.0)
-        nodes = dump("22_trash_viewer2_b")
-    d = find(nodes, r"^(delete|delete permanently|delete forever)$")
-    results.append(("trash viewer 2: visible texts", "INFO", vis(nodes)))
+    d = find(nodes, r"delete permanently")
     if d:
         touch.tap(d[-1]["cx"], d[-1]["cy"])
-        time.sleep(1.5)
-        nodes = dump("22_perm_dialog")
-        b = find(nodes, r"^(delete|delete permanently|delete forever|ok|yes|empty)$")
-        if b:
-            touch.tap(b[-1]["cx"], b[-1]["cy"])
-        time.sleep(1.0)
-        system_confirm()
-        time.sleep(2.5)
-        shot("22_after_perm_delete")
-        record("trash: delete forever from the trash viewer did not crash", alive() and not crash_lines(), "; ".join(crash_lines()))
     else:
-        results.append(("trash: no 'Delete' control found in the trash viewer", "WARN", vis(nodes)))
-    # 5) 'Empty' on the trash screen
+        touch.tap(W * 0.70, H * 0.94)
+    time.sleep(1.5)
+    nodes = dump("22_perm_dialog")
+    shot("22_perm_dialog")
+    results.append(("perm delete dialog", "INFO", vis(nodes)))
+    b = find(nodes, r"^(delete|delete permanently|delete forever|ok|yes|confirm)$")
+    if b:
+        touch.tap(b[-1]["cx"], b[-1]["cy"])
+    time.sleep(1.0)
+    system_confirm()
+    time.sleep(2.5)
+    shot("22_after_perm_delete")
+    record("trash: delete forever did not crash", alive() and not crash_lines(), "; ".join(crash_lines()))
     if "MainActivity" not in focus():
         launch()
     open_quick("Trash", "22_trash_fourth")
+    n3 = count_in_header(dump("22_trash_count3"))
+    record("trash: permanent delete emptied it", n3 is not None and (n2 is None or n3 < n2 or n3 == 0), f"{n2} -> {n3}")
     if click_text(r"^empty$", "22_empty", min_y=0.0, max_y=0.35):
         time.sleep(1.2)
         click_text(r"^empty trash$|^empty$|^delete$|^ok$", "22_empty_dialog", min_y=0.3, max_y=0.9)
         time.sleep(1.0)
         system_confirm()
         time.sleep(2.5)
-        shot("22_after_empty")
         record("trash: Empty did not crash", alive() and not crash_lines(), "; ".join(crash_lines()))
-    else:
-        results.append(("trash: no 'Empty' control found", "WARN", ""))
 
 
 def s23_library_buttons():
@@ -1036,6 +1026,119 @@ def s24_new_photo_latency():
     record("new photos: median latency under 4 s", bool(ok) and sorted(ok)[len(ok) // 2] < 4000, f"{latencies}")
 
 
+def sweep_screen(tag, header_rx, rounds=6, cap=28, skip_rx=r"(?i)^(delete|reset|clear|erase|factory|empty|sign out|log out)"):
+    """Opens every tappable row of the current screen (scrolling down), screenshots it, then comes back. Never crashes is the check."""
+    seen = set()
+    taps = 0
+    for rnd in range(rounds):
+        nodes = dump(f"{tag}_r{rnd}")
+        shot(f"{tag}_page{rnd}")
+        for n in nodes:
+            label = (n["text"] or n["desc"]).strip()
+            if not (label and 3 <= len(label) < 45) or label in seen:
+                continue
+            if not (H * 0.12 < n["cy"] < H * 0.86) or re.search(skip_rx, label):
+                continue
+            seen.add(label)
+            taps += 1
+            if taps > cap:
+                break
+            touch.tap(n["cx"], n["cy"])
+            time.sleep(1.2)
+            shot(f"{tag}_tap{taps:02d}")
+            if not alive():
+                record(f"{tag}: '{label}' crashed the app", False, "; ".join(crash_lines()))
+                launch()
+                return taps
+            if not find(dump(f"{tag}_after{taps:02d}"), header_rx):
+                sh("input keyevent KEYCODE_BACK")
+                time.sleep(1.0)
+                if not find(dump(f"{tag}_back{taps:02d}"), header_rx):
+                    sh("input keyevent KEYCODE_BACK")
+                    time.sleep(1.0)
+            if "MainActivity" not in focus():
+                launch()
+                return taps
+        if taps > cap:
+            break
+        touch.swipe(W * 0.5, H * 0.78, W * 0.5, H * 0.28, ms=350)
+        time.sleep(0.8)
+    return taps
+
+
+def s25_settings():
+    """Settings: open every row, look for crashes and ugly screens."""
+    launch()
+    tab_tap("Library", 0.78)
+    time.sleep(1.5)
+    touch.tap(W * 0.93, H * 0.088)  # gear at the top right of the Library tab
+    time.sleep(2.0)
+    nodes = dump("25_settings_open")
+    shot("25_settings_open")
+    results.append(("settings texts", "INFO", vis(nodes)))
+    record("settings: opens from the Library tab", bool(find(nodes, r"settings|appearance|general|language")), vis(nodes)[:120])
+    taps = sweep_screen("25", r"(?i)settings")
+    record("settings: every row opens without a crash", alive() and not crash_lines(), f"{taps} rows tried; " + "; ".join(crash_lines()))
+
+
+def s26_editor():
+    """Editor: open a photo, tap the pencil, look at every tool, rotate/crop/filters, leave without saving."""
+    launch()
+    tab_tap("Media", 0.20)
+    time.sleep(1.0)
+    touch.tap(W * 0.17, H * 0.66)
+    time.sleep(2.2)
+    dismiss_tips()
+    touch.tap(W * 0.53, H * 0.94)  # pencil in the viewer bar
+    time.sleep(2.5)
+    nodes = dump("26_editor_open")
+    shot("26_editor_open")
+    results.append(("editor texts", "INFO", vis(nodes)))
+    record("editor: opens (or offers a choice)", alive() and len(nodes) > 5, vis(nodes)[:120])
+    # a chooser ('edit a copy' / 'edit original') may come first
+    for pat in (r"^Ax Editor$", r"edit copy|save as copy|create copy", r"^continue$|^edit$|^ok$"):
+        if find(nodes, pat) and not find(nodes, r"^(crop|filters|adjust)$"):
+            click_text(pat, "26_choice")
+            time.sleep(2.0)
+            nodes = dump("26_editor_after_choice")
+            shot("26_editor_after_choice")
+    taps = sweep_screen("26", r"(?i)crop|adjust|filter|draw|text|editor", rounds=3, cap=14,
+                        skip_rx=r"(?i)^(delete|reset|clear|erase|save|done|apply|discard|exit|close)")
+    record("editor: tools open without a crash", alive() and not crash_lines(), f"{taps} controls tried; " + "; ".join(crash_lines()))
+    sh("input keyevent KEYCODE_BACK")
+    time.sleep(1.0)
+    click_text(r"(?i)^(discard|don't save|leave|exit|no)$", "26_discard")
+    time.sleep(1.0)
+    record("editor: can be left", alive(), "")
+
+
+def s27_app_lock():
+    """App lock settings screen: find it, open it, do not set a PIN (would lock the test run)."""
+    launch()
+    tab_tap("Library", 0.78)
+    time.sleep(1.5)
+    touch.tap(W * 0.93, H * 0.088)
+    time.sleep(2.0)
+    found = False
+    for _ in range(18):
+        nodes = dump("27_settings")
+        hit = [n for n in find(nodes, r"(?i)app lock|lock the app|pin|biometric|security|privacy") if H * 0.12 < n["cy"] < H * 0.86]
+        if hit:
+            touch.tap(hit[0]["cx"], hit[0]["cy"])
+            found = True
+            break
+        touch.swipe(W * 0.5, H * 0.78, W * 0.5, H * 0.28, ms=350)
+        time.sleep(0.8)
+    time.sleep(1.8)
+    nodes = dump("27_lock_screen")
+    shot("27_lock_screen")
+    results.append(("app lock screen texts", "INFO", vis(nodes)))
+    record("app lock: settings entry found and opens", found and alive(), vis(nodes)[:140])
+    taps = sweep_screen("27", r"(?i)lock|security|privacy|pin", rounds=2, cap=6,
+                        skip_rx=r"(?i)^(delete|reset|clear|erase|disable|turn off|remove)")
+    record("app lock: rows open without crash", alive() and not crash_lines(), f"{taps} rows; " + "; ".join(crash_lines()))
+
+
 def s28_real_glass():
     """Turns the experimental 'Real liquid glass' switch on, then looks at the screens that carry the glass bar."""
     launch()
@@ -1101,7 +1204,7 @@ def main():
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     allfns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s09_monkey)
+              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s09_monkey)
     # the fresh emulator often shows a launcher ANR dialog; restart the launcher before the first scenario
     sh("am force-stop com.google.android.apps.nexuslauncher; am force-stop com.google.android.apps.nexuslauncher")
     time.sleep(12)
