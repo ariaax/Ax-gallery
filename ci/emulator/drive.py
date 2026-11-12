@@ -1192,12 +1192,19 @@ def s28_real_glass():
 
 
 def _changed(a, b):
-    """Pixels that changed noticeably between two screenshots (ignores the status bar)."""
-    import numpy as np
-    x = np.asarray(a).astype(int); y = np.asarray(b).astype(int)
-    d = np.abs(x - y).sum(axis=2) > 90
-    d[: int(H * 0.04), :] = False
-    ys, xs = np.nonzero(d)
+    """Pixels that changed noticeably between two screenshots (ignores the status bar). Pure PIL, no numpy on the runner."""
+    from PIL import ImageChops
+    k = 4
+    d = ImageChops.difference(a, b).convert("L").resize((a.width // k, a.height // k)).point(lambda v: 255 if v > 30 else 0)
+    w, h = d.size
+    data = d.getdata()
+    xs, ys = [], []
+    for i, v in enumerate(data):
+        if v:
+            y = (i // w) * k
+            if y > H * 0.04:
+                xs.append((i % w) * k)
+                ys.append(y)
     return xs, ys
 
 
@@ -1226,19 +1233,20 @@ def s29_selection_hit():
         if before is None or after is None:
             continue
         xs, ys = _changed(before, after)
-        if len(xs) == 0:
+        if not xs:
             results.append((f"selection tap {n}: nothing changed", "WARN", f"tap=({int(x)},{int(y)})"))
             continue
         # allow the header ("N selected") region at the top; judge only the grid area
-        m = ys > H * 0.30
-        xs, ys = xs[m], ys[m]
-        if len(xs) == 0:
+        keep = [i for i, yy in enumerate(ys) if yy > H * 0.30]
+        xs = [xs[i] for i in keep]; ys = [ys[i] for i in keep]
+        if not xs:
             continue
-        inside = ((xs > tile * c - 6) & (xs < tile * (c + 1) + 6) & (ys > y - tile * 0.55) & (ys < y + tile * 0.55)).mean()
+        inside = sum(1 for xx, yy in zip(xs, ys)
+                     if tile * c - 6 < xx < tile * (c + 1) + 6 and y - tile * 0.55 < yy < y + tile * 0.55) / len(xs)
         ok = inside > 0.85
         bad += (not ok)
         record(f"selection tap {n}: only the tapped tile changes", ok,
-               f"tap=({int(x)},{int(y)}) changed_x={int(xs.min())}-{int(xs.max())} y={int(ys.min())}-{int(ys.max())} inside={inside:.2f}")
+               f"tap=({int(x)},{int(y)}) changed_x={min(xs)}-{max(xs)} y={min(ys)}-{max(ys)} inside={inside:.2f}")
     nodes = dump("29_header")
     results.append(("selection header texts", "INFO", vis(nodes)))
     record("selection: no crash", alive() and not crash_lines(), "; ".join(crash_lines()))
