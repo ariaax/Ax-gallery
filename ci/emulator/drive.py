@@ -1154,14 +1154,17 @@ def s28_real_glass():
         hit = [n for n in find(nodes, r"Real liquid glass") if H * 0.12 < n["cy"] < H * 0.88]
         if hit:
             found = True
-            for attempt in (touch_input_tap, touch.tap):
-                attempt(W * 0.86, hit[0]["cy"] + H * 0.0275)
-                time.sleep(1.0)
-                chk = [n for n in dump("28_after_tap").__iter__() if n.get("checkable") and abs(n["cy"] - (hit[0]["cy"] + H * 0.0275)) < H * 0.02]
+            ty = hit[0]["cy"] + H * 0.0275
+            for k in range(6):
+                (touch_input_tap if k % 2 == 0 else touch.tap)(W * 0.86, ty)
+                time.sleep(1.6)
+                nd = dump("28_after_tap")
+                chk = [n for n in nd if n.get("checkable") and abs(n["cy"] - ty) < H * 0.02]
                 on = bool(chk) and chk[0].get("checked")
-                results.append((f"real glass: switch state after {attempt.__name__}", "INFO", f"nodes={len(chk)} checked={on}"))
+                results.append((f"real glass: switch state after try {k}", "INFO", f"nodes={len(chk)} checked={on}"))
                 if on:
                     break
+            break
             break
         touch.swipe(W * 0.5, H * 0.78, W * 0.5, H * 0.28, ms=350)
         time.sleep(0.6)
