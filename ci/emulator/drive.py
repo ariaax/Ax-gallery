@@ -1171,23 +1171,23 @@ def s28_real_glass():
     time.sleep(1.0)
     shot("28_switch")
     if not alive():
-        (OUT / "logs" / "s28_death_after_switch.txt").write_text(adb("logcat", "-d", "-t", "8000"))
+        (OUT / "logs" / "s28_after_switch_crash.txt").write_text(adb("logcat", "-d", "-t", "8000"))
     record("real glass: switch found in Settings", found, "")
     sh("input keyevent KEYCODE_BACK")
     time.sleep(1.2)
     if not alive():
-        (OUT / "logs" / "s28_death_after_back.txt").write_text(adb("logcat", "-d", "-t", "8000"))
+        (OUT / "logs" / "s28_after_back_crash.txt").write_text(adb("logcat", "-d", "-t", "8000"))
     for name, x in (("media", 0.20), ("library", 0.78)):
         tab_tap("Media" if name == "media" else "Library", x)
         time.sleep(2.0)
         if not alive():
-            (OUT / "logs" / f"s28_death_{name}.txt").write_text(adb("logcat", "-d", "-t", "8000"))
+            (OUT / "logs" / f"s28_{name}_crash.txt").write_text(adb("logcat", "-d", "-t", "8000"))
         shot(f"28_glass_{name}")
     touch.swipe(W * 0.5, H * 0.75, W * 0.5, H * 0.25, ms=300)
     time.sleep(1.0)
     shot("28_glass_scrolled")
     if not alive():
-        (OUT / "logs" / "s28_death_end.txt").write_text(adb("logcat", "-d", "-t", "8000"))
+        (OUT / "logs" / "s28_end_crash.txt").write_text(adb("logcat", "-d", "-t", "8000"))
     record("real glass: no crash with the shader bar", alive() and not crash_lines(), "; ".join(crash_lines()))
 
 
