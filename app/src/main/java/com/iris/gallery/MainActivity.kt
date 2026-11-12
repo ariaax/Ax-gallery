@@ -2420,8 +2420,8 @@ private fun GalleryScaffold(
                             singleLine = true,
                             shape = CutCornerShape(30),
                             colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
-                                focusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
+                                unfocusedContainerColor = Color(0xFF111729),
+                                focusedContainerColor = Color(0xFF16203A),
                                 unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f),
                                 focusedBorderColor = MaterialTheme.colorScheme.primary
                             )
@@ -2764,7 +2764,10 @@ private fun GalleryScaffold(
                         }
                     }
                 } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                // while searching the bar is solid so the date headers and photos scrolling underneath never show through the field
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = if (isFileSearching && canSearchOnScreen) Color(0xFF05070D) else Color.Transparent
+                ),
             )
           }
         },
@@ -4886,7 +4889,8 @@ private fun PhotoGrid(
                     Modifier
                         .align(Alignment.CenterEnd)
                         .fillMaxHeight()
-                        .padding(bottom = bottomPadding)
+                        // start below the bars: at the top of the list the thumb used to sit under the header buttons
+                        .padding(top = topPadding, bottom = bottomPadding)
                         .width(40.dp)
                         .graphicsLayer { alpha = scrollerAlpha }
                         .pointerInput(timelineItems.size, totalRows, totalContentHeight) {
