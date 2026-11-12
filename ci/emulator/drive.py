@@ -1125,15 +1125,8 @@ def s27_app_lock():
         nodes = dump("27_settings")
         hit = [n for n in find(nodes, r"(?i)app lock|lock the app|pin|biometric|security|privacy") if H * 0.12 < n["cy"] < H * 0.86]
         if hit:
+            touch.tap(hit[0]["cx"], hit[0]["cy"])
             found = True
-            for attempt in (touch_input_tap, touch.tap):
-                attempt(W * 0.86, hit[0]["cy"] + H * 0.0275)
-                time.sleep(1.0)
-                chk = [n for n in dump("28_after_tap").__iter__() if n.get("checkable") and abs(n["cy"] - (hit[0]["cy"] + H * 0.0275)) < H * 0.02]
-                on = bool(chk) and chk[0].get("checked")
-                results.append((f"real glass: switch state after {attempt.__name__}", "INFO", f"nodes={len(chk)} checked={on}"))
-                if on:
-                    break
             break
         touch.swipe(W * 0.5, H * 0.78, W * 0.5, H * 0.28, ms=350)
         time.sleep(0.8)
@@ -1160,8 +1153,15 @@ def s28_real_glass():
         nodes = dump("28_settings")
         hit = [n for n in find(nodes, r"Real liquid glass") if H * 0.12 < n["cy"] < H * 0.88]
         if hit:
-            touch.tap(hit[0]["cx"], hit[0]["cy"])
             found = True
+            for attempt in (touch_input_tap, touch.tap):
+                attempt(W * 0.86, hit[0]["cy"] + H * 0.0275)
+                time.sleep(1.0)
+                chk = [n for n in dump("28_after_tap").__iter__() if n.get("checkable") and abs(n["cy"] - (hit[0]["cy"] + H * 0.0275)) < H * 0.02]
+                on = bool(chk) and chk[0].get("checked")
+                results.append((f"real glass: switch state after {attempt.__name__}", "INFO", f"nodes={len(chk)} checked={on}"))
+                if on:
+                    break
             break
         touch.swipe(W * 0.5, H * 0.78, W * 0.5, H * 0.28, ms=350)
         time.sleep(0.6)
