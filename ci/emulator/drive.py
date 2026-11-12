@@ -1124,7 +1124,7 @@ def s27_app_lock():
         nodes = dump("27_settings")
         hit = [n for n in find(nodes, r"(?i)app lock|lock the app|pin|biometric|security|privacy") if H * 0.12 < n["cy"] < H * 0.86]
         if hit:
-            touch.tap(W * 0.86, hit[0]["cy"] + H * 0.03)
+            touch_input_tap(W * 0.86, hit[0]["cy"] + H * 0.03)
             found = True
             break
         touch.swipe(W * 0.5, H * 0.78, W * 0.5, H * 0.28, ms=350)
