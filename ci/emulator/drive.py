@@ -1191,6 +1191,59 @@ def s28_real_glass():
     record("real glass: no crash with the shader bar", alive() and not crash_lines(), "; ".join(crash_lines()))
 
 
+def _changed(a, b):
+    """Pixels that changed noticeably between two screenshots (ignores the status bar)."""
+    import numpy as np
+    x = np.asarray(a).astype(int); y = np.asarray(b).astype(int)
+    d = np.abs(x - y).sum(axis=2) > 90
+    d[: int(H * 0.04), :] = False
+    ys, xs = np.nonzero(d)
+    return xs, ys
+
+
+def s29_selection_hit():
+    """Every tap in selection mode must change ONLY the tapped tile (reported bug: the row below gets selected)."""
+    launch()
+    tab_tap("Media", 0.20)
+    time.sleep(1.5)
+    tile = W / 3.0
+    # tiles of the first rows (3 columns on the emulator): column centres, row centres below the shortcut row
+    ys0 = H * 0.43
+    taps = [(0, 0), (1, 0), (2, 1), (0, 2), (1, 1), (2, 0)]
+    first = True
+    bad = 0
+    for n, (c, r) in enumerate(taps):
+        x = tile * (c + 0.5)
+        y = ys0 + tile * r
+        before = shot(f"29_before_{n}")
+        if first:
+            touch.swipe(x, y, x, y, ms=900)
+            first = False
+        else:
+            touch.tap(x, y)
+        time.sleep(1.0)
+        after = shot(f"29_after_{n}")
+        if before is None or after is None:
+            continue
+        xs, ys = _changed(before, after)
+        if len(xs) == 0:
+            results.append((f"selection tap {n}: nothing changed", "WARN", f"tap=({int(x)},{int(y)})"))
+            continue
+        # allow the header ("N selected") region at the top; judge only the grid area
+        m = ys > H * 0.30
+        xs, ys = xs[m], ys[m]
+        if len(xs) == 0:
+            continue
+        inside = ((xs > tile * c - 6) & (xs < tile * (c + 1) + 6) & (ys > y - tile * 0.55) & (ys < y + tile * 0.55)).mean()
+        ok = inside > 0.85
+        bad += (not ok)
+        record(f"selection tap {n}: only the tapped tile changes", ok,
+               f"tap=({int(x)},{int(y)}) changed_x={int(xs.min())}-{int(xs.max())} y={int(ys.min())}-{int(ys.max())} inside={inside:.2f}")
+    nodes = dump("29_header")
+    results.append(("selection header texts", "INFO", vis(nodes)))
+    record("selection: no crash", alive() and not crash_lines(), "; ".join(crash_lines()))
+
+
 def s09_monkey():
     launch()
     gfx_reset()
@@ -1223,7 +1276,7 @@ def main():
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     allfns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s09_monkey)
+              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s29_selection_hit, s09_monkey)
     # the fresh emulator often shows a launcher ANR dialog; restart the launcher before the first scenario
     sh("am force-stop com.google.android.apps.nexuslauncher; am force-stop com.google.android.apps.nexuslauncher")
     time.sleep(12)
