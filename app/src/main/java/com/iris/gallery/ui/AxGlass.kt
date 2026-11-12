@@ -153,6 +153,8 @@ object AxGlass {
     var enabled: Boolean by mutableStateOf(true)
     /** Shader-based glass (library) on the bottom bar; Android 13+ only, set from Settings. */
     var real: Boolean by mutableStateOf(false)
+    /** Set by the main screen while real glass is on: the shared backdrop that chrome (bar buttons, title, shortcuts) refracts. */
+    var realState: com.wexpa.liquidglass.LiquidGlassState? by mutableStateOf(null)
     val realSupported: Boolean get() = Build.VERSION.SDK_INT >= 33
 }
 
@@ -930,4 +932,12 @@ fun Modifier.axSpinRing(): Modifier {
             }
         }
     }
+}
+
+
+/** Dark chrome fill used by bar buttons, the title capsule and the shortcut chips: real refracting glass when it is on, the flat gradient otherwise. */
+fun Modifier.axChromeFill(shape: androidx.compose.ui.graphics.Shape): Modifier {
+    val rg = AxGlass.realState
+    return if (rg != null) this.liquidGlass(rg, shape, GlassStyle.DarkChrome)
+    else this.background(Brush.verticalGradient(listOf(Color(0xFF151B2B).copy(alpha = 0.86f), Color(0xFF05070D).copy(alpha = 0.92f))))
 }

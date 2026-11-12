@@ -2378,6 +2378,7 @@ private fun GalleryScaffold(
     val axGlass = rememberAxGlassState()
     val useRealGlass = com.iris.gallery.ui.AxGlass.real && com.iris.gallery.ui.AxGlass.realSupported && com.iris.gallery.ui.AxGlass.enabled
     val realGlassState = com.wexpa.liquidglass.rememberLiquidGlassState(background = androidx.compose.ui.graphics.Color(0xFF05070F))
+    androidx.compose.runtime.SideEffect { com.iris.gallery.ui.AxGlass.realState = if (useRealGlass) realGlassState else null }
     Box(Modifier.fillMaxSize()) {
         Scaffold(
         containerColor = Color.Transparent,

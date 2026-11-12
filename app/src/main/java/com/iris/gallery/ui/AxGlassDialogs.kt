@@ -249,7 +249,7 @@ fun AxBarButton(
             .then(
                 if (grouped) Modifier.clip(CutCornerShape(30))
                 else Modifier.clip(CutCornerShape(30))
-                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF151B2B).copy(alpha = 0.86f), Color(0xFF05070D).copy(alpha = 0.92f))))
+                    .axChromeFill(CutCornerShape(30))
                     .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color(0xFF4E8DFF).copy(alpha = 0.16f))), CutCornerShape(30))
             )
             .clickable(
@@ -292,7 +292,7 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
     androidx.compose.foundation.layout.Row(
         modifier = Modifier
             .clip(CutCornerShape(30))
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF151B2B).copy(alpha = 0.86f), Color(0xFF05070D).copy(alpha = 0.92f))))
+            .axChromeFill(CutCornerShape(30))
             .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color(0xFF4E8DFF).copy(alpha = 0.16f))), CutCornerShape(30))
             .padding(start = if (badge != null && album != null) 6.dp else 14.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,

@@ -99,7 +99,7 @@ fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, fo
                 val chip = CutCornerShape(14.dp)
                 Box(
                     Modifier.size(54.dp).clip(chip)
-                        .background(Brush.verticalGradient(listOf(Color(0xFF151B2B).copy(alpha = 0.86f), Color(0xFF05070D).copy(alpha = 0.92f))))
+                        .axChromeFill(chip)
                         .border(
                             BorderStroke(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color(0xFF4E8DFF).copy(alpha = 0.18f)))),
                             chip,
