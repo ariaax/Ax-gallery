@@ -182,7 +182,8 @@ def dump(name):
                 x1, y1, x2, y2 = map(int, b)
                 nodes.append({"text": n.get("text", ""), "desc": n.get("content-desc", ""), "cx": (x1 + x2) // 2,
                               "cy": (y1 + y2) // 2, "box": (x1, y1, x2, y2), "click": n.get("clickable") == "true",
-                              "cls": n.get("class", "")})
+                              "cls": n.get("class", ""), "checkable": n.get("checkable") == "true",
+                              "checked": n.get("checked") == "true"})
     except ET.ParseError:
         return []
     return nodes
@@ -1124,8 +1125,15 @@ def s27_app_lock():
         nodes = dump("27_settings")
         hit = [n for n in find(nodes, r"(?i)app lock|lock the app|pin|biometric|security|privacy") if H * 0.12 < n["cy"] < H * 0.86]
         if hit:
-            touch_input_tap(W * 0.86, hit[0]["cy"] + H * 0.03)
             found = True
+            for attempt in (touch_input_tap, touch.tap):
+                attempt(W * 0.86, hit[0]["cy"] + H * 0.0275)
+                time.sleep(1.0)
+                chk = [n for n in dump("28_after_tap").__iter__() if n.get("checkable") and abs(n["cy"] - (hit[0]["cy"] + H * 0.0275)) < H * 0.02]
+                on = bool(chk) and chk[0].get("checked")
+                results.append((f"real glass: switch state after {attempt.__name__}", "INFO", f"nodes={len(chk)} checked={on}"))
+                if on:
+                    break
             break
         touch.swipe(W * 0.5, H * 0.78, W * 0.5, H * 0.28, ms=350)
         time.sleep(0.8)
