@@ -1220,6 +1220,7 @@ def s29_select_hit():
         record(f"select hit {k}: mark lands on the touched tile", ok, f"touched y={int(H * fy)} changed y={top}-{bot} dy={int(dy)}px (tile~{int(tile)}px)")
         sh("input keyevent KEYCODE_BACK")
         time.sleep(1.0)
+    (OUT / "logs" / "s29_hit_crash.txt").write_text(adb("logcat", "-d", "-s", "AxHit"))
     record("select hit: no mismatch", bad == 0, f"{bad} of 4 off")
 
 

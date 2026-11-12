@@ -4663,6 +4663,24 @@ private fun PhotoGrid(
                 }
             }
         }
+        // Do the grid's reported item offsets already include the top content padding? It depends on the Compose
+        // version, and touch hit-testing (drag select, long press) lands on the row below when this is wrong.
+        // Measured once while the list sits at its very top: the first item must then start at the padding.
+        var offsetsExcludePadding by remember { mutableStateOf<Boolean?>(null) }
+        LaunchedEffect(gridState) {
+            snapshotFlow {
+                val info = gridState.layoutInfo
+                val first = info.visibleItemsInfo.firstOrNull { it.index == 0 }
+                if (first != null && gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0 && info.beforeContentPadding > 8)
+                    (first.offset.y < info.beforeContentPadding / 2) to "${first.offset.y}/${info.beforeContentPadding}"
+                else null
+            }.collect { m ->
+                if (m != null && offsetsExcludePadding != m.first) {
+                    offsetsExcludePadding = m.first
+                    android.util.Log.i("AxHit", "offsetsExcludePadding=${m.first} first.offset.y/beforeContentPadding=${m.second}")
+                }
+            }
+        }
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Adaptive(cellSize),
@@ -4677,11 +4695,14 @@ private fun PhotoGrid(
                 var autoScrollJob: kotlinx.coroutines.Job? = null
                 val edge = 72.dp.toPx()
                 val dragSlop = 16.dp.toPx()
-                fun mediaAt(position: Offset) = gridState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
-                    item.key is Long &&
-                        position.x >= item.offset.x && position.x <= item.offset.x + item.size.width &&
-                        position.y >= item.offset.y && position.y <= item.offset.y + item.size.height
-                }?.key as? Long
+                fun mediaAt(position: Offset): Long? {
+                    val shift = if (offsetsExcludePadding == true) gridState.layoutInfo.beforeContentPadding else 0
+                    return gridState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
+                        item.key is Long &&
+                            position.x >= item.offset.x && position.x <= item.offset.x + item.size.width &&
+                            position.y >= item.offset.y + shift && position.y <= item.offset.y + shift + item.size.height
+                    }?.key as? Long
+                }
                 detectDragGesturesAfterLongPress(
                     onDragStart = { position ->
                         val id = mediaAt(position) ?: return@detectDragGesturesAfterLongPress
