@@ -1224,6 +1224,28 @@ def s29_select_hit():
     record("select hit: no mismatch", bad == 0, f"{bad} of 4 off")
 
 
+def s30_search_scrubber():
+    """Search bar must be solid; the fast-scroll thumb must start below the bars."""
+    launch()
+    tab_tap("Media", 0.20)
+    time.sleep(1.5)
+    touch.swipe(W * 0.5, H * 0.60, W * 0.5, H * 0.55, ms=200)  # nudge: the thumb shows for ~1.5 s
+    shot("30_scrubber_top")
+    time.sleep(0.4)
+    touch.swipe(W * 0.5, H * 0.55, W * 0.5, H * 0.62, ms=200)
+    shot("30_scrubber_top2")
+    time.sleep(2.0)
+    touch_input_tap(W * 0.06, H * 0.087)
+    time.sleep(1.5)
+    sh("input text 1")
+    time.sleep(1.5)
+    shot("30_search")
+    touch.swipe(W * 0.5, H * 0.75, W * 0.5, H * 0.40, ms=300)
+    time.sleep(0.8)
+    shot("30_search_scrolled")
+    record("search/scrubber: no crash", alive() and not crash_lines(), "; ".join(crash_lines()))
+
+
 def s09_monkey():
     launch()
     gfx_reset()
@@ -1256,7 +1278,7 @@ def main():
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     allfns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s29_select_hit, s09_monkey)
+              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s29_select_hit, s30_search_scrubber, s09_monkey)
     # the fresh emulator often shows a launcher ANR dialog; restart the launcher before the first scenario
     sh("am force-stop com.google.android.apps.nexuslauncher; am force-stop com.google.android.apps.nexuslauncher")
     time.sleep(12)
