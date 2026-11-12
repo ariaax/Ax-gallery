@@ -2420,8 +2420,8 @@ private fun GalleryScaffold(
                             singleLine = true,
                             shape = CutCornerShape(30),
                             colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
-                                focusedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
+                                unfocusedContainerColor = Color(0xFF0D1426),
+                                focusedContainerColor = Color(0xFF121B33),
                                 unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f),
                                 focusedBorderColor = MaterialTheme.colorScheme.primary
                             )
@@ -2764,6 +2764,10 @@ private fun GalleryScaffold(
                         }
                     }
                 } },
+                modifier = if (isFileSearching && canSearchOnScreen)
+                    // search is open: put a solid backing behind the bar so photos and date headers cannot show through the text
+                    Modifier.background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF05070F), Color(0xF505070F), Color(0x00000000))))
+                else Modifier,
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
           }
@@ -4886,7 +4890,8 @@ private fun PhotoGrid(
                     Modifier
                         .align(Alignment.CenterEnd)
                         .fillMaxHeight()
-                        .padding(bottom = bottomPadding)
+                        // start below the top bar: otherwise this strip covers (and steals touches from) the bar's right-most button
+                        .padding(top = topPadding, bottom = bottomPadding)
                         .width(40.dp)
                         .graphicsLayer { alpha = scrollerAlpha }
                         .pointerInput(timelineItems.size, totalRows, totalContentHeight) {
