@@ -4837,7 +4837,9 @@ private fun PhotoGrid(
                         )
                     }
                     .combinedClickable(onClick = {
-                        if (suppressReleaseClickId == image.id) suppressReleaseClickId = null
+                        // after a long-press the grid can shift under the finger (quick row hides), so the release lands on
+                        // a different tile: swallow that one release click whatever tile it hit
+                        if (suppressReleaseClickId != null) suppressReleaseClickId = null
                         else { AxHero.mark(heroCell[0], image.id); onOpen(image) }
                     },
                         onLongClick = null)) {
