@@ -1266,7 +1266,7 @@ def selected_count():
     return 0, nodes
 
 
-def s29_selection_delete():
+def s30_selection_delete():
     """Selecting exactly what the finger touches, and deleting exactly what is selected."""
     launch()
     tab_tap("Media", 0.20)
@@ -1358,7 +1358,7 @@ def main():
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     allfns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s29_selection_hit, s09_monkey)
+              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s29_selection_hit, s30_selection_delete, s09_monkey)
     # the fresh emulator often shows a launcher ANR dialog; restart the launcher before the first scenario
     sh("am force-stop com.google.android.apps.nexuslauncher; am force-stop com.google.android.apps.nexuslauncher")
     time.sleep(12)
