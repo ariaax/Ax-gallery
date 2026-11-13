@@ -1363,6 +1363,11 @@ def s31_row_after_delete():
     time.sleep(1.5)
     shot("31_back_at_top")
     nodes = dump("31_top_nodes")
+    for _ in range(3):
+        if nodes:
+            break
+        time.sleep(1.5)
+        nodes = dump("31_top_nodes")
     shown = bool(find(nodes, r"^TRASH$"))
     record("row-after-delete: shortcut row visible at top", shown, vis(nodes)[:150])
     ok = click_text(r"^Videos$", "31_tap_videos", min_y=0.08, max_y=0.45)
