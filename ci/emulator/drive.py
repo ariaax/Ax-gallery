@@ -1252,6 +1252,80 @@ def s29_selection_hit():
     record("selection: no crash", alive() and not crash_lines(), "; ".join(crash_lines()))
 
 
+def media_ids():
+    out = sh("content query --uri content://media/external/images/media --projection _id")
+    return set(re.findall(r"_id=(\d+)", out)) | set(re.findall(r"_id=(\d+)", sh("content query --uri content://media/external/video/media --projection _id")))
+
+
+def selected_count():
+    nodes = dump("29_sel")
+    for n in nodes:
+        m = re.search(r"(\d+)\s+selected", n["text"] + " " + n["desc"], re.I)
+        if m:
+            return int(m.group(1)), nodes
+    return 0, nodes
+
+
+def s29_selection_delete():
+    """Selecting exactly what the finger touches, and deleting exactly what is selected."""
+    launch()
+    tab_tap("Media", 0.20)
+    time.sleep(1.5)
+    # scroll a little so the shortcut row is folded away, like real use
+    touch.swipe(W * 0.5, H * 0.70, W * 0.5, H * 0.35, ms=300)
+    time.sleep(1.2)
+    before = media_ids()
+    row_y = H * 0.55
+    touch.hold(W * 0.17, row_y, seconds=1.3)
+    time.sleep(1.0)
+    n1, nodes = selected_count()
+    shot("29_one_selected")
+    record("selection: long-press selects exactly one", n1 == 1, f"selected={n1}")
+    results.append(("selection: shortcut row hidden while selecting", "PASS" if not find(nodes, r"^TRASH$") else "FAIL", ""))
+    touch.tap(W * 0.50, row_y)
+    time.sleep(0.8)
+    n2, _ = selected_count()
+    record("selection: tapping a second tile adds exactly one", n2 == 2, f"selected={n2}")
+    touch.tap(W * 0.83, row_y)
+    time.sleep(0.8)
+    n3, _ = selected_count()
+    record("selection: tapping a third tile adds exactly one", n3 == 3, f"selected={n3}")
+    touch.tap(W * 0.83, row_y)
+    time.sleep(0.8)
+    n4, _ = selected_count()
+    record("selection: tapping it again removes exactly that one", n4 == 2, f"selected={n4}")
+    shot("29_two_selected")
+    # tap a tile on the row BELOW: must add exactly one, not two
+    touch.tap(W * 0.50, row_y + H * 0.14)
+    time.sleep(0.8)
+    n5, _ = selected_count()
+    record("selection: tile on the next row adds exactly one", n5 == 3, f"selected={n5}")
+    touch.tap(W * 0.50, row_y + H * 0.14)
+    time.sleep(0.8)
+    # delete the two selected
+    nodes = dump("29_before_delete")
+    b = [n for n in find(nodes, r"delete|trash") if n["cy"] < H * 0.16]
+    if b:
+        touch.tap(b[-1]["cx"], b[-1]["cy"])
+    else:
+        results.append(("selection: no delete button found in the top bar", "WARN", vis(nodes)))
+    time.sleep(1.5)
+    shot("29_delete_dialog")
+    nodes = dump("29_delete_dialog_nodes")
+    d = find(nodes, r"^(delete|move to trash|trash|remove|ok|yes)$")
+    if d:
+        touch.tap(d[-1]["cx"], d[-1]["cy"])
+    time.sleep(1.0)
+    system_confirm()
+    time.sleep(2.5)
+    shot("29_after_delete")
+    after = media_ids()
+    gone = before - after
+    added = after - before
+    record("delete: exactly the 2 selected items disappeared", len(gone) == 2 and not added, f"removed={len(gone)} added={len(added)}")
+    record("delete: no crash", alive() and not crash_lines(), "; ".join(crash_lines()))
+
+
 def s09_monkey():
     launch()
     gfx_reset()
