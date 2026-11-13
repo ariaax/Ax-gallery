@@ -2881,7 +2881,12 @@ private fun GalleryScaffold(
                       librarySection = section
                   }
                   val quickCollapsed by remember {
-                      derivedStateOf { photoGridState.firstVisibleItemIndex > 0 || photoGridState.firstVisibleItemScrollOffset > 140 }
+                      derivedStateOf {
+                          // at the very top the row is ALWAYS shown (folding changes the grid's top padding, which could
+                          // otherwise leave the grid parked at a small offset with the row folded and untappable)
+                          photoGridState.canScrollBackward &&
+                              (photoGridState.firstVisibleItemIndex > 0 || photoGridState.firstVisibleItemScrollOffset > 140)
+                      }
                   }
                   // 0 = icon row shown, 1 = folded away: the space it took is given back to the photos
                   val quickFold by androidx.compose.animation.core.animateFloatAsState(

@@ -1329,15 +1329,21 @@ def s30_selection_delete():
 def s31_row_after_delete():
     """Shortcut row must stay tappable when we come back to the top after scrolling + deleting."""
     launch()
+    time.sleep(3.0)
+    if "MainActivity" not in focus():
+        launch()
+        time.sleep(3.0)
     tab_tap("Media", 0.20)
     time.sleep(1.5)
     for _ in range(3):
         touch.swipe(W * 0.5, H * 0.75, W * 0.5, H * 0.30, ms=250)
         time.sleep(0.5)
     time.sleep(1.0)
+    shot("31_scrolled")
     before = media_ids()
     touch.hold(W * 0.17, H * 0.55, seconds=1.3)
     time.sleep(1.0)
+    shot("31_selected")
     nodes = dump("31_selected")
     b = [n for n in find(nodes, r"delete|trash") if n["cy"] < H * 0.16]
     if b:
