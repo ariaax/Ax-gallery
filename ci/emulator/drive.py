@@ -1326,6 +1326,46 @@ def s30_selection_delete():
     record("delete: no crash", alive() and not crash_lines(), "; ".join(crash_lines()))
 
 
+def s31_row_after_delete():
+    """Shortcut row must stay tappable when we come back to the top after scrolling + deleting."""
+    launch()
+    tab_tap("Media", 0.20)
+    time.sleep(1.5)
+    for _ in range(3):
+        touch.swipe(W * 0.5, H * 0.75, W * 0.5, H * 0.30, ms=250)
+        time.sleep(0.5)
+    time.sleep(1.0)
+    before = media_ids()
+    touch.hold(W * 0.17, H * 0.55, seconds=1.3)
+    time.sleep(1.0)
+    nodes = dump("31_selected")
+    b = [n for n in find(nodes, r"delete|trash") if n["cy"] < H * 0.16]
+    if b:
+        touch.tap(b[-1]["cx"], b[-1]["cy"])
+    time.sleep(1.5)
+    nodes = dump("31_dialog")
+    d = find(nodes, r"^(delete|move to trash|trash|remove|ok|yes)$")
+    if d:
+        touch.tap(d[-1]["cx"], d[-1]["cy"])
+    time.sleep(1.0)
+    system_confirm()
+    time.sleep(2.5)
+    record("row-after-delete: item removed", len(before - media_ids()) == 1, "")
+    for _ in range(5):
+        touch.swipe(W * 0.5, H * 0.30, W * 0.5, H * 0.85, ms=200)
+        time.sleep(0.4)
+    time.sleep(1.5)
+    shot("31_back_at_top")
+    nodes = dump("31_top_nodes")
+    shown = bool(find(nodes, r"^TRASH$"))
+    record("row-after-delete: shortcut row visible at top", shown, vis(nodes)[:150])
+    ok = click_text(r"^Videos$", "31_tap_videos", min_y=0.08, max_y=0.45)
+    time.sleep(2.0)
+    nodes = dump("31_after_tap")
+    shot("31_after_tap")
+    record("row-after-delete: tapping a shortcut opens its screen", ok and not find(nodes, r"^TRASH$"), f"found={ok}")
+
+
 def s09_monkey():
     launch()
     gfx_reset()
@@ -1358,7 +1398,7 @@ def main():
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     allfns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s29_selection_hit, s30_selection_delete, s09_monkey)
+              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s29_selection_hit, s30_selection_delete, s31_row_after_delete, s09_monkey)
     # the fresh emulator often shows a launcher ANR dialog; restart the launcher before the first scenario
     sh("am force-stop com.google.android.apps.nexuslauncher; am force-stop com.google.android.apps.nexuslauncher")
     time.sleep(12)
