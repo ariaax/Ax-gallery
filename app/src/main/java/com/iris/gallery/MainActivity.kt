@@ -2393,7 +2393,7 @@ private fun GalleryScaffold(
                         OutlinedTextField(
                             value = fileSearchQuery,
                             onValueChange = { fileSearchQuery = it },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().background(Color(0xFF0D1426), CutCornerShape(30)),
                             textStyle = MaterialTheme.typography.bodyMedium.copy(
                                 platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)
                             ),
@@ -2450,7 +2450,7 @@ private fun GalleryScaffold(
                             }
                         if (selectedIds.isNotEmpty()) {
                             AnimatedContent(count, label = "selection count") { text ->
-                                Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
                             }
                         } else {
                             AxBarTitle(count, if (destination == 1) selectedAlbum else null)
@@ -2764,10 +2764,19 @@ private fun GalleryScaffold(
                         }
                     }
                 } },
-                modifier = if (isFileSearching && canSearchOnScreen)
-                    // search is open: put a solid backing behind the bar so photos and date headers cannot show through the text
-                    Modifier.background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF05070F), Color(0xF505070F), Color(0x00000000))))
-                else Modifier,
+                modifier = Modifier.drawBehind {
+                    // Dark scrim behind the clock + bar so scrolled photos / date headers never collide with them.
+                    // While searching it stays solid under the whole field, so nothing shows through the pill.
+                    val solid = if (isFileSearching && canSearchOnScreen) 0.94f else 0.72f
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            0f to Color(0xFF050710),
+                            solid to Color(if (isFileSearching && canSearchOnScreen) 0xFA050710 else 0xB8050710),
+                            1f to Color.Transparent,
+                        ),
+                        size = androidx.compose.ui.geometry.Size(size.width, size.height + 18.dp.toPx()),
+                    )
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
           }
@@ -2882,7 +2891,7 @@ private fun GalleryScaffold(
                   )
                   val quickPadding = PaddingValues(
                       start = padding.calculateStartPadding(LocalLayoutDirection.current),
-                      top = padding.calculateTopPadding() + if (destination == 0 && fileSearchQuery.isBlank()) (92.dp * (1f - quickFold)) else 0.dp,
+                      top = padding.calculateTopPadding() + if (destination == 0 && fileSearchQuery.isBlank() && !isFileSearching && selectedIds.isEmpty()) (92.dp * (1f - quickFold)) else 0.dp,
                       end = padding.calculateEndPadding(LocalLayoutDirection.current),
                       bottom = padding.calculateBottomPadding(),
                   )
@@ -2909,7 +2918,7 @@ private fun GalleryScaffold(
                   else if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding)
                   else EmptyState(stringResource(R.string.empty_photos), padding)
                   // drawn AFTER the grid: the grid now runs under it, so the row must be on top to get the touches
-                  if (destination == 0 && fileSearchQuery.isBlank()) QuickActionRow(
+                  if (destination == 0 && fileSearchQuery.isBlank() && !isFileSearching && selectedIds.isEmpty()) QuickActionRow(
                       fold = quickFold,
                       actions = listOf(
                           QuickAction(AxIcons.Trash, "Trash") { openLibrarySection("trash") },
