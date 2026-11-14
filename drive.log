@@ -1,0 +1,42 @@
+07:05:12 installing app/build/outputs/apk/optimized/app-optimized.apk
+07:05:26 screen 1080 2400
+07:05:53 media rows indexed: 43
+07:05:53 PASS setup: media indexed by MediaStore 43 rows
+07:05:53 touch device: /dev/input/event12 32767 32767
+07:05:53 PASS setup: touch device found /dev/input/event12
+07:06:12 === scenario s29_selection_hit
+07:06:13 WARN app not in foreground before s29_selection_hit -> mCurrentFocus=Window{8b9cea5 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity} | mFocusedApp=ActivityRecord{efa4664 u0 com.google.android.apps.nexuslauncher/.NexusLauncherActivity} t12}
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:1200: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  data = d.getdata()
+07:07:16 FAIL selection tap 0: only the tapped tile changes tap=(180,1032) changed_x=0-1076 y=340-2396
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:1200: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  data = d.getdata()
+07:07:21 PASS selection tap 1: only the tapped tile changes tap=(540,1032) changed_x=368-712 y=708-1052
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:1200: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  data = d.getdata()
+07:07:26 PASS selection tap 2: only the tapped tile changes tap=(900,1392) changed_x=724-1068 y=1064-1408
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:1200: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  data = d.getdata()
+07:07:31 PASS selection tap 3: only the tapped tile changes tap=(180,1752) changed_x=8-352 y=1420-1768
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:1200: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  data = d.getdata()
+07:07:37 PASS selection tap 4: only the tapped tile changes tap=(540,1392) changed_x=368-708 y=1064-1408
+/home/runner/work/Ax-gallery/Ax-gallery/ci/emulator/drive.py:1200: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  data = d.getdata()
+07:07:41 PASS selection tap 5: only the tapped tile changes tap=(900,1032) changed_x=724-1064 y=708-1052
+07:07:44 PASS selection: no crash 
+07:07:44 === scenario s30_selection_delete
+07:08:29 PASS selection: long-press selects exactly one selected=1
+07:08:34 PASS selection: tapping a second tile adds exactly one selected=2
+07:08:38 PASS selection: tapping a third tile adds exactly one selected=3
+07:08:41 PASS selection: tapping it again removes exactly that one selected=2
+07:08:46 PASS selection: tile on the next row adds exactly one selected=3
+07:09:24 PASS delete: exactly the 2 selected items disappeared removed=2 added=0
+07:09:25 PASS delete: no crash 
+07:09:26 === scenario s31_row_after_delete
+07:10:40 PASS row-after-delete: item removed 
+07:11:00 PASS row-after-delete: shortcut row visible at top Today / VID_B.mp4 / 0:18 / VID_A.mp4 / 0:12 / IMG_001.jpg / IMG_002.jpg / IMG_003.jpg / IMG_004.jpg / IMG_005.jpg / IMG_006.jpg / IMG_007.jpg / IMG_00
+07:11:18 PASS row-after-delete: tapping a shortcut opens its screen found=True
+07:11:18 === scenario s32_search_and_intro
+07:12:57 PASS search/intro: no crash 
+07:13:03 33 passed, 1 failed
