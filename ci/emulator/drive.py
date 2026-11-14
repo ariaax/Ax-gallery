@@ -1236,17 +1236,17 @@ def s29_selection_hit():
         if not xs:
             results.append((f"selection tap {n}: nothing changed", "WARN", f"tap=({int(x)},{int(y)})"))
             continue
-        # allow the header ("N selected") region at the top; judge only the grid area
-        keep = [i for i, yy in enumerate(ys) if yy > H * 0.30]
+        # judge only the grid area; the changed pixels must form ONE tile-sized box that contains the tap point
+        keep = [i for i, yy in enumerate(ys) if yy > H * 0.14]
         xs = [xs[i] for i in keep]; ys = [ys[i] for i in keep]
         if not xs:
             continue
-        inside = sum(1 for xx, yy in zip(xs, ys)
-                     if tile * c - 6 < xx < tile * (c + 1) + 6 and y - tile * 0.55 < yy < y + tile * 0.55) / len(xs)
-        ok = inside > 0.85
+        w_, h_ = max(xs) - min(xs), max(ys) - min(ys)
+        hit = min(xs) - 8 <= x <= max(xs) + 8 and min(ys) - 8 <= y <= max(ys) + 8
+        ok = hit and w_ <= tile + 24 and h_ <= tile + 24
         bad += (not ok)
         record(f"selection tap {n}: only the tapped tile changes", ok,
-               f"tap=({int(x)},{int(y)}) changed_x={min(xs)}-{max(xs)} y={min(ys)}-{max(ys)} inside={inside:.2f}")
+               f"tap=({int(x)},{int(y)}) changed_x={min(xs)}-{max(xs)} y={min(ys)}-{max(ys)}")
     nodes = dump("29_header")
     results.append(("selection header texts", "INFO", vis(nodes)))
     record("selection: no crash", alive() and not crash_lines(), "; ".join(crash_lines()))
@@ -1347,6 +1347,7 @@ def s31_row_after_delete():
     time.sleep(1.0)
     shot("31_selected")
     nodes = dump("31_selected")
+    results.append(("row-after-delete: selection state after hold", "INFO", vis(nodes)[:160]))
     b = [n for n in find(nodes, r"delete|trash") if n["cy"] < H * 0.16]
     if b:
         touch.tap(b[-1]["cx"], b[-1]["cy"])

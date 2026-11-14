@@ -201,7 +201,7 @@ fun AxLiquidIntro(onCovered: () -> Unit = {}, onFinished: () -> Unit) {
                     val endY = h * coverBottom(sx, p) - h * 0.05f
                     if (endY > h * 0.06f) {
                         streak.reset()
-                        streak.moveTo(w * sx, h * 0.04f)
+                        streak.moveTo(w * sx, -h * 0.02f) // from above the screen edge, not from under the status bar
                         streak.lineTo(w * sx, endY)
                         drawPath(
                             streak,
