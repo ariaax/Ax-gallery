@@ -50,11 +50,11 @@ fun Modifier.axPressScale(source: InteractionSource, pressedScale: Float = 0.95f
 fun Modifier.axEnter(): Modifier {
     if (!AxGlass.enabled) return this
     val p = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { p.animateTo(1f, tween(240, easing = FastOutSlowInEasing)) }
+    LaunchedEffect(Unit) { p.animateTo(1f, tween(120, easing = FastOutSlowInEasing)) }
     return this.graphicsLayer {
         val v = p.value
         alpha = v
-        translationY = (1f - v) * 16.dp.toPx()
+        translationY = (1f - v) * 8.dp.toPx()
     }
 }
 
@@ -68,7 +68,7 @@ val AxIosEase = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
 @Composable
 fun Modifier.axPushIn(forward: Boolean): Modifier {
     val p = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { p.animateTo(1f, tween(360, easing = AxIosEase)) }
+    LaunchedEffect(Unit) { p.animateTo(1f, tween(180, easing = AxIosEase)) }
     return this.graphicsLayer {
         // no off-screen buffer for the fade: much lighter on the GPU for a full-screen grid
         compositingStrategy = CompositingStrategy.ModulateAlpha

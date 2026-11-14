@@ -959,12 +959,7 @@ private fun GalleryApp(
         AnimatedContent(
             targetState = (!settings.appLockEnabled || !settings.hasPin || isAppUnlocked),
             transitionSpec = {
-                (fadeIn(animationSpec = tween(320, easing = FastOutSlowInEasing)) +
-                 scaleIn(initialScale = 0.94f, animationSpec = tween(320, easing = FastOutSlowInEasing)))
-                    .togetherWith(
-                        fadeOut(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
-                        scaleOut(targetScale = 1.06f, animationSpec = tween(220, easing = FastOutSlowInEasing))
-                    )
+                fadeIn(animationSpec = tween(120)).togetherWith(fadeOut(animationSpec = tween(90)))
             },
             label = "AppLockTransition"
         ) { unlocked ->
@@ -1116,12 +1111,7 @@ private fun GalleryApp(
                 AnimatedContent(
                     targetState = settings.language,
                     transitionSpec = {
-                        (fadeIn(animationSpec = tween(280, easing = FastOutSlowInEasing)) +
-                         scaleIn(initialScale = 0.98f, animationSpec = tween(280, easing = FastOutSlowInEasing)))
-                            .togetherWith(
-                                fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing)) +
-                                scaleOut(targetScale = 1.01f, animationSpec = tween(180, easing = FastOutSlowInEasing))
-                            )
+                        fadeIn(animationSpec = tween(120)).togetherWith(fadeOut(animationSpec = tween(90)))
                     },
                     label = "language_transition"
                 ) { _ ->
@@ -2368,7 +2358,7 @@ private fun GalleryScaffold(
             } else if (kotlin.math.abs(current - index) > 1) {
                 tabPagerState.scrollToPage(index)
             } else {
-                tabPagerState.animateScrollToPage(index, animationSpec = tween(220, easing = FastOutSlowInEasing))
+                tabPagerState.animateScrollToPage(index, animationSpec = tween(150, easing = FastOutSlowInEasing))
             }
         }
     }
@@ -2876,7 +2866,7 @@ private fun GalleryScaffold(
                   val quickLibraryIndex = visibleTabs.indexOfFirst { it.destination == 3 }
                   fun openLibrarySection(section: String) {
                       if (quickLibraryIndex >= 0) tabScope.launch {
-                          tabPagerState.animateScrollToPage(quickLibraryIndex, animationSpec = tween(220, easing = FastOutSlowInEasing))
+                          tabPagerState.animateScrollToPage(quickLibraryIndex, animationSpec = tween(150, easing = FastOutSlowInEasing))
                       }
                       librarySection = section
                   }
@@ -4093,8 +4083,8 @@ private fun GalleryScaffold(
     }
     AnimatedVisibility(
         visible = editorImage != null,
-        enter = slideInVertically(tween(380, easing = AxIosEase)) { it } + fadeIn(tween(160)),
-        exit = slideOutVertically(tween(320, easing = AxIosEase)) { it } + fadeOut(tween(220, delayMillis = 100)),
+        enter = slideInVertically(tween(200, easing = AxIosEase)) { it } + fadeIn(tween(100)),
+        exit = slideOutVertically(tween(160, easing = AxIosEase)) { it } + fadeOut(tween(100)),
     ) {
         editorImage?.let { image ->
             EditorScreen(image, onClose = { editorImage = null }, onSaved = { saved, overwritten ->
@@ -4117,20 +4107,8 @@ private fun GalleryScaffold(
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(bottom = if (selectedId != null) 96.dp else if (selectedIds.isEmpty()) 88.dp else 24.dp),
-            enter = fadeIn(tween(160)) + slideInVertically(
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-                initialOffsetY = { it / 2 }
-            ) + scaleIn(
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-                initialScale = 0.82f
-            ),
-            exit = fadeOut(tween(220, easing = FastOutSlowInEasing)) + slideOutVertically(
-                animationSpec = tween(180, easing = FastOutSlowInEasing),
-                targetOffsetY = { it / 2 }
-            ) + scaleOut(
-                animationSpec = tween(180, easing = FastOutSlowInEasing),
-                targetScale = 0.85f
-            ),
+            enter = fadeIn(tween(120)),
+            exit = fadeOut(tween(90)),
         ) {
             trashFeedback?.let { feedback ->
                 Surface(
@@ -4202,8 +4180,8 @@ private fun GalleryScaffold(
 
         AnimatedVisibility(
             visible = activeOverlayScreen == "settings",
-            enter = slideInHorizontally(tween(380, easing = AxIosEase)) { it } + fadeIn(tween(140)),
-            exit = slideOutHorizontally(tween(320, easing = AxIosEase)) { it } + fadeOut(tween(260)),
+            enter = slideInHorizontally(tween(200, easing = AxIosEase)) { it } + fadeIn(tween(100)),
+            exit = slideOutHorizontally(tween(160, easing = AxIosEase)) { it } + fadeOut(tween(100)),
         ) {
             BackHandler(enabled = true) { activeOverlayScreen = null }
             SettingsScreen(
@@ -4221,8 +4199,8 @@ private fun GalleryScaffold(
 
         AnimatedVisibility(
             visible = activeOverlayScreen == "about",
-            enter = slideInHorizontally(tween(380, easing = AxIosEase)) { it } + fadeIn(tween(140)),
-            exit = slideOutHorizontally(tween(320, easing = AxIosEase)) { it } + fadeOut(tween(260)),
+            enter = slideInHorizontally(tween(200, easing = AxIosEase)) { it } + fadeIn(tween(100)),
+            exit = slideOutHorizontally(tween(160, easing = AxIosEase)) { it } + fadeOut(tween(100)),
         ) {
             BackHandler(enabled = true) { activeOverlayScreen = "settings" }
             AboutScreen(
@@ -4694,11 +4672,19 @@ private fun PhotoGrid(
                 var autoScrollJob: kotlinx.coroutines.Job? = null
                 val edge = 72.dp.toPx()
                 val dragSlop = 16.dp.toPx()
-                fun mediaAt(position: Offset) = gridState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
-                    item.key is Long &&
-                        position.x >= item.offset.x && position.x <= item.offset.x + item.size.width &&
-                        position.y >= item.offset.y && position.y <= item.offset.y + item.size.height
-                }?.key as? Long
+                // LazyGrid item offsets are measured from the START OF THE CONTENT, i.e. after contentPadding
+                // (the viewport starts at -beforeContentPadding), while `position` is measured from the grid's top edge.
+                // Without this correction the finger hit the tile that lies exactly `contentPadding` further down
+                // (the row below; the whole top-bar + shortcut-row height when the shortcut row is visible).
+                fun mediaAt(position: Offset): Long? {
+                    val info = gridState.layoutInfo
+                    val y = position.y - info.beforeContentPadding
+                    return info.visibleItemsInfo.firstOrNull { item ->
+                        item.key is Long &&
+                            position.x >= item.offset.x && position.x <= item.offset.x + item.size.width &&
+                            y >= item.offset.y && y <= item.offset.y + item.size.height
+                    }?.key as? Long
+                }
                 detectDragGesturesAfterLongPress(
                     onDragStart = { position ->
                         val id = mediaAt(position) ?: return@detectDragGesturesAfterLongPress
@@ -5248,7 +5234,7 @@ private fun PhotoViewer(
             if (bmp == null) Pair(Color(0xFF080808), null as Color?) else com.iris.gallery.ui.axPhotoColors(bmp)
         }
     }
-    val viewerBg by androidx.compose.animation.animateColorAsState(viewerColors.first, tween(350), label = "viewer bg")
+    val viewerBg by androidx.compose.animation.animateColorAsState(viewerColors.first, tween(120), label = "viewer bg")
     // Background gradient tinted from the picture itself (top: lighter and richer, bottom: deeper). The animated colours are
     // read in the draw lambda only, so changing page never recomposes the viewer.
     val ambient by produceState<Pair<Color, Color>?>(null, current.id, current.isVideo) {
@@ -5259,12 +5245,12 @@ private fun PhotoViewer(
             bmp?.let { com.iris.gallery.ui.axAmbientGradient(it) }
         }
     }
-    val ambientTopState = androidx.compose.animation.animateColorAsState(ambient?.first ?: viewerBg, tween(520), label = "ambient top")
+    val ambientTopState = androidx.compose.animation.animateColorAsState(ambient?.first ?: viewerBg, tween(150), label = "ambient top")
     val ambientBottomState = androidx.compose.animation.animateColorAsState(
-        ambient?.second ?: androidx.compose.ui.graphics.lerp(viewerBg, Color(0xFF040404), 0.65f), tween(520), label = "ambient bottom",
+        ambient?.second ?: androidx.compose.ui.graphics.lerp(viewerBg, Color(0xFF040404), 0.65f), tween(150), label = "ambient bottom",
     )
     val defaultViewerAccent = MaterialTheme.colorScheme.primary
-    val viewerAccent by androidx.compose.animation.animateColorAsState(viewerColors.second ?: defaultViewerAccent, tween(350), label = "viewer accent")
+    val viewerAccent by androidx.compose.animation.animateColorAsState(viewerColors.second ?: defaultViewerAccent, tween(120), label = "viewer accent")
 
     // Gentle 3D parallax: the photo drifts and tilts a little when you tilt the phone.
     val tiltX = remember { mutableFloatStateOf(0f) }
@@ -5454,7 +5440,7 @@ private fun PhotoViewer(
             // so its cost is not eaten by the first animation frames
             androidx.compose.runtime.withFrameNanos { }
             androidx.compose.runtime.withFrameNanos { }
-            if (heroStartRect != null) heroP.animateTo(1f, tween(420, easing = AxIosEase))
+            if (heroStartRect != null) heroP.animateTo(1f, tween(240, easing = AxIosEase))
             else openAnim.animateTo(1f, tween(250, easing = com.iris.gallery.ui.TgEaseOutQuint))
         } finally {
             AxHero.settledState.value = true
@@ -5591,7 +5577,7 @@ private fun PhotoViewer(
                 } else null
                 if (cellNow != null && cellNow.bottom > 0f && cellNow.top < viewerHeightPx) {
                     heroRect = cellNow
-                    heroP.animateTo(0f, tween(340, easing = AxIosEase))
+                    heroP.animateTo(0f, tween(200, easing = AxIosEase))
                 } else {
                     closeAnim.animateTo(1f, tween(durationMillis = 200, easing = com.iris.gallery.ui.TgDefault))
                 }
@@ -5707,7 +5693,7 @@ private fun PhotoViewer(
             beyondViewportPageCount = 1,
             flingBehavior = androidx.compose.foundation.pager.PagerDefaults.flingBehavior(
                 state = pagerState,
-                snapAnimationSpec = tween(250, easing = com.iris.gallery.ui.TgDecelerate15),
+                snapAnimationSpec = tween(160, easing = com.iris.gallery.ui.TgDecelerate15),
             ),
             userScrollEnabled = zoomedImageId != current.id && !isDismissing,
             pageSpacing = 16.dp,
@@ -5839,8 +5825,8 @@ private fun PhotoViewer(
           modifier = Modifier
               .align(Alignment.TopCenter)
               .graphicsLayer { alpha = controlsAlphaNow() },
-          enter = fadeIn(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInVertically(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) { -tgBarShift },
-          exit = fadeOut(tween(200, easing = com.iris.gallery.ui.TgDefault)) + slideOutVertically(tween(200, easing = com.iris.gallery.ui.TgDefault)) { -tgBarShift },
+          enter = fadeIn(tween(150, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInVertically(tween(150, easing = com.iris.gallery.ui.TgDecelerate15)) { -tgBarShift },
+          exit = fadeOut(tween(120, easing = com.iris.gallery.ui.TgDefault)) + slideOutVertically(tween(120, easing = com.iris.gallery.ui.TgDefault)) { -tgBarShift },
         ) {
           Box(Modifier.fillMaxWidth().height(156.dp)) {
           Box(
@@ -5953,8 +5939,8 @@ private fun PhotoViewer(
                     .navigationBarsPadding()
                     .padding(start = 16.dp, end = 16.dp, bottom = bottomOffset)
                     .graphicsLayer { alpha = controlsAlphaNow() },
-                enter = fadeIn(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInVertically(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) { tgBarShift },
-                exit = fadeOut(tween(200, easing = com.iris.gallery.ui.TgDefault)) + slideOutVertically(tween(200, easing = com.iris.gallery.ui.TgDefault)) { tgBarShift },
+                enter = fadeIn(tween(150, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInVertically(tween(150, easing = com.iris.gallery.ui.TgDecelerate15)) { tgBarShift },
+                exit = fadeOut(tween(120, easing = com.iris.gallery.ui.TgDefault)) + slideOutVertically(tween(120, easing = com.iris.gallery.ui.TgDefault)) { tgBarShift },
             ) {
                 Surface(
                     color = Color.Transparent,
@@ -6159,8 +6145,8 @@ private fun PhotoViewer(
               .navigationBarsPadding()
               .padding(start = 16.dp, end = 16.dp, bottom = 0.dp)
               .graphicsLayer { alpha = controlsAlphaNow() },
-          enter = fadeIn(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInVertically(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) { tgBarShift },
-          exit = fadeOut(tween(200, easing = com.iris.gallery.ui.TgDefault)) + slideOutVertically(tween(200, easing = com.iris.gallery.ui.TgDefault)) { tgBarShift },
+          enter = fadeIn(tween(150, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInVertically(tween(150, easing = com.iris.gallery.ui.TgDecelerate15)) { tgBarShift },
+          exit = fadeOut(tween(120, easing = com.iris.gallery.ui.TgDefault)) + slideOutVertically(tween(120, easing = com.iris.gallery.ui.TgDefault)) { tgBarShift },
         ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -6392,8 +6378,7 @@ private fun PhotoViewer(
                 transitionSpec = {
                   val forward = (images.indexOfFirst { it.id == targetState }) >= (images.indexOfFirst { it.id == initialState })
                   val dir = if (forward) 1 else -1
-                  (slideInVertically(tween(300, easing = AxIosEase)) { (it * 0.5f).toInt() * dir } + fadeIn(tween(220, easing = AxIosEase))) togetherWith
-                  (slideOutVertically(tween(200, easing = AxIosEase)) { -(it * 0.5f).toInt() * dir } + fadeOut(tween(120)))
+                  fadeIn(tween(90)) togetherWith fadeOut(tween(60))
                 },
                 label = "viewer actions reel",
               ) { _ ->
@@ -6436,8 +6421,8 @@ private fun PhotoViewer(
                     .align(Alignment.CenterStart)
                     .padding(start = 14.dp, top = 84.dp, bottom = 12.dp)
                     .graphicsLayer { alpha = controlsAlphaNow() },
-                enter = fadeIn(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInHorizontally(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) { -tgBarShift },
-                exit = fadeOut(tween(200, easing = com.iris.gallery.ui.TgDefault)) + slideOutHorizontally(tween(200, easing = com.iris.gallery.ui.TgDefault)) { -tgBarShift },
+                enter = fadeIn(tween(150, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInHorizontally(tween(150, easing = com.iris.gallery.ui.TgDecelerate15)) { -tgBarShift },
+                exit = fadeOut(tween(120, easing = com.iris.gallery.ui.TgDefault)) + slideOutHorizontally(tween(120, easing = com.iris.gallery.ui.TgDefault)) { -tgBarShift },
             ) {
                 AnimatedContent(
                     targetState = docksExpanded,
@@ -6489,8 +6474,8 @@ private fun PhotoViewer(
                     .align(Alignment.CenterEnd)
                     .padding(end = 14.dp, top = 84.dp, bottom = 12.dp)
                     .graphicsLayer { alpha = controlsAlphaNow() },
-                enter = fadeIn(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInHorizontally(tween(250, easing = com.iris.gallery.ui.TgDecelerate15)) { tgBarShift },
-                exit = fadeOut(tween(200, easing = com.iris.gallery.ui.TgDefault)) + slideOutHorizontally(tween(200, easing = com.iris.gallery.ui.TgDefault)) { tgBarShift },
+                enter = fadeIn(tween(150, easing = com.iris.gallery.ui.TgDecelerate15)) + slideInHorizontally(tween(150, easing = com.iris.gallery.ui.TgDecelerate15)) { tgBarShift },
+                exit = fadeOut(tween(120, easing = com.iris.gallery.ui.TgDefault)) + slideOutHorizontally(tween(120, easing = com.iris.gallery.ui.TgDefault)) { tgBarShift },
             ) {
                 AnimatedContent(
                     targetState = docksExpanded,
