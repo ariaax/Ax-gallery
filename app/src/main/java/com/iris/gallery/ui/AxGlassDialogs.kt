@@ -4,6 +4,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -243,14 +244,14 @@ fun AxBarButton(
     androidx.compose.foundation.layout.Box(
         modifier = modifier
             .padding(horizontal = if (grouped) 0.dp else 2.dp)
-            .size(40.dp)
-            .axPressScale(src, 0.86f)
-            // octagon chip with the same chrome rim as the shortcut row
+            .size(38.dp)
+            .axPressScale(src, 0.88f)
+            // flat, airy disc: a faint tint of the text colour and a hairline, nothing heavier
             .then(
-                if (grouped) Modifier.clip(AxRound(30))
-                else Modifier.clip(AxRound(30))
-                    .axChromeFill(AxRound(30))
-                    .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(c.copy(alpha = 0.24f), c.copy(alpha = 0.08f))), AxRound(30))
+                if (grouped) Modifier.clip(CircleShape)
+                else Modifier.clip(CircleShape)
+                    .background(c.copy(alpha = 0.07f))
+                    .border(0.6.dp, c.copy(alpha = 0.12f), CircleShape)
             )
             .clickable(
                 interactionSource = src,
@@ -291,10 +292,10 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
     // Telegram-style: the title sits in its own soft capsule
     androidx.compose.foundation.layout.Row(
         modifier = Modifier
-            .clip(AxRound(30))
-            .axChromeFill(AxRound(30))
-            .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(c.copy(alpha = 0.24f), c.copy(alpha = 0.08f))), AxRound(30))
-            .padding(start = if (badge != null && album != null) 6.dp else 14.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
+            .clip(CircleShape)
+            .background(c.copy(alpha = 0.07f))
+            .border(0.6.dp, c.copy(alpha = 0.12f), CircleShape)
+            .padding(start = if (badge != null && album != null) 6.dp else 16.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(7.dp),
     ) {
@@ -305,8 +306,8 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
             overflow = TextOverflow.Ellipsis,
             style = TextStyle(
                 fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.Bold,
-                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp,
                 color = c,
             ),
         )

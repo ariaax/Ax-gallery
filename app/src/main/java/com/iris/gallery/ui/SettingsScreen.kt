@@ -89,6 +89,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -2284,70 +2288,151 @@ private fun SettingsSwitchRow(
 }
 
 
-/** Background colour setting: White / Black presets and a free picker (hue, saturation, brightness). */
+/** Background colour setting: round presets, a live preview and three slim gradient sliders (hue, saturation, brightness). */
 @Composable
 private fun BackgroundColorCard(current: Int, onChange: (Int) -> Unit) {
     val hsv = remember(current) { FloatArray(3).also { android.graphics.Color.colorToHSV(current, it) } }
-    var hue by remember(current) { mutableStateOf(hsv[0]) }
-    var sat by remember(current) { mutableStateOf(hsv[1]) }
-    var value by remember(current) { mutableStateOf(hsv[2]) }
+    var hue by remember { mutableStateOf(hsv[0]) }
+    var sat by remember { mutableStateOf(hsv[1]) }
+    var value by remember { mutableStateOf(hsv[2]) }
+    // only follow outside changes (a preset); our own commits keep hue/saturation even when they round to grey or black
+    androidx.compose.runtime.LaunchedEffect(current) {
+        if (android.graphics.Color.HSVToColor(floatArrayOf(hue, sat, value)) != current) { hue = hsv[0]; sat = hsv[1]; value = hsv[2] }
+    }
+    fun hsvColor(h: Float, s: Float, v: Float) = Color(android.graphics.Color.HSVToColor(floatArrayOf(h, s, v)))
     fun commit() = onChange(android.graphics.Color.HSVToColor(floatArrayOf(hue, sat, value)))
-    val white = 0xFFFFFFFF.toInt()
-    val black = 0xFF000000.toInt()
+    val presets = listOf(
+        "White" to 0xFFFFFFFF.toInt(),
+        "Snow" to 0xFFF3F4F7.toInt(),
+        "Sand" to 0xFFF1EADB.toInt(),
+        "Graphite" to 0xFF1C1C1E.toInt(),
+        "Midnight" to 0xFF0B1020.toInt(),
+        "Black" to 0xFF000000.toInt(),
+    )
+    val ink = MaterialTheme.colorScheme.onSurface
+    val soft = MaterialTheme.colorScheme.onSurfaceVariant
     Card(
-        shape = AxRound(24.dp),
+        shape = AxRound(28.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Gallery background", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text(
-                "Text, icons and bars switch between light and dark automatically so they stay readable.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                listOf("White" to white, "Black" to black).forEach { (label, argb) ->
-                    val selected = current == argb
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(Color(argb))
-                                .border(if (selected) 3.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, CircleShape)
-                                .clickable { onChange(argb) }
-                        )
-                        Text(label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
-                    }
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(Color(current))
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Box(
+                    Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(Color(current))
+                        .border(1.dp, ink.copy(alpha = 0.18f), CircleShape)
+                )
+                Column(Modifier.weight(1f)) {
+                    Text("Gallery background", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "#%06X".format(current and 0xFFFFFF),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = soft,
                     )
-                    Text("Current", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
                 }
             }
-            Text("Custom colour", style = MaterialTheme.typography.labelLarge)
-            Slider(
-                value = hue, onValueChange = { hue = it }, onValueChangeFinished = { commit() },
-                valueRange = 0f..360f,
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                presets.forEach { (label, argb) ->
+                    val selected = current == argb
+                    val onColour = if (Color(argb).luminance() > 0.5f) Color.Black else Color.White
+                    Box(
+                        Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color(argb))
+                            .border(
+                                if (selected) 2.dp else 1.dp,
+                                if (selected) MaterialTheme.colorScheme.primary else ink.copy(alpha = 0.18f),
+                                CircleShape,
+                            )
+                            .clickable(onClickLabel = label) { onChange(argb) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (selected) Icon(AxIcons.Check, label, tint = onColour, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+            AxGradientSlider(
+                label = "Hue",
+                value = hue / 360f,
+                colors = listOf(0f, 60f, 120f, 180f, 240f, 300f, 360f).map { hsvColor(it % 360f, 1f, 1f) },
+                onChange = { hue = it * 360f },
+                onFinish = { commit() },
             )
-            Text("Hue", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Slider(
-                value = sat, onValueChange = { sat = it }, onValueChangeFinished = { commit() },
-                valueRange = 0f..1f,
+            AxGradientSlider(
+                label = "Saturation",
+                value = sat,
+                colors = listOf(hsvColor(hue, 0f, 1f), hsvColor(hue, 1f, 1f)),
+                onChange = { sat = it },
+                onFinish = { commit() },
             )
-            Text("Saturation", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Slider(
-                value = value, onValueChange = { value = it }, onValueChangeFinished = { commit() },
-                valueRange = 0f..1f,
+            AxGradientSlider(
+                label = "Brightness",
+                value = value,
+                colors = listOf(Color.Black, hsvColor(hue, sat.coerceAtLeast(0.25f), 1f)),
+                onChange = { value = it },
+                onFinish = { commit() },
             )
-            Text("Brightness", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
+
+/** Slim rounded track filled with the colour range it controls, and a small round white thumb. Tap or drag. */
+@Composable
+private fun AxGradientSlider(
+    label: String,
+    value: Float,
+    colors: List<Color>,
+    onChange: (Float) -> Unit,
+    onFinish: () -> Unit,
+) {
+    val change = androidx.compose.runtime.rememberUpdatedState(onChange)
+    val finish = androidx.compose.runtime.rememberUpdatedState(onFinish)
+    val ink = MaterialTheme.colorScheme.onSurface
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("${(value * 100).toInt().coerceIn(0, 100)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        androidx.compose.foundation.Canvas(
+            Modifier
+                .fillMaxWidth()
+                .height(26.dp)
+                .sliderInput(change, finish)
+        ) {
+            val r = 11.dp.toPx()
+            val trackH = 8.dp.toPx()
+            val cy = size.height / 2f
+            drawRoundRect(
+                brush = Brush.horizontalGradient(colors),
+                topLeft = androidx.compose.ui.geometry.Offset(0f, cy - trackH / 2f),
+                size = androidx.compose.ui.geometry.Size(size.width, trackH),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(trackH / 2f),
+            )
+            val cx = r + value.coerceIn(0f, 1f) * (size.width - 2f * r)
+            drawCircle(Color.Black.copy(alpha = 0.18f), radius = r + 1.5.dp.toPx(), center = androidx.compose.ui.geometry.Offset(cx, cy + 1.dp.toPx()))
+            drawCircle(Color.White, radius = r, center = androidx.compose.ui.geometry.Offset(cx, cy))
+            drawCircle(ink.copy(alpha = 0.14f), radius = r, center = androidx.compose.ui.geometry.Offset(cx, cy), style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+        }
+    }
+}
+
+private fun Modifier.sliderInput(change: androidx.compose.runtime.State<(Float) -> Unit>, finish: androidx.compose.runtime.State<() -> Unit>): Modifier =
+    this
+        .pointerInput(Unit) {
+            detectTapGestures { o ->
+                val r = 11.dp.toPx()
+                change.value(((o.x - r) / (size.width - 2f * r)).coerceIn(0f, 1f)); finish.value()
+            }
+        }
+        .pointerInput(Unit) {
+            val r = 11.dp.toPx()
+            detectHorizontalDragGestures(
+                onDragStart = { o -> change.value(((o.x - r) / (size.width - 2f * r)).coerceIn(0f, 1f)) },
+                onDragEnd = { finish.value() },
+                onDragCancel = { finish.value() },
+            ) { c, _ -> c.consume(); change.value(((c.position.x - r) / (size.width - 2f * r)).coerceIn(0f, 1f)) }
+        }
