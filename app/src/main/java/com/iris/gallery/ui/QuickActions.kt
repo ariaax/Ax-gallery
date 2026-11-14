@@ -46,7 +46,7 @@ class QuickAction(val icon: ImageVector, val label: String, val onClick: () -> U
  * are centred under their icons. Same glass look as the rest of the app (dark tint + thin light rim).
  */
 @Composable
-fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, fold: Float = 0f) {
+fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, fold: Float = 0f, enabled: Boolean = true) {
     if (fold > 0.998f) return
     val ink = Color(0xFF0A0E18)
     val rim = Color(0xFFBFD3FF)
@@ -82,7 +82,7 @@ fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, fo
                 scaleX = sc
                 scaleY = sc
                 translationY = -size.height * 0.10f * fold
-                alpha = (1f - (fold - 0.35f).coerceAtLeast(0f) / 0.5f).coerceIn(0f, 1f)
+                alpha = (1f - (fold - 0.35f).coerceAtLeast(0f) / 0.5f).coerceIn(0f, 1f) * (if (enabled) 1f else 0.35f)
             },
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
@@ -93,7 +93,7 @@ fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, fo
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = { if (fold < 0.5f) action.onClick() },
+                        onClick = { if (enabled && fold < 0.5f) action.onClick() },
                     )
                     .padding(horizontal = 6.dp, vertical = 2.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,

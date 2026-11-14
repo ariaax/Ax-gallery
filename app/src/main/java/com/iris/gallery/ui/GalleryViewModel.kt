@@ -143,7 +143,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
             val trulyDeletedOldIds = movedOldIds.filterNot { it in newIds }.toSet()
             repository.markMovedOrDeleted(trulyDeletedOldIds, movedOldPaths)
             val currentImages = _uiState.value.images
-            val remainingImages = currentImages.filterNot { it.id in movedOldIds || it.path in movedOldPaths }
+            val remainingImages = currentImages.filterNot { it.id in movedOldIds || (it.path.isNotBlank() && it.path in movedOldPaths) }
             val updatedImages = (remainingImages + result.movedMedia).sortedWith(
                 compareByDescending<MediaImage> { it.sortDate }
                     .thenByDescending { it.dateModified }
@@ -276,7 +276,8 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
     fun markMediaDeleted(ids: Collection<Long>, paths: Collection<String> = emptyList()) {
         if (ids.isEmpty() && paths.isEmpty()) return
         val idSet = ids.toSet()
-        val pathSet = paths.toSet()
+        // a blank path matches EVERY item whose path is unknown, so it must never be used to remove items
+        val pathSet = paths.filter { it.isNotBlank() }.toSet()
         idSet.forEach { libraryPreferences.setCustomTitle(it, null) }
         repository.markMovedOrDeleted(idSet, pathSet)
         idSet.forEach { ThumbnailCache.remove(it) }

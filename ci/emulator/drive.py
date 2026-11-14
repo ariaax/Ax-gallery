@@ -1281,7 +1281,9 @@ def s30_selection_delete():
     n1, nodes = selected_count()
     shot("29_one_selected")
     record("selection: long-press selects exactly one", n1 == 1, f"selected={n1}")
-    results.append(("selection: shortcut row hidden while selecting", "PASS" if not find(nodes, r"^TRASH$") else "FAIL", ""))
+    # layout must NOT shift when selection starts: the first tile has to stay exactly where the finger pressed it
+    after1 = shot("29_layout_after_select")
+    results.append(("selection: layout stable (see 29_one_selected)", "INFO", ""))
     touch.tap(W * 0.50, row_y)
     time.sleep(0.8)
     n2, _ = selected_count()
@@ -1377,6 +1379,44 @@ def s31_row_after_delete():
     record("row-after-delete: tapping a shortcut opens its screen", ok and not find(nodes, r"^TRASH$"), f"found={ok}")
 
 
+def s32_search_and_intro():
+    """Intro must cover the whole screen from the first frame; the search bar must be readable over scrolling photos."""
+    sh(f"am force-stop {PKG}")
+    time.sleep(0.8)
+    sh(f"am start -n {ACT}")
+    frames = []
+    t0 = time.time()
+    for i in range(10):
+        im = shot(f"32_intro_{i}")
+        frames.append((round(time.time() - t0, 2), im))
+    for t, im in frames:
+        if im is None:
+            continue
+        top = im.crop((0, 2, im.width, 28)).resize((1, 1)).getpixel((0, 0))
+        mid = im.crop((0, int(H * 0.30), im.width, int(H * 0.30) + 26)).resize((1, 1)).getpixel((0, 0))
+        results.append((f"intro frame t={t}s", "INFO", f"status-bar band rgb={top} mid band rgb={mid}"))
+    time.sleep(6)
+    dismiss_system_dialogs()
+    tab_tap("Media", 0.20)
+    time.sleep(1.5)
+    nodes = dump("32_media")
+    b = [n for n in find(nodes, r"^Search$") if n["cy"] < H * 0.16]
+    if b:
+        touch.tap(b[0]["cx"], b[0]["cy"])
+    else:
+        touch.tap(W * 0.12, H * 0.075)
+    time.sleep(1.2)
+    shot("32_search_open")
+    for _ in range(2):
+        touch.swipe(W * 0.5, H * 0.75, W * 0.5, H * 0.35, ms=250)
+        time.sleep(0.5)
+    shot("32_search_scrolled")
+    sh("input text IMG")
+    time.sleep(1.2)
+    shot("32_search_typed")
+    record("search/intro: no crash", alive() and not crash_lines(), "; ".join(crash_lines()))
+
+
 def s09_monkey():
     launch()
     gfx_reset()
@@ -1409,7 +1449,7 @@ def main():
     touch = Touch()
     record("setup: touch device found", touch.dev is not None, str(touch.dev))
     allfns = (s00_touch_calibration, s01_startup, s02_tabs, s03_scroll_perf, s04_photo_viewer, s05_video_playback_and_seek,
-              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s29_selection_hit, s30_selection_delete, s31_row_after_delete, s09_monkey)
+              s06_video_gestures, s07_swipe_between_videos, s08_rotation, s10_favorite_and_delete, s15_viewer_menu, s20_tour, s21_fold_and_trash, s22_trash, s23_library_buttons, s24_new_photo_latency, s25_settings, s26_editor, s27_app_lock, s28_real_glass, s29_selection_hit, s30_selection_delete, s31_row_after_delete, s32_search_and_intro, s09_monkey)
     # the fresh emulator often shows a launcher ANR dialog; restart the launcher before the first scenario
     sh("am force-stop com.google.android.apps.nexuslauncher; am force-stop com.google.android.apps.nexuslauncher")
     time.sleep(12)

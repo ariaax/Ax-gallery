@@ -2896,7 +2896,7 @@ private fun GalleryScaffold(
                   )
                   val quickPadding = PaddingValues(
                       start = padding.calculateStartPadding(LocalLayoutDirection.current),
-                      top = padding.calculateTopPadding() + if (destination == 0 && fileSearchQuery.isBlank() && !isFileSearching && selectedIds.isEmpty()) (92.dp * (1f - quickFold)) else 0.dp,
+                      top = padding.calculateTopPadding() + if (destination == 0 && fileSearchQuery.isBlank() && !isFileSearching) (92.dp * (1f - quickFold)) else 0.dp, // NOT tied to selection: a padding jump would slide the tiles under the finger
                       end = padding.calculateEndPadding(LocalLayoutDirection.current),
                       bottom = padding.calculateBottomPadding(),
                   )
@@ -2923,8 +2923,9 @@ private fun GalleryScaffold(
                   else if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding)
                   else EmptyState(stringResource(R.string.empty_photos), padding)
                   // drawn AFTER the grid: the grid now runs under it, so the row must be on top to get the touches
-                  if (destination == 0 && fileSearchQuery.isBlank() && !isFileSearching && selectedIds.isEmpty()) QuickActionRow(
+                  if (destination == 0 && fileSearchQuery.isBlank() && !isFileSearching) QuickActionRow(
                       fold = quickFold,
+                      enabled = selectedIds.isEmpty(),
                       actions = listOf(
                           QuickAction(AxIcons.Trash, "Trash") { openLibrarySection("trash") },
                           QuickAction(AxIcons.Video, "Videos") { openLibrarySection("videos") },
@@ -4603,7 +4604,8 @@ private fun PhotoGrid(
         }
         found
     } }
-    val currentImages by rememberUpdatedState(images)
+    // drag-select ranges must follow the order the tiles are DRAWN in (grouped by day), which is not always the order of `images`
+    val currentImages by rememberUpdatedState(remember(groups) { groups.flatMap { it.value } })
     val currentSelection by rememberUpdatedState(selectedIds)
     val currentSetSelection by rememberUpdatedState(onSetSelection)
     val currentCellSize by rememberUpdatedState(cellSize)
