@@ -76,13 +76,25 @@ object AxIcons {
         return out
     }
 
-    /** Centre of the drawn shape (end points only); null when arcs make that unreliable. */
+    /** Centre of the drawn shape (points ON the path, curves sampled); null when arcs make that unreliable. */
     private fun centre(nodes: List<PathNode>): Pair<Float, Float>? {
         var minX = 1e9f; var minY = 1e9f; var maxX = -1e9f; var maxY = -1e9f
         fun add(x: Float, y: Float) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y }
+        var px = 0f; var py = 0f
         for (n in nodes) when (n) {
-            is PathNode.MoveTo -> add(n.x, n.y)
-            is PathNode.LineTo -> add(n.x, n.y)
+            is PathNode.MoveTo -> { add(n.x, n.y); px = n.x; py = n.y }
+            is PathNode.LineTo -> { add(n.x, n.y); px = n.x; py = n.y }
+            is PathNode.CurveTo -> {
+                // curves bulge between their end points, so sample them (end points alone made curve-only icons off-centre)
+                for (i in 1..8) {
+                    val t = i / 8f; val u = 1f - t
+                    add(
+                        u * u * u * px + 3 * u * u * t * n.x1 + 3 * u * t * t * n.x2 + t * t * t * n.x3,
+                        u * u * u * py + 3 * u * u * t * n.y1 + 3 * u * t * t * n.y2 + t * t * t * n.y3,
+                    )
+                }
+                px = n.x3; py = n.y3
+            }
             is PathNode.ArcTo -> return null
             else -> {}
         }
