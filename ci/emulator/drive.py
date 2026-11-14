@@ -1241,6 +1241,10 @@ def s29_selection_hit():
         xs = [xs[i] for i in keep]; ys = [ys[i] for i in keep]
         if not xs:
             continue
+        if n == 0:
+            # entering selection mode also changes the top bar and shows "Select date": not a single-tile change
+            results.append(("selection: long-press enters selection mode", "INFO", f"changed_y={min(ys)}-{max(ys)}"))
+            continue
         w_, h_ = max(xs) - min(xs), max(ys) - min(ys)
         hit = min(xs) - 8 <= x <= max(xs) + 8 and min(ys) - 8 <= y <= max(ys) + 8
         ok = hit and w_ <= tile + 24 and h_ <= tile + 24
