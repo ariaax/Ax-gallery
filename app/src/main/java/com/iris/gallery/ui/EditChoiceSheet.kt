@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.AutoFixHigh
@@ -236,7 +236,7 @@ fun EditChoiceBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = CutCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = AxRound(topStart = 28.dp, topEnd = 28.dp),
     ) {
         Column(
             modifier = Modifier
@@ -255,10 +255,10 @@ fun EditChoiceBottomSheet(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(CutCornerShape(18.dp))
+                    .clip(AxRound(18.dp))
                     .clickable { onChooseBuiltIn(rememberChoice) },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-                shape = CutCornerShape(18.dp),
+                shape = AxRound(18.dp),
             ) {
                 Row(
                     modifier = Modifier
@@ -270,7 +270,7 @@ fun EditChoiceBottomSheet(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(CutCornerShape(30))
+                            .clip(AxRound(30))
                             .background(
                                 Brush.linearGradient(
                                     colors = listOf(Color(0xFF9D34F5), Color(0xFF4F16D8))
@@ -304,10 +304,10 @@ fun EditChoiceBottomSheet(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(CutCornerShape(18.dp))
+                    .clip(AxRound(18.dp))
                     .clickable { onChooseExternal(rememberChoice) },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-                shape = CutCornerShape(18.dp),
+                shape = AxRound(18.dp),
             ) {
                 Row(
                     modifier = Modifier
@@ -319,7 +319,7 @@ fun EditChoiceBottomSheet(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(CutCornerShape(30))
+                            .clip(AxRound(30))
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {

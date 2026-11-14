@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -311,7 +311,7 @@ fun ExifEditorSheet(
                                 modifier = Modifier.size(18.dp),
                             )
                         },
-                        shape = CutCornerShape(30),
+                        shape = AxRound(30),
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                             labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -350,7 +350,7 @@ fun ExifEditorSheet(
                                 placeholder = { Text(stringResource(R.string.details_title_hint)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                shape = CutCornerShape(12.dp),
+                                shape = AxRound(12.dp),
                             )
 
                             OutlinedTextField(
@@ -360,7 +360,7 @@ fun ExifEditorSheet(
                                 placeholder = { Text(stringResource(R.string.exif_image_desc_hint)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                shape = CutCornerShape(12.dp),
+                                shape = AxRound(12.dp),
                             )
 
                             OutlinedTextField(
@@ -372,7 +372,7 @@ fun ExifEditorSheet(
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 1,
                                 maxLines = 6,
-                                shape = CutCornerShape(12.dp),
+                                shape = AxRound(12.dp),
                             )
                         }
                     }
@@ -390,7 +390,7 @@ fun ExifEditorSheet(
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                shape = CutCornerShape(12.dp),
+                                shape = AxRound(12.dp),
                             )
 
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -413,7 +413,7 @@ fun ExifEditorSheet(
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                                shape = CutCornerShape(16.dp),
+                                shape = AxRound(16.dp),
                             ) {
                                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -440,7 +440,7 @@ fun ExifEditorSheet(
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     modifier = Modifier.weight(1f),
                                     singleLine = true,
-                                    shape = CutCornerShape(12.dp),
+                                    shape = AxRound(12.dp),
                                 )
 
                                 OutlinedTextField(
@@ -454,7 +454,7 @@ fun ExifEditorSheet(
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     modifier = Modifier.weight(1f),
                                     singleLine = true,
-                                    shape = CutCornerShape(12.dp),
+                                    shape = AxRound(12.dp),
                                 )
                             }
 
@@ -480,7 +480,7 @@ fun ExifEditorSheet(
                                 placeholder = { Text(stringResource(R.string.exif_artist_hint)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                shape = CutCornerShape(12.dp),
+                                shape = AxRound(12.dp),
                             )
 
                             OutlinedTextField(
@@ -490,7 +490,7 @@ fun ExifEditorSheet(
                                 placeholder = { Text(stringResource(R.string.exif_copyright_hint)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                shape = CutCornerShape(12.dp),
+                                shape = AxRound(12.dp),
                             )
 
                             OutlinedTextField(
@@ -499,7 +499,7 @@ fun ExifEditorSheet(
                                 label = { Text(stringResource(R.string.exif_software_label)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                shape = CutCornerShape(12.dp),
+                                shape = AxRound(12.dp),
                             )
                         }
                     }
@@ -514,7 +514,7 @@ fun ExifEditorSheet(
                                     placeholder = { Text(stringResource(R.string.exif_camera_make_hint)) },
                                     modifier = Modifier.weight(1f),
                                     singleLine = true,
-                                    shape = CutCornerShape(12.dp),
+                                    shape = AxRound(12.dp),
                                 )
                                 OutlinedTextField(
                                     value = cameraModel,
@@ -523,7 +523,7 @@ fun ExifEditorSheet(
                                     placeholder = { Text(stringResource(R.string.exif_camera_model_hint)) },
                                     modifier = Modifier.weight(1f),
                                     singleLine = true,
-                                    shape = CutCornerShape(12.dp),
+                                    shape = AxRound(12.dp),
                                 )
                             }
 
@@ -534,7 +534,7 @@ fun ExifEditorSheet(
                                 placeholder = { Text(stringResource(R.string.exif_lens_model_hint)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                shape = CutCornerShape(12.dp),
+                                shape = AxRound(12.dp),
                             )
 
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -546,7 +546,7 @@ fun ExifEditorSheet(
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     modifier = Modifier.weight(1f),
                                     singleLine = true,
-                                    shape = CutCornerShape(12.dp),
+                                    shape = AxRound(12.dp),
                                 )
                                 OutlinedTextField(
                                     value = apertureStr,
@@ -556,7 +556,7 @@ fun ExifEditorSheet(
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     modifier = Modifier.weight(1f),
                                     singleLine = true,
-                                    shape = CutCornerShape(12.dp),
+                                    shape = AxRound(12.dp),
                                 )
                             }
 
@@ -568,7 +568,7 @@ fun ExifEditorSheet(
                                     placeholder = { Text("1/250") },
                                     modifier = Modifier.weight(1f),
                                     singleLine = true,
-                                    shape = CutCornerShape(12.dp),
+                                    shape = AxRound(12.dp),
                                 )
                                 OutlinedTextField(
                                     value = focalLengthStr,
@@ -578,7 +578,7 @@ fun ExifEditorSheet(
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     modifier = Modifier.weight(1f),
                                     singleLine = true,
-                                    shape = CutCornerShape(12.dp),
+                                    shape = AxRound(12.dp),
                                 )
                             }
 
@@ -674,7 +674,7 @@ fun ExifEditorSheet(
                         )
                         onSave(request)
                     },
-                    shape = CutCornerShape(12.dp),
+                    shape = AxRound(12.dp),
                 ) {
                     Icon(Icons.Outlined.Save, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))

@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import com.iris.gallery.data.AccentColor
@@ -105,13 +106,15 @@ fun IrisTheme(
     accentColor: AccentColor = AccentColor.IRIS,
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     amoledBlack: Boolean = false,
+    bgColor: Int = 0xFF000000.toInt(),
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
     // The app is always black (see the design: sharp chrome on black), whatever the system or old settings say.
     @Suppress("UNUSED_VARIABLE", "NAME_SHADOWING") val themeMode = ThemeMode.DARK
     @Suppress("NAME_SHADOWING") val amoledBlack = true
-    val isDark = true
+    val bg = Color(bgColor)
+    val isDark = bg.luminance() < 0.5f
 
     val colors = if (accentColor == AccentColor.MONOCHROME) {
         if (isDark) createMonochromeDarkPalette(amoledBlack) else createMonochromeLightPalette()
@@ -144,6 +147,22 @@ fun IrisTheme(
         }
     }
 
+    // The chosen background drives every surface; text and icon colours are picked from its brightness so contrast holds.
+    val onBg = if (isDark) Color(0xFFF2F4F8) else Color(0xFF14161B)
+    val onBgVariant = if (isDark) Color(0xFFB5BDCF) else Color(0xFF555B68)
+    fun lift(f: Float) = androidx.compose.ui.graphics.lerp(bg, onBg, f)
+    val themed = colors.copy(
+        background = bg, surface = bg,
+        onBackground = onBg, onSurface = onBg, onSurfaceVariant = onBgVariant,
+        surfaceContainerLowest = lift(0.00f), surfaceContainerLow = lift(0.03f), surfaceContainer = lift(0.06f),
+        surfaceContainerHigh = lift(0.09f), surfaceContainerHighest = lift(0.12f),
+        surfaceVariant = lift(0.10f), outlineVariant = lift(0.18f), outline = lift(0.40f),
+        // keep the accent readable on this background
+        primary = if (kotlin.math.abs(colors.primary.luminance() - bg.luminance()) < 0.25f)
+            (if (isDark) Color(0xFF8FB4FF) else Color(0xFF1F5FD6)) else colors.primary,
+        onPrimary = if (colors.primary.luminance() > 0.5f) Color(0xFF14161B) else Color.White,
+    )
+
     val view = androidx.compose.ui.platform.LocalView.current
     if (!view.isInEditMode) {
         androidx.compose.runtime.SideEffect {
@@ -158,11 +177,11 @@ fun IrisTheme(
 
     // sharp, cut-corner shapes for every Material component (buttons, cards, dialogs, menus, fields)
     val shapes = androidx.compose.material3.Shapes(
-        extraSmall = androidx.compose.foundation.shape.CutCornerShape(4.dp),
-        small = androidx.compose.foundation.shape.CutCornerShape(8.dp),
-        medium = androidx.compose.foundation.shape.CutCornerShape(12.dp),
-        large = androidx.compose.foundation.shape.CutCornerShape(16.dp),
-        extraLarge = androidx.compose.foundation.shape.CutCornerShape(24.dp),
+        extraSmall = com.iris.gallery.ui.AxRound(4.dp),
+        small = com.iris.gallery.ui.AxRound(8.dp),
+        medium = com.iris.gallery.ui.AxRound(12.dp),
+        large = com.iris.gallery.ui.AxRound(16.dp),
+        extraLarge = com.iris.gallery.ui.AxRound(24.dp),
     )
-    MaterialTheme(colorScheme = colors, shapes = shapes, content = content)
+    MaterialTheme(colorScheme = themed, shapes = shapes, content = content)
 }

@@ -7,6 +7,7 @@ import android.os.Environment
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -27,7 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
@@ -178,15 +179,7 @@ fun SettingsScreen(
         contentColor = MaterialTheme.colorScheme.onBackground,
         modifier = Modifier.axAurora(),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.section_settings)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(AxIcons.Back, stringResource(R.string.action_back))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
+            AxTopBar(stringResource(R.string.section_settings), onBack, backDescription = stringResource(R.string.action_back))
         }
     ) { scaffoldPadding ->
         LazyColumn(
@@ -196,6 +189,14 @@ fun SettingsScreen(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+        // Background colour: presets + free colour picker; the whole app (text, icons, bars) adapts to it
+        item {
+            SettingsSectionHeader(AxIcons.Palette, "Background")
+        }
+        item {
+            BackgroundColorCard(current = settings.bgColor, onChange = { preferences.setBgColor(it) })
+        }
+
         // Section: Ax Gallery (timeline order, liquid glass, background dates)
         item {
             SettingsSectionHeader(AxIcons.Palette, "Ax Gallery")
@@ -203,9 +204,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = CutCornerShape(24.dp),
+                shape = AxRound(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(AxRound(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text("Timeline order", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -290,10 +291,10 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = CutCornerShape(24.dp),
+                shape = AxRound(24.dp),
                 onClick = { showLanguageDialog = true },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(AxRound(24.dp))
             ) {
                 Row(
                     modifier = Modifier
@@ -341,9 +342,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = CutCornerShape(24.dp),
+                shape = AxRound(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(AxRound(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     // Material You dynamic color selector
@@ -378,12 +379,12 @@ fun SettingsScreen(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .clip(CutCornerShape(30))
+                                    .clip(AxRound(30))
                                     .background(brush)
                                     .clickable { preferences.setAccentColor(accent) }
                                     .then(
-                                        if (isSelected) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CutCornerShape(30))
-                                        else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), CutCornerShape(30))
+                                        if (isSelected) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, AxRound(30))
+                                        else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), AxRound(30))
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -409,9 +410,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = CutCornerShape(24.dp),
+                shape = AxRound(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(AxRound(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(stringResource(R.string.settings_corner_style), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -565,7 +566,7 @@ fun SettingsScreen(
                                 .animateContentSize(),
                             color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                            shape = CutCornerShape(14.dp),
+                            shape = AxRound(14.dp),
                         ) {
                             val spacing = settings.gridSpacing.dp.dp
                             val numRows = if (photoColumns <= 3) 1 else 2
@@ -590,7 +591,7 @@ fun SettingsScreen(
                                                 modifier = Modifier
                                                     .weight(1f)
                                                     .aspectRatio(1f)
-                                                    .clip(CutCornerShape(settings.cornerStyle.dp.dp))
+                                                    .clip(AxRound(settings.cornerStyle.dp.dp))
                                                     .background(Brush.linearGradient(gradient)),
                                                 contentAlignment = Alignment.Center,
                                             ) {
@@ -611,7 +612,7 @@ fun SettingsScreen(
                                                 if (index == 0 && settings.showVideoDurationBadge) {
                                                     Surface(
                                                         color = Color.Black.copy(alpha = 0.65f),
-                                                        shape = CutCornerShape(3.dp),
+                                                        shape = AxRound(3.dp),
                                                         modifier = Modifier.align(Alignment.BottomStart).padding(if (photoColumns <= 2) 4.dp else 2.dp),
                                                     ) {
                                                         Row(
@@ -630,7 +631,7 @@ fun SettingsScreen(
                                                 } else if (index == 1 && settings.showMediaFormatBadge) {
                                                     Surface(
                                                         color = Color.Black.copy(alpha = 0.65f),
-                                                        shape = CutCornerShape(3.dp),
+                                                        shape = AxRound(3.dp),
                                                         modifier = Modifier.align(Alignment.BottomStart).padding(if (photoColumns <= 2) 4.dp else 2.dp),
                                                     ) {
                                                         Text("RAW", color = Color.White, fontSize = if (photoColumns <= 2) 9.sp else 6.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp))
@@ -681,7 +682,7 @@ fun SettingsScreen(
                                             fontWeight = if (isCurrentCol) FontWeight.Bold else FontWeight.Medium,
                                         )
                                     },
-                                    shape = CutCornerShape(30),
+                                    shape = AxRound(30),
                                 )
                             }
                         }
@@ -693,7 +694,7 @@ fun SettingsScreen(
                         ) {
                             Surface(
                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = CutCornerShape(30),
+                                shape = AxRound(30),
                             ) {
                                 Text(
                                     "${currentPhotoSize.roundToInt()} dp · $photoColumns ${if (photoColumns == 1) "col" else "cols"}",
@@ -725,7 +726,7 @@ fun SettingsScreen(
                                 .height(98.dp),
                             color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                            shape = CutCornerShape(14.dp),
+                            shape = AxRound(14.dp),
                         ) {
                             Row(
                                 modifier = Modifier
@@ -753,7 +754,7 @@ fun SettingsScreen(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .aspectRatio(1f, matchHeightConstraintsFirst = true)
-                                                .clip(CutCornerShape(settings.cornerStyle.dp.dp))
+                                                .clip(AxRound(settings.cornerStyle.dp.dp))
                                                 .background(Brush.linearGradient(albumGrad)),
                                             contentAlignment = Alignment.Center,
                                         ) {
@@ -806,7 +807,7 @@ fun SettingsScreen(
                                             fontWeight = if (isCurrentCol) FontWeight.Bold else FontWeight.Medium,
                                         )
                                     },
-                                    shape = CutCornerShape(30),
+                                    shape = AxRound(30),
                                 )
                             }
                         }
@@ -818,7 +819,7 @@ fun SettingsScreen(
                         ) {
                             Surface(
                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = CutCornerShape(30),
+                                shape = AxRound(30),
                             ) {
                                 Text(
                                     "${currentAlbumSize.roundToInt()} dp · $albumColumns ${if (albumColumns == 1) "col" else "cols"}",
@@ -847,9 +848,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = CutCornerShape(24.dp),
+                shape = AxRound(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(AxRound(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     SettingsSwitchRow(
@@ -870,7 +871,7 @@ fun SettingsScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(CutCornerShape(8.dp))
+                                    .clip(AxRound(8.dp))
                                     .clickable { showDateFormatDialog = true }
                                     .padding(vertical = 4.dp, horizontal = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -986,15 +987,15 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = CutCornerShape(24.dp),
+                shape = AxRound(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(AxRound(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(CutCornerShape(12.dp))
+                            .clip(AxRound(12.dp))
                             .clickable { showViewerHeaderDialog = true }
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -1121,9 +1122,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = CutCornerShape(24.dp),
+                shape = AxRound(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(AxRound(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     SettingsSwitchRow(
@@ -1178,7 +1179,7 @@ fun SettingsScreen(
                                     )
                                 }
                                 Surface(
-                                    shape = CutCornerShape(8.dp),
+                                    shape = AxRound(8.dp),
                                     color = MaterialTheme.colorScheme.primaryContainer,
                                     modifier = Modifier.clickable { showTimePickerDialog = true }
                                 ) {
@@ -1203,9 +1204,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = CutCornerShape(24.dp),
+                shape = AxRound(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(AxRound(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(stringResource(R.string.settings_navigation_tabs_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -1416,7 +1417,7 @@ fun SettingsScreen(
                             }
                             if (hasAllFiles) {
                                 Surface(
-                                    shape = CutCornerShape(30),
+                                    shape = AxRound(30),
                                     color = MaterialTheme.colorScheme.primaryContainer,
                                     modifier = Modifier.size(32.dp)
                                 ) {
@@ -1569,7 +1570,7 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(CutCornerShape(12.dp))
+                            .clip(AxRound(12.dp))
                             .clickable { showSecureSharingDialog = true }
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1625,9 +1626,9 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = CutCornerShape(24.dp),
+                shape = AxRound(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(AxRound(24.dp))
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(
@@ -1676,10 +1677,10 @@ fun SettingsScreen(
 
         item {
             Card(
-                shape = CutCornerShape(24.dp),
+                shape = AxRound(24.dp),
                 onClick = onOpenAbout,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.66f)),
-                modifier = Modifier.fillMaxWidth().axGlassBorder(CutCornerShape(24.dp))
+                modifier = Modifier.fillMaxWidth().axGlassBorder(AxRound(24.dp))
             ) {
                 Row(
                     modifier = Modifier
@@ -1882,7 +1883,7 @@ fun SettingsScreen(
                             SecureSharingMode.STRIP_ALL -> AxIcons.Shield
                         }
                         Surface(
-                            shape = CutCornerShape(12.dp),
+                            shape = AxRound(12.dp),
                             color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                             else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
                             border = BorderStroke(
@@ -1891,7 +1892,7 @@ fun SettingsScreen(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(CutCornerShape(12.dp))
+                                .clip(AxRound(12.dp))
                                 .clickable {
                                     preferences.setSecureSharingMode(mode)
                                     showSecureSharingDialog = false
@@ -2067,7 +2068,7 @@ fun ExcludedFoldersDialog(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Card(
-                        shape = CutCornerShape(12.dp),
+                        shape = AxRound(12.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2103,7 +2104,7 @@ fun ExcludedFoldersDialog(
                     }
 
                     Card(
-                        shape = CutCornerShape(12.dp),
+                        shape = AxRound(12.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2175,7 +2176,7 @@ fun ExcludedFoldersDialog(
                             }
 
                             Card(
-                                shape = CutCornerShape(12.dp),
+                                shape = AxRound(12.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (isAlreadyExcluded)
                                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
@@ -2199,7 +2200,7 @@ fun ExcludedFoldersDialog(
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     Card(
-                                        shape = CutCornerShape(8.dp),
+                                        shape = AxRound(8.dp),
                                         modifier = Modifier.size(52.dp)
                                     ) {
                                         MediaThumbnail(album.cover, Modifier.fillMaxSize())
@@ -2279,5 +2280,74 @@ private fun SettingsSwitchRow(
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+
+/** Background colour setting: White / Black presets and a free picker (hue, saturation, brightness). */
+@Composable
+private fun BackgroundColorCard(current: Int, onChange: (Int) -> Unit) {
+    val hsv = remember(current) { FloatArray(3).also { android.graphics.Color.colorToHSV(current, it) } }
+    var hue by remember(current) { mutableStateOf(hsv[0]) }
+    var sat by remember(current) { mutableStateOf(hsv[1]) }
+    var value by remember(current) { mutableStateOf(hsv[2]) }
+    fun commit() = onChange(android.graphics.Color.HSVToColor(floatArrayOf(hue, sat, value)))
+    val white = 0xFFFFFFFF.toInt()
+    val black = 0xFF000000.toInt()
+    Card(
+        shape = AxRound(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Gallery background", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Text, icons and bars switch between light and dark automatically so they stay readable.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                listOf("White" to white, "Black" to black).forEach { (label, argb) ->
+                    val selected = current == argb
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(Color(argb))
+                                .border(if (selected) 3.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, CircleShape)
+                                .clickable { onChange(argb) }
+                        )
+                        Text(label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color(current))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                    )
+                    Text("Current", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
+                }
+            }
+            Text("Custom colour", style = MaterialTheme.typography.labelLarge)
+            Slider(
+                value = hue, onValueChange = { hue = it }, onValueChangeFinished = { commit() },
+                valueRange = 0f..360f,
+            )
+            Text("Hue", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Slider(
+                value = sat, onValueChange = { sat = it }, onValueChangeFinished = { commit() },
+                valueRange = 0f..1f,
+            )
+            Text("Saturation", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Slider(
+                value = value, onValueChange = { value = it }, onValueChangeFinished = { commit() },
+                valueRange = 0f..1f,
+            )
+            Text("Brightness", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

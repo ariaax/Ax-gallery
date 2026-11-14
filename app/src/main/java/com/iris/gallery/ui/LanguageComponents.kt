@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material3.BottomSheetDefaults
@@ -168,7 +168,7 @@ fun FirstLaunchLanguageBottomSheet(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(CutCornerShape(30))
+                        .clip(AxRound(30))
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
@@ -221,7 +221,7 @@ fun FirstLaunchLanguageBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                shape = CutCornerShape(16.dp),
+                shape = AxRound(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -247,7 +247,7 @@ private fun MaterialLanguageRow(
 ) {
     Surface(
         onClick = onClick,
-        shape = CutCornerShape(16.dp),
+        shape = AxRound(16.dp),
         color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer
         else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
         modifier = Modifier.fillMaxWidth()

@@ -30,7 +30,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -139,45 +139,24 @@ fun FolderBrowserScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = if (isAtRoot) stringResource(R.string.section_folder_view) else currentDirectory.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = currentDirectory.absolutePath,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+            AxTopBar(
+                title = if (isAtRoot) stringResource(R.string.section_folder_view) else currentDirectory.name,
+                onBack = {
+                    if (!isAtRoot && currentDirectory.parentFile != null) {
+                        currentDirectory = currentDirectory.parentFile!!
+                    } else {
+                        onBack()
                     }
                 },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        if (!isAtRoot && currentDirectory.parentFile != null) {
-                            currentDirectory = currentDirectory.parentFile!!
-                        } else {
-                            onBack()
-                        }
-                    }) {
-                        Icon(AxIcons.Back, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+                backDescription = stringResource(R.string.action_back),
                 actions = {
-                    IconButton(onClick = { isListView = !isListView }) {
+                    AxBarButton(onClick = { isListView = !isListView }) {
                         Icon(
                             if (isListView) AxIcons.GridSmall else AxIcons.List,
                             contentDescription = stringResource(if (isListView) R.string.view_grid else R.string.view_list)
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
         modifier = Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())
@@ -307,7 +286,7 @@ fun FolderBrowserScreen(
                         }
                         items(directories, key = { it.file.absolutePath }) { item ->
                             Card(
-                                shape = CutCornerShape(cornerStyle.dp.dp),
+                                shape = AxRound(cornerStyle.dp.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                 ),
@@ -325,7 +304,7 @@ fun FolderBrowserScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(44.dp)
-                                            .clip(CutCornerShape(30))
+                                            .clip(AxRound(30))
                                             .background(MaterialTheme.colorScheme.primaryContainer),
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -377,7 +356,7 @@ fun FolderBrowserScreen(
                         }
                         items(mediaFiles, key = { it.id }) { image ->
                             Card(
-                                shape = CutCornerShape(cornerStyle.dp.dp),
+                                shape = AxRound(cornerStyle.dp.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                                 ),
@@ -393,7 +372,7 @@ fun FolderBrowserScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     Card(
-                                        shape = CutCornerShape((cornerStyle.dp.dp / 2).coerceAtLeast(4.dp)),
+                                        shape = AxRound((cornerStyle.dp.dp / 2).coerceAtLeast(4.dp)),
                                         modifier = Modifier.size(56.dp)
                                     ) {
                                         MediaThumbnail(
@@ -475,7 +454,7 @@ fun FolderBrowserScreen(
                         }
                         items(directories, key = { it.file.absolutePath }) { item ->
                             Card(
-                                shape = CutCornerShape(cornerStyle.dp.dp),
+                                shape = AxRound(cornerStyle.dp.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                 ),
@@ -531,7 +510,7 @@ fun FolderBrowserScreen(
                                     .clickable { onOpenMedia(image, mediaFiles) }
                             ) {
                                 Card(
-                                    shape = CutCornerShape(cornerStyle.dp.dp),
+                                    shape = AxRound(cornerStyle.dp.dp),
                                     modifier = Modifier.fillMaxSize()
                                 ) {
                                     MediaThumbnail(

@@ -8,7 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.graphicsLayer
@@ -61,7 +61,7 @@ fun ModalBottomSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(),
-    shape: Shape = CutCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    shape: Shape = AxRound(topStart = 28.dp, topEnd = 28.dp),
     containerColor: Color = BottomSheetDefaults.ContainerColor,
     contentColor: Color = contentColorFor(containerColor),
     tonalElevation: androidx.compose.ui.unit.Dp = BottomSheetDefaults.Elevation,
@@ -95,7 +95,7 @@ fun AlertDialog(
     icon: @Composable (() -> Unit)? = null,
     title: @Composable (() -> Unit)? = null,
     text: @Composable (() -> Unit)? = null,
-    shape: Shape = CutCornerShape(28.dp),
+    shape: Shape = AxRound(28.dp),
     containerColor: Color = AlertDialogDefaults.containerColor,
     iconContentColor: Color = AlertDialogDefaults.iconContentColor,
     titleContentColor: Color = AlertDialogDefaults.titleContentColor,
@@ -147,7 +147,7 @@ fun DropdownMenu(
             offset = offset,
             scrollState = scrollState,
             properties = properties,
-            shape = CutCornerShape(22.dp),
+            shape = AxRound(22.dp),
             containerColor = themed.surfaceContainer,
             border = if (AxGlass.enabled) androidx.compose.foundation.BorderStroke(
                 1.dp,
@@ -247,10 +247,10 @@ fun AxBarButton(
             .axPressScale(src, 0.86f)
             // octagon chip with the same chrome rim as the shortcut row
             .then(
-                if (grouped) Modifier.clip(CutCornerShape(30))
-                else Modifier.clip(CutCornerShape(30))
-                    .axChromeFill(CutCornerShape(30))
-                    .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color(0xFF4E8DFF).copy(alpha = 0.16f))), CutCornerShape(30))
+                if (grouped) Modifier.clip(AxRound(30))
+                else Modifier.clip(AxRound(30))
+                    .axChromeFill(AxRound(30))
+                    .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(c.copy(alpha = 0.24f), c.copy(alpha = 0.08f))), AxRound(30))
             )
             .clickable(
                 interactionSource = src,
@@ -291,9 +291,9 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
     // Telegram-style: the title sits in its own soft capsule
     androidx.compose.foundation.layout.Row(
         modifier = Modifier
-            .clip(CutCornerShape(30))
-            .axChromeFill(CutCornerShape(30))
-            .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color(0xFF4E8DFF).copy(alpha = 0.16f))), CutCornerShape(30))
+            .clip(AxRound(30))
+            .axChromeFill(AxRound(30))
+            .border(1.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(c.copy(alpha = 0.24f), c.copy(alpha = 0.08f))), AxRound(30))
             .padding(start = if (badge != null && album != null) 6.dp else 14.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(7.dp),
@@ -315,7 +315,7 @@ fun AxBarTitle(text: String, album: MediaAlbum? = null) {
 
 /** Icy-blue frosted glass, same look as the video control bar (works over video, where blur is impossible). */
 fun Modifier.axIcyPanel(corner: androidx.compose.ui.unit.Dp): Modifier {
-    val shape = CutCornerShape(corner)
+    val shape = AxRound(corner)
     return this
         .clip(shape)
         .background(Color(0xFF0B0B0D).copy(alpha = 0.88f))
@@ -346,7 +346,7 @@ fun AxGlassChip(
     }
     val c = MaterialTheme.colorScheme.onSurface
     val tint = MaterialTheme.colorScheme.primary
-    val shape = CutCornerShape(30)
+    val shape = AxRound(30)
     val top = if (selected) tint.copy(alpha = 0.38f) else c.copy(alpha = 0.16f)
     val bottom = if (selected) tint.copy(alpha = 0.16f) else c.copy(alpha = 0.06f)
     val src = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -389,7 +389,7 @@ fun AxGlassSearchField(
     modifier: Modifier = Modifier,
 ) {
     val c = MaterialTheme.colorScheme.onSurface
-    val shape = CutCornerShape(26.dp)
+    val shape = AxRound(26.dp)
     val glass = AxGlass.enabled
     androidx.compose.material3.OutlinedTextField(
         value = value,
@@ -426,6 +426,32 @@ fun AxSelectCheck(modifier: Modifier = Modifier) {
         modifier = modifier
             .graphicsLayer { scaleX = pop.value; scaleY = pop.value; alpha = pop.value }
             .size(27.dp)
-            .background(MaterialTheme.colorScheme.surface, CutCornerShape(30)),
+            .background(MaterialTheme.colorScheme.surface, AxRound(30)),
+    )
+}
+
+/**
+ * The one top bar every secondary screen uses (Settings, About, Folders, Editor...): round back button on the left,
+ * title centred on the SCREEN in its own capsule, optional round action buttons on the right.
+ * Same look as the main gallery bar, so every page feels alike.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun AxTopBar(
+    title: String,
+    onBack: (() -> Unit)?,
+    backIcon: androidx.compose.ui.graphics.vector.ImageVector = AxIcons.Back,
+    backDescription: String? = null,
+    actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
+) {
+    androidx.compose.material3.CenterAlignedTopAppBar(
+        title = { AxBarTitle(title) },
+        navigationIcon = {
+            if (onBack != null) {
+                AxBarButton(onClick = onBack) { androidx.compose.material3.Icon(backIcon, backDescription) }
+            }
+        },
+        actions = { AxBarActions(actions) },
+        colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
     )
 }

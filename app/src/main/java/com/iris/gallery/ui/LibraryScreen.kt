@@ -137,7 +137,7 @@ private fun BentoRow(vararg tiles: BentoSpec) {
 
 @Composable
 private fun BentoTile(spec: BentoSpec, modifier: Modifier) {
-    val shape = androidx.compose.foundation.shape.CutCornerShape(26.dp)
+    val shape = com.iris.gallery.ui.AxRound(26.dp)
     val accent = MaterialTheme.colorScheme.primary
     val fill = remember { Color(0xFF14161B).copy(alpha = 0.92f) }
     val rim = remember {
@@ -167,9 +167,9 @@ private fun BentoTile(spec: BentoSpec, modifier: Modifier) {
         Box(
             Modifier
                 .size(42.dp)
-                .clip(androidx.compose.foundation.shape.CutCornerShape(14.dp))
+                .clip(com.iris.gallery.ui.AxRound(14.dp))
                 .background(accent.copy(alpha = if (spec.hero) 0.30f else 0.18f))
-                .border(1.dp, Color.White.copy(alpha = 0.14f), androidx.compose.foundation.shape.CutCornerShape(14.dp)),
+                .border(1.dp, Color.White.copy(alpha = 0.14f), com.iris.gallery.ui.AxRound(14.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(spec.icon, null, tint = if (spec.hero) Color.White else accent)

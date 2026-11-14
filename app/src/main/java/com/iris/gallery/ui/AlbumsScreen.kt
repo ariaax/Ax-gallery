@@ -33,7 +33,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Surface
@@ -458,7 +458,7 @@ fun AlbumsGrid(
                 val isPinned = album.id in pinned
                 val featured = index % 5 == 0 && actualColumns >= 2
                 val narrow = actualColumns >= 4 && !featured
-                val tileShape = CutCornerShape((cornerStyle.dp + 8).dp)
+                val tileShape = AxRound((cornerStyle.dp + 8).dp)
                 val tileFill = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.80f)
                 Column(
                     Modifier
@@ -485,7 +485,7 @@ fun AlbumsGrid(
                             .aspectRatio(if (featured) 2f else 1f)
                     ) {
                         Card(
-                            shape = CutCornerShape(cornerStyle.dp.dp),
+                            shape = AxRound(cornerStyle.dp.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
                             MediaThumbnail(
@@ -509,7 +509,7 @@ fun AlbumsGrid(
                                     androidx.compose.ui.graphics.Brush.linearGradient(
                                         listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.05f), Color.White.copy(alpha = 0.22f))
                                     ),
-                                    CutCornerShape(cornerStyle.dp.dp),
+                                    AxRound(cornerStyle.dp.dp),
                                 )
                         )
                         if (showCount) {
@@ -522,9 +522,9 @@ fun AlbumsGrid(
                                     // top-right keeps it clear of a video's duration pill (bottom-right); pin / reorder buttons own that corner
                                     .align(if ((sort != AlbumSort.CUSTOM && isPinned) || (sort == AlbumSort.CUSTOM && isEditingOrder)) Alignment.BottomEnd else Alignment.TopEnd)
                                     .padding(if (narrow) 3.dp else 6.dp)
-                                    .clip(CutCornerShape(30))
+                                    .clip(AxRound(30))
                                     .background(Color.Black.copy(alpha = 0.38f))
-                                    .border(0.8.dp, Color.White.copy(alpha = 0.30f), CutCornerShape(30))
+                                    .border(0.8.dp, Color.White.copy(alpha = 0.30f), AxRound(30))
                                     .padding(horizontal = 8.dp, vertical = 2.dp),
                             )
                         }
@@ -532,7 +532,7 @@ fun AlbumsGrid(
                         // Floating Pin Badge on top-right of pinned album image
                         if (sort != AlbumSort.CUSTOM && isPinned) {
                             Surface(
-                                shape = CutCornerShape(30),
+                                shape = AxRound(30),
                                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f),
                                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                                 shadowElevation = 2.dp,
@@ -562,7 +562,7 @@ fun AlbumsGrid(
                                 val buttonContentColor = MaterialTheme.colorScheme.onSurface
                                 if (index > 0) {
                                     Surface(
-                                        shape = CutCornerShape(30),
+                                        shape = AxRound(30),
                                         color = buttonColor,
                                         contentColor = buttonContentColor,
                                         shadowElevation = 2.dp,
@@ -577,7 +577,7 @@ fun AlbumsGrid(
                                         }
                                     }
                                     Surface(
-                                        shape = CutCornerShape(30),
+                                        shape = AxRound(30),
                                         color = buttonColor,
                                         contentColor = buttonContentColor,
                                         shadowElevation = 2.dp,
@@ -594,7 +594,7 @@ fun AlbumsGrid(
                                 }
                                 if (index in 0 until effectiveOrder.lastIndex) {
                                     Surface(
-                                        shape = CutCornerShape(30),
+                                        shape = AxRound(30),
                                         color = buttonColor,
                                         contentColor = buttonContentColor,
                                         shadowElevation = 2.dp,
@@ -609,7 +609,7 @@ fun AlbumsGrid(
                                         }
                                     }
                                     Surface(
-                                        shape = CutCornerShape(30),
+                                        shape = AxRound(30),
                                         color = buttonColor,
                                         contentColor = buttonContentColor,
                                         shadowElevation = 2.dp,
@@ -666,7 +666,7 @@ fun AlbumsGrid(
                                     softWrap = false,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                     modifier = Modifier
-                                        .clip(CutCornerShape(5.dp))
+                                        .clip(AxRound(5.dp))
                                         .background(MaterialTheme.colorScheme.secondaryContainer)
                                         .padding(horizontal = 5.dp, vertical = 2.dp),
                                 )
@@ -683,7 +683,7 @@ fun AlbumsGrid(
             ModalBottomSheet(
                 onDismissRequest = { selectedAlbumForOptions = null },
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                shape = CutCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                shape = AxRound(topStart = 28.dp, topEnd = 28.dp),
                 modifier = Modifier.navigationBarsPadding(),
             ) {
                 Column(
@@ -701,7 +701,7 @@ fun AlbumsGrid(
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         Card(
-                            shape = CutCornerShape(14.dp),
+                            shape = AxRound(14.dp),
                             modifier = Modifier.size(56.dp)
                         ) {
                             MediaThumbnail(
@@ -737,7 +737,7 @@ fun AlbumsGrid(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                         ),
-                        shape = CutCornerShape(16.dp)
+                        shape = AxRound(16.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -749,7 +749,7 @@ fun AlbumsGrid(
                             Box(
                                 modifier = Modifier
                                     .size(42.dp)
-                                    .clip(CutCornerShape(30))
+                                    .clip(AxRound(30))
                                     .background(MaterialTheme.colorScheme.primaryContainer),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -786,7 +786,7 @@ fun AlbumsGrid(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                         ),
-                        shape = CutCornerShape(16.dp)
+                        shape = AxRound(16.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -798,7 +798,7 @@ fun AlbumsGrid(
                             Box(
                                 modifier = Modifier
                                 .size(42.dp)
-                                .clip(CutCornerShape(30))
+                                .clip(AxRound(30))
                                 .background(MaterialTheme.colorScheme.errorContainer),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -835,7 +835,7 @@ fun AlbumsGrid(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                         ),
-                        shape = CutCornerShape(16.dp)
+                        shape = AxRound(16.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -847,7 +847,7 @@ fun AlbumsGrid(
                             Box(
                                 modifier = Modifier
                                     .size(42.dp)
-                                    .clip(CutCornerShape(30))
+                                    .clip(AxRound(30))
                                     .background(MaterialTheme.colorScheme.secondaryContainer),
                                 contentAlignment = Alignment.Center
                             ) {

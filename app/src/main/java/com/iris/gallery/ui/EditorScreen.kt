@@ -52,7 +52,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
@@ -311,7 +311,7 @@ fun EditorScreen(image: MediaImage, onClose: () -> Unit, onSaved: (saved: Boolea
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Scaffold(
             topBar = {
-                TopAppBar(
+                androidx.compose.material3.CenterAlignedTopAppBar(
                     title = {
                         Text(
                             stringResource(R.string.editor_title),
@@ -461,7 +461,7 @@ fun EditorScreen(image: MediaImage, onClose: () -> Unit, onSaved: (saved: Boolea
                     if (canvasZoom > 1.05f) {
                         Surface(
                             onClick = { editorView?.resetZoom() },
-                            shape = CutCornerShape(16.dp),
+                            shape = AxRound(16.dp),
                             color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
                             contentColor = MaterialTheme.colorScheme.onSurface,
                             tonalElevation = 4.dp,
@@ -765,7 +765,7 @@ private fun SaveAsDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Surface(
-                    shape = CutCornerShape(12.dp),
+                    shape = AxRound(12.dp),
                     color = if (overwriteOriginal)
                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                     else
@@ -819,7 +819,7 @@ private fun SaveAsDialog(
                         selected = isSelected,
                         onClick = { if (!overwriteOriginal) onSelectFormat(format) },
                         enabled = !overwriteOriginal,
-                        shape = CutCornerShape(12.dp),
+                        shape = AxRound(12.dp),
                         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -849,7 +849,7 @@ private fun SaveAsDialog(
                                     if (format == originalFormat) {
                                         Surface(
                                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
-                                            shape = CutCornerShape(6.dp),
+                                            shape = AxRound(6.dp),
                                         ) {
                                             Text(
                                                 text = stringResource(R.string.format_original_tag),
@@ -1568,12 +1568,12 @@ private fun DrawControls(
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(Color(c), CutCornerShape(30))
+                    .background(Color(c), AxRound(30))
                     .then(
                         if (brushColor == c && !erasing) {
-                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CutCornerShape(30))
+                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, AxRound(30))
                         } else {
-                            Modifier.border(1.dp, Color.Gray.copy(alpha = 0.4f), CutCornerShape(30))
+                            Modifier.border(1.dp, Color.Gray.copy(alpha = 0.4f), AxRound(30))
                         }
                     )
                     .clickable {
@@ -1723,12 +1723,12 @@ private fun ShapeControls(
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(Color(c), CutCornerShape(30))
+                    .background(Color(c), AxRound(30))
                     .then(
                         if (color == c && !erasing) {
-                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CutCornerShape(30))
+                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, AxRound(30))
                         } else {
-                            Modifier.border(1.dp, Color.Gray.copy(alpha = 0.4f), CutCornerShape(30))
+                            Modifier.border(1.dp, Color.Gray.copy(alpha = 0.4f), AxRound(30))
                         }
                     )
                     .clickable {
@@ -1829,7 +1829,7 @@ private fun TextControls(
             placeholder = { Text(stringResource(R.string.editor_text_hint)) },
             modifier = Modifier.weight(1f),
             singleLine = true,
-            shape = CutCornerShape(12.dp)
+            shape = AxRound(12.dp)
         )
         Button(
             onClick = {
@@ -1873,12 +1873,12 @@ private fun TextControls(
             Box(
                 modifier = Modifier
                     .size(28.dp)
-                    .background(Color(c), CutCornerShape(30))
+                    .background(Color(c), AxRound(30))
                     .then(
                         if (textColor == c) {
-                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CutCornerShape(30))
+                            Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, AxRound(30))
                         } else {
-                            Modifier.border(1.dp, Color.Gray.copy(alpha = 0.4f), CutCornerShape(30))
+                            Modifier.border(1.dp, Color.Gray.copy(alpha = 0.4f), AxRound(30))
                         }
                     )
                     .clickable {

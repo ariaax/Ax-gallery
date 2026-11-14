@@ -20,7 +20,7 @@ fun Modifier.axAurora(): Modifier {
     val themeBg = cs.background
     val dark = themeBg.luminance() < 0.5f
     // dark mode: near-black base (like an OLED wallpaper) so photos pop; light mode keeps the theme colour
-    val bg = if (dark && AxGlass.enabled) androidx.compose.ui.graphics.Color(0xFF040405) else themeBg
+    val bg = themeBg   // the user's chosen background colour, exactly
     if (!AxGlass.enabled) return this.background(bg)
     val top = lerp(bg, cs.primary, if (dark) 0.035f else 0.07f)
     val mid = lerp(bg, cs.primary, if (dark) 0.01f else 0.02f)

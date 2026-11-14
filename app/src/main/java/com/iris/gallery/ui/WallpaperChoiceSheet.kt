@@ -12,7 +12,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
@@ -295,7 +295,7 @@ fun WallpaperChoiceBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = CutCornerShape(16.dp),
+                shape = AxRound(16.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             ) {
                 Row(
@@ -309,7 +309,7 @@ fun WallpaperChoiceBottomSheet(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .size(56.dp)
-                            .clip(CutCornerShape(10.dp))
+                            .clip(AxRound(10.dp))
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -335,7 +335,7 @@ fun WallpaperChoiceBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = CutCornerShape(16.dp),
+                shape = AxRound(16.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 onClick = { if (!isApplying) allowScroll = !allowScroll }
             ) {
@@ -440,7 +440,7 @@ private fun WallpaperOptionItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 3.dp),
-        shape = CutCornerShape(12.dp),
+        shape = AxRound(12.dp),
         color = MaterialTheme.colorScheme.surface,
         onClick = onClick
     ) {

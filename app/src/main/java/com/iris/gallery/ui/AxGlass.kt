@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import com.wexpa.liquidglass.GlassStyle
 import com.wexpa.liquidglass.liquidGlass
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -352,7 +352,8 @@ fun AxGlassNavBar(
         spring(dampingRatio = 0.82f, stiffness = 420f),
         label = "dock height",
     )
-    val tint = Color(0xFF0B0B0D).copy(alpha = 0.90f)
+    val darkBg = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val tint = if (darkBg) Color(0xFF0B0B0D).copy(alpha = 0.90f) else Color.White.copy(alpha = 0.94f)
     val edge = Brush.linearGradient(
         listOf(Color.White.copy(alpha = 0.30f), Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.22f))
     )
@@ -362,7 +363,7 @@ fun AxGlassNavBar(
         glint.snapTo(0f)
         glint.animateTo(1f, tween(750, easing = FastOutSlowInEasing))
     }
-    val shape = CutCornerShape(30)
+    val shape = AxRound(30)
 
     // One highlight pill that GLIDES between tabs. It is driven by a single 0..1 progress and the tabs' live bounds, and
     // everything is read only while drawing, so a tab change costs no recomposition (that was the stutter).
@@ -394,8 +395,9 @@ fun AxGlassNavBar(
     val ringBrushColors = remember {
         listOf(Color(0xFF5AD1FF), Color(0xFF3B6BFF), Color(0xFFFF9A3C), Color(0xFFFFFFFF), Color(0xFF5AD1FF))
     }
-    val innerFill = remember(accent) {
-        accent.copy(alpha = 0.18f).compositeOver(Color.Black.copy(alpha = 0.40f).compositeOver(Color(0xFF0B0B0D)))
+    val innerFill = remember(accent, darkBg) {
+        if (darkBg) accent.copy(alpha = 0.18f).compositeOver(Color.Black.copy(alpha = 0.40f).compositeOver(Color(0xFF0B0B0D)))
+        else accent.copy(alpha = 0.14f).compositeOver(Color.White)
     }
 
     Box(
@@ -490,7 +492,7 @@ fun AxGlassNavBar(
                     val itemSource = remember { MutableInteractionSource() }
                     val pressed by itemSource.collectIsPressedAsState()
                     val press by animateFloatAsState(if (pressed) 0.90f else 1f, spring(dampingRatio = 0.5f, stiffness = 520f), label = "dock press")
-                    val itemShape = CutCornerShape(30)
+                    val itemShape = AxRound(30)
                     Row(
                         modifier = Modifier
                             .fillMaxHeight()
@@ -536,7 +538,7 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
         state.regions.add(region)
         onDispose { state.regions.remove(region) }
     }
-    val shape = CutCornerShape(corner)
+    val shape = AxRound(corner)
     // One look for every viewer panel (top buttons, filmstrip, info, action bar): translucent frosted glass in the style of
     // Telegram. The tint is light enough that the picture's own colours (the ambient gradient) glow through it; a white
     // wash + a bright top-lit rim give the frosted edge. It stays the same with or without live blur, so all panels match.
@@ -572,7 +574,7 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
 /** Container look for pop-up menus over a picture: dark enough to read over any photo, still glassy. */
 object AxMenuGlass {
     val color: Color = Color(0xFF12151C).copy(alpha = 0.80f)
-    val shape = CutCornerShape(22.dp)
+    val shape = AxRound(22.dp)
     val border = BorderStroke(
         1.dp,
         Brush.linearGradient(listOf(Color.White.copy(alpha = 0.38f), Color.White.copy(alpha = 0.05f), Color.White.copy(alpha = 0.22f))),
@@ -936,8 +938,14 @@ fun Modifier.axSpinRing(): Modifier {
 
 
 /** Dark chrome fill used by bar buttons, the title capsule and the shortcut chips: real refracting glass when it is on, the flat gradient otherwise. */
+@Composable
 fun Modifier.axChromeFill(shape: androidx.compose.ui.graphics.Shape): Modifier {
     val rg = AxGlass.realState
     return if (rg != null) this.liquidGlass(rg, shape, GlassStyle.DarkChrome)
-    else this.background(Brush.verticalGradient(listOf(Color(0xFF151B2B).copy(alpha = 0.86f), Color(0xFF05070D).copy(alpha = 0.92f))))
+    else {
+        val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+        val c = MaterialTheme.colorScheme.onSurface
+        if (dark) this.background(Brush.verticalGradient(listOf(Color(0xFF151B2B).copy(alpha = 0.86f), Color(0xFF05070D).copy(alpha = 0.92f))))
+        else this.background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.96f), Color(0xFFF1F2F5).copy(alpha = 0.96f))))
+    }
 }

@@ -26,31 +26,30 @@ class Pen {
  * circles, one consistent angular style. Drawn as vectors, so they tint and scale like any other icon.
  */
 object AxIcons {
-    /** Octagon instead of a circle: the set is angular on purpose (sharp, cut-corner look). */
+    /** A true circle (four cubic arcs). */
     private fun Pen.circle(cx: Float, cy: Float, r: Float) {
-        val k = 0.4142f * r   // tan(22.5 deg) * r : a regular octagon with flat sides facing up/down/left/right
-        moveTo(cx - k, cy - r)
-        lineTo(cx + k, cy - r)
-        lineTo(cx + r, cy - k)
-        lineTo(cx + r, cy + k)
-        lineTo(cx + k, cy + r)
-        lineTo(cx - k, cy + r)
-        lineTo(cx - r, cy + k)
-        lineTo(cx - r, cy - k)
+        val k = 0.5523f * r
+        moveTo(cx, cy - r)
+        curveTo(cx + k, cy - r, cx + r, cy - k, cx + r, cy)
+        curveTo(cx + r, cy + k, cx + k, cy + r, cx, cy + r)
+        curveTo(cx - k, cy + r, cx - r, cy + k, cx - r, cy)
+        curveTo(cx - r, cy - k, cx - k, cy - r, cx, cy - r)
         close()
     }
 
-    /** Box with cut (chamfered) corners instead of rounded ones. */
+    /** Box with softly rounded corners. */
     private fun Pen.box(x: Float, y: Float, w: Float, h: Float, r: Float) {
-        val c = (r * 0.6f).coerceAtMost(minOf(w, h) / 2f)
+        val c = (r * 0.8f).coerceAtMost(minOf(w, h) / 2f)
+        val k = c * 0.4477f
         moveTo(x + c, y)
         lineTo(x + w - c, y)
-        lineTo(x + w, y + c)
+        curveTo(x + w - k, y, x + w, y + k, x + w, y + c)
         lineTo(x + w, y + h - c)
-        lineTo(x + w - c, y + h)
+        curveTo(x + w, y + h - k, x + w - k, y + h, x + w - c, y + h)
         lineTo(x + c, y + h)
-        lineTo(x, y + h - c)
+        curveTo(x + k, y + h, x, y + h - k, x, y + h - c)
         lineTo(x, y + c)
+        curveTo(x, y + k, x + k, y, x + c, y)
         close()
     }
 
@@ -92,7 +91,7 @@ object AxIcons {
     }
 
     private fun line(name: String, block: Pen.() -> Unit): ImageVector {
-        val nodes = sharpen(Pen().apply(block).nodes)
+        val nodes = Pen().apply(block).nodes   // curves stay curves: soft, round icon set
         // optical centring: every glyph is centred on the 24 grid, so it sits in the middle of its chip
         val c = centre(nodes)
         val dx = if (c != null) 12f - c.first else 0f
@@ -104,8 +103,8 @@ object AxIcons {
                 fill = null,
                 stroke = SolidColor(Color.Black),
                 strokeLineWidth = 1.8f,
-                strokeLineCap = StrokeCap.Butt,
-                strokeLineJoin = StrokeJoin.Miter,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
                 strokeLineMiter = 6f,
             )
             clearGroup()

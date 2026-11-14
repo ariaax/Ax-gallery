@@ -20,7 +20,7 @@ import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -250,15 +250,15 @@ fun AlbumAppBadge(album: MediaAlbum, modifier: Modifier = Modifier, animated: Bo
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.6.dp.toPx()),
                 )
             }
-            .shadow(4.dp, CutCornerShape(30))
+            .shadow(4.dp, AxRound(30))
             .size(32.dp)
-            .clip(CutCornerShape(30))
+            .clip(AxRound(30))
             .background(if (badge is AlbumBadge.App) Color.White.copy(alpha = 0.92f) else Color(0xFF1B2433).copy(alpha = 0.78f))
-            .axGlassBorder(CutCornerShape(30)),
+            .axGlassBorder(AxRound(30)),
         contentAlignment = Alignment.Center,
     ) {
         when (badge) {
-            is AlbumBadge.App -> Image(bitmap = badge.bitmap, contentDescription = null, modifier = Modifier.size(28.dp).clip(CutCornerShape(30)))
+            is AlbumBadge.App -> Image(bitmap = badge.bitmap, contentDescription = null, modifier = Modifier.size(28.dp).clip(AxRound(30)))
             is AlbumBadge.Vector -> Icon(badge.icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
         }
     }

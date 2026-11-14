@@ -65,7 +65,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
@@ -743,7 +743,7 @@ fun VideoPage(
             val muted = lastMuteFeedback ?: (muteFeedbackEvent?.first == true)
             Row(
                 modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.72f), CutCornerShape(28.dp))
+                    .background(Color.Black.copy(alpha = 0.72f), AxRound(28.dp))
                     .padding(horizontal = 22.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -770,8 +770,8 @@ fun VideoPage(
             val isPlay = lastPlayPauseFeedback ?: (playPauseFeedbackEvent?.first == true)
             Box(
                 modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.46f), CutCornerShape(30))
-                    .border(1.dp, Color.White.copy(alpha = 0.18f), CutCornerShape(30))
+                    .background(Color.Black.copy(alpha = 0.46f), AxRound(30))
+                    .border(1.dp, Color.White.copy(alpha = 0.18f), AxRound(30))
                     .padding(16.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -789,9 +789,9 @@ fun VideoPage(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(horizontal = 28.dp)
-                    .clip(CutCornerShape(24.dp))
+                    .clip(AxRound(24.dp))
                     .background(Color(0xFF0E1420).copy(alpha = 0.80f))
-                    .border(1.dp, Color.White.copy(alpha = 0.25f), CutCornerShape(24.dp))
+                    .border(1.dp, Color.White.copy(alpha = 0.25f), AxRound(24.dp))
                     .padding(horizontal = 20.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -800,13 +800,13 @@ fun VideoPage(
                 Box(
                     modifier = Modifier
                         .padding(top = 12.dp)
-                        .clip(CutCornerShape(30))
+                        .clip(AxRound(30))
                         .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
                         .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
                         .border(
                             1.2.dp,
                             Brush.linearGradient(listOf(Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.50f))),
-                            CutCornerShape(30),
+                            AxRound(30),
                         )
                         .clickable {
                             runCatching {
@@ -854,18 +854,18 @@ fun VideoPage(
                 .navigationBarsPadding()
                 .padding(start = 15.dp, end = 15.dp, top = if (compactLandscape) 4.dp else 128.dp,
                     bottom = if (compactLandscape) 10.dp else 122.dp)
-                .clip(CutCornerShape(14.dp))
+                .clip(AxRound(14.dp))
                 .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
                 .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
                 .border(1.2.dp, Brush.linearGradient(listOf(
                     Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.50f))),
-                    CutCornerShape(14.dp))
+                    AxRound(14.dp))
                 .padding(horizontal = 10.dp, vertical = 2.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             AnimatedVisibility(scrubbing && preview != null) {
                 preview?.let { Image(it.asImageBitmap(), null, Modifier.size(160.dp, 90.dp)
-                    .background(Color.Black, CutCornerShape(12.dp)), contentScale = ContentScale.Crop) }
+                    .background(Color.Black, AxRound(12.dp)), contentScale = ContentScale.Crop) }
             }
             AnimatedVisibility(scrubbing) {
                 Text(
@@ -910,20 +910,20 @@ fun VideoPage(
                     Box(Modifier.size(34.dp), contentAlignment = Alignment.Center) {
                         val core by animateDpAsState(if (scrubbing) 24.dp else 13.dp, spring(dampingRatio = 0.55f, stiffness = 600f), label = "thumb")
                         val halo by animateDpAsState(if (scrubbing) 34.dp else 22.dp, spring(dampingRatio = 0.6f, stiffness = 500f), label = "thumbHalo")
-                        Box(Modifier.size(halo).background(Color.White.copy(alpha = if (scrubbing) 0.30f else 0.18f), CutCornerShape(30)))
-                        Box(Modifier.size(core).background(Color.White, CutCornerShape(30)))
+                        Box(Modifier.size(halo).background(Color.White.copy(alpha = if (scrubbing) 0.30f else 0.18f), AxRound(30)))
+                        Box(Modifier.size(core).background(Color.White, AxRound(30)))
                     }
                 },
                 track = { sliderState ->
                     val fraction = sliderState.value.coerceIn(0f, 1f)
                     Box(
                         Modifier.fillMaxWidth().height(trackH)
-                            .clip(CutCornerShape(30))
+                            .clip(AxRound(30))
                             .background(Color.White.copy(alpha = 0.30f))
                     ) {
                         Box(
                             Modifier.fillMaxWidth(fraction).fillMaxHeight()
-                                .clip(CutCornerShape(30))
+                                .clip(AxRound(30))
                                 .background(Brush.horizontalGradient(listOf(Color(0xFFB9D4FF), Color.White)))
                         )
                     }
@@ -1048,7 +1048,7 @@ private fun AxVideoGlassButton(
         modifier = Modifier
             .size(size)
             .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
-            .clip(CutCornerShape(30))
+            .clip(AxRound(30))
             .then(
                 if (plain) Modifier else Modifier
                     .background(Color.White.copy(alpha = if (active) 0.30f else 0.14f))
@@ -1056,7 +1056,7 @@ private fun AxVideoGlassButton(
                     .border(
                         1.dp,
                         Brush.linearGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.3f))),
-                        CutCornerShape(30),
+                        AxRound(30),
                     )
             )
             .clickable(interactionSource = interaction, indication = null, onClick = onClick),

@@ -32,7 +32,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
@@ -306,7 +306,7 @@ internal fun BoxScope.SeekFeedbackOverlay(feedback: SeekFeedbackState?) {
             sweep.snapTo(0f)
             sweep.animateTo(1f, tween(340, easing = LinearEasing))
         }
-        val shape = CutCornerShape(30)
+        val shape = AxRound(30)
         Row(
             modifier = Modifier
                 .graphicsLayer {
@@ -369,7 +369,7 @@ internal fun LevelHud(
         exit = fadeOut(tween(150)),
     ) {
         val p = progress().coerceIn(0f, 1f)
-        val shape = CutCornerShape(30)
+        val shape = AxRound(30)
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 text = "${(p * 100f).roundToInt()}%",

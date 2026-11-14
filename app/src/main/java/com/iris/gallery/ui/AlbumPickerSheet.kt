@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.outlined.Add
@@ -90,7 +90,7 @@ fun AlbumPickerSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = CutCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        shape = AxRound(topStart = 28.dp, topEnd = 28.dp),
     ) {
         Column(
             modifier = Modifier
@@ -148,7 +148,7 @@ fun AlbumPickerSheet(
                             }
                         },
                         singleLine = true,
-                        shape = CutCornerShape(24.dp),
+                        shape = AxRound(24.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -170,7 +170,7 @@ fun AlbumPickerSheet(
                 // "Create New Album" Tile
                 item(key = "create-new-album") {
                     Card(
-                        shape = CutCornerShape(16.dp),
+                        shape = AxRound(16.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                         ),
@@ -192,7 +192,7 @@ fun AlbumPickerSheet(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Surface(
-                                    shape = CutCornerShape(30),
+                                    shape = AxRound(30),
                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                                     modifier = Modifier.size(54.dp),
                                 ) {
@@ -228,7 +228,7 @@ fun AlbumPickerSheet(
                             .clickable { onSelectAlbum(album) }
                     ) {
                         Card(
-                            shape = CutCornerShape(16.dp),
+                            shape = AxRound(16.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(1f),
@@ -250,7 +250,7 @@ fun AlbumPickerSheet(
                             if (album.isSdCard) {
                                 Surface(
                                     color = MaterialTheme.colorScheme.secondaryContainer,
-                                    shape = CutCornerShape(4.dp),
+                                    shape = AxRound(4.dp),
                                 ) {
                                     Text(
                                         text = stringResource(R.string.storage_sd_card),
@@ -317,7 +317,7 @@ fun CreateAlbumDialog(
                     onValueChange = { albumName = it },
                     label = { Text(stringResource(R.string.create_album_name_hint)) },
                     singleLine = true,
-                    shape = CutCornerShape(16.dp),
+                    shape = AxRound(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester),

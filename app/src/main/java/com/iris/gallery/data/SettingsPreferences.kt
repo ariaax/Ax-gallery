@@ -186,6 +186,8 @@ data class SettingsState(
     val recentWindowDays: Int = 7,
     val glassEnabled: Boolean = true,
     val realGlass: Boolean = false,
+    /** gallery background colour as ARGB (default black); text and icons follow its brightness */
+    val bgColor: Int = 0xFF000000.toInt(),
     val backgroundExifDates: Boolean = true,
 ) {
     val hasPin: Boolean get() = appLockPinHash.isNotEmpty()
@@ -226,6 +228,7 @@ class SettingsPreferences(context: Context) {
     fun setRecentWindowDays(days: Int) = update { copy(recentWindowDays = days.coerceIn(1, 90)) }
     fun setGlassEnabled(enabled: Boolean) = update { copy(glassEnabled = enabled) }
     fun setRealGlass(enabled: Boolean) = update { copy(realGlass = enabled) }
+    fun setBgColor(argb: Int) = update { copy(bgColor = argb or 0xFF000000.toInt()) }
     fun setBackgroundExifDates(enabled: Boolean) = update { copy(backgroundExifDates = enabled) }
 
     fun setThemeMode(mode: ThemeMode) = update { copy(themeMode = mode) }
@@ -432,6 +435,7 @@ class SettingsPreferences(context: Context) {
             recentWindowDays = prefs.getInt("ax_recent_window_days", 7).coerceIn(1, 90),
             glassEnabled = prefs.getBoolean("ax_glass_enabled", true),
             realGlass = prefs.getBoolean("ax_real_glass", false),
+            bgColor = prefs.getInt("ax_bg_color", 0xFF000000.toInt()),
             backgroundExifDates = prefs.getBoolean("ax_background_exif_dates", true),
         )
     }
@@ -499,6 +503,7 @@ class SettingsPreferences(context: Context) {
             .putInt("ax_recent_window_days", state.recentWindowDays)
             .putBoolean("ax_glass_enabled", state.glassEnabled)
             .putBoolean("ax_real_glass", state.realGlass)
+            .putInt("ax_bg_color", state.bgColor)
             .putBoolean("ax_background_exif_dates", state.backgroundExifDates)
             .apply()
     }

@@ -12,8 +12,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CutCornerShape
+import com.iris.gallery.ui.AxRound
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -89,7 +90,7 @@ fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, fo
         actions.forEach { action ->
             Column(
                 Modifier
-                    .clip(androidx.compose.foundation.shape.CutCornerShape(18.dp))
+                    .clip(com.iris.gallery.ui.AxRound(18.dp))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -98,27 +99,27 @@ fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, fo
                     .padding(horizontal = 6.dp, vertical = 2.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                val chip = CutCornerShape(14.dp)
+                val chip = androidx.compose.foundation.shape.CircleShape
                 Box(
                     Modifier.size(54.dp).clip(chip)
-                        .background(Brush.verticalGradient(listOf(Color(0xFF151B2B).copy(alpha = 0.86f), Color(0xFF05070D).copy(alpha = 0.92f))))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .border(
-                            BorderStroke(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color(0xFF4E8DFF).copy(alpha = 0.18f)))),
+                            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             chip,
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(action.icon, action.label, tint = Color(0xFFEAF1FF), modifier = Modifier.size(24.dp))
+                    Icon(action.icon, action.label, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(24.dp))
                 }
                 Text(
-                    action.label.uppercase(),
-                    fontSize = 10.5.sp,
-                    letterSpacing = 1.2.sp,
+                    action.label,
+                    fontSize = 11.sp,
+                    letterSpacing = 0.2.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Clip,
                     textAlign = TextAlign.Center,
-                    color = Color(0xFFCBD6EE).copy(alpha = 0.9f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 6.dp).size(width = 64.dp, height = 16.dp),
                 )
             }
