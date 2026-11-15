@@ -249,6 +249,7 @@ class TrashRepository(private val context: Context) {
         val hasManagerAccess = hasAllFilesAccess()
 
         for (item in mediaList.distinctBy { it.id }) {
+            if (item.path.isNotBlank()) RestoredDates.forget(context, item.path)
             val uniqueId = generateUniqueId(currentItems)
             val cleanName = sanitizeFileName(item.name.ifBlank { "media_${uniqueId}" })
             val trashFileName = "${uniqueId}_${cleanName}"
@@ -382,8 +383,11 @@ class TrashRepository(private val context: Context) {
                 continue
             }
 
-            val restored = restoreFileToStorage(item, trashFile)
-            if (restored) {
+            val restoredPath = restoreFileToStorage(item, trashFile)
+            if (restoredPath != null) {
+                // MediaStore stamps DATE_ADDED with "now" for the new row and the timeline's default mode keeps new files on
+                // top, so remember the original value and let the loader use it: the photo returns to where it was.
+                RestoredDates.record(context, restoredPath, item.dateAdded)
                 runCatching { trashFile.delete() }
                 currentItems.remove(item)
                 restoredList.add(
@@ -394,7 +398,7 @@ class TrashRepository(private val context: Context) {
                         dateTaken = item.dateTaken,
                         width = item.width,
                         height = item.height,
-                        path = item.originalPath,
+                        path = restoredPath,
                         bucketId = item.originalBucketId,
                         bucketName = item.originalBucketName,
                         isVideo = item.isVideo,
@@ -451,7 +455,8 @@ class TrashRepository(private val context: Context) {
         loadTrashItems()
     } }
 
-    private fun restoreFileToStorage(item: TrashItem, trashFile: File): Boolean {
+    /** Returns the final path of the restored file, or null when the restore failed (the trash copy is then kept). */
+    private fun restoreFileToStorage(item: TrashItem, trashFile: File): String? {
         return try {
             val effectiveModMs = when {
                 item.dateModified > 0L -> item.dateModified
@@ -474,7 +479,6 @@ class TrashRepository(private val context: Context) {
                     File(fallbackDir, item.originalName)
                 }
                 placeRestoredFile(item, trashFile, wanted, effectiveModMs, effectiveTakenMs, effectiveAddedSec, effectiveModSec)
-                true
             } else if (Build.VERSION.SDK_INT >= 29) {
                 val relativePath = computeRelativePath(item.originalPath, item.isVideo)
                 val values = ContentValues().apply {
@@ -501,7 +505,7 @@ class TrashRepository(private val context: Context) {
                 } else {
                     MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
                 }
-                val newUri = context.contentResolver.insert(collection, values) ?: return false
+                val newUri = context.contentResolver.insert(collection, values) ?: return null
                 val written = try {
                     val output = context.contentResolver.openOutputStream(newUri)
                     if (output == null) false else {
@@ -514,7 +518,7 @@ class TrashRepository(private val context: Context) {
                 if (!written) {
                     // Do not leave an empty pending row behind, and keep the trash copy (the caller only deletes it on success).
                     runCatching { context.contentResolver.delete(newUri, null, null) }
-                    return false
+                    return null
                 }
                 values.clear()
                 values.put(MediaStore.MediaColumns.IS_PENDING, 0)
@@ -522,7 +526,11 @@ class TrashRepository(private val context: Context) {
                 values.put(MediaStore.MediaColumns.DATE_TAKEN, effectiveTakenMs)
                 values.put(MediaStore.MediaColumns.DATE_ADDED, effectiveAddedSec)
                 context.contentResolver.update(newUri, values, null, null)
-                true
+                runCatching {
+                    context.contentResolver.query(newUri, arrayOf(MediaStore.MediaColumns.DATA), null, null, null)?.use {
+                        if (it.moveToFirst()) it.getString(0) else null
+                    }
+                }.getOrNull().orEmpty().ifBlank { File(Environment.getExternalStorageDirectory(), relativePath + item.originalName).absolutePath }
             } else {
                 @Suppress("DEPRECATION")
                 val publicDir = if (item.originalPath.isNotBlank()) {
@@ -535,10 +543,9 @@ class TrashRepository(private val context: Context) {
                     ).resolve("Iris")
                 }.apply { mkdirs() }
                 placeRestoredFile(item, trashFile, File(publicDir, item.originalName), effectiveModMs, effectiveTakenMs, effectiveAddedSec, effectiveModSec)
-                true
             }
         } catch (e: Exception) {
-            false
+            null
         }
     }
 
@@ -556,7 +563,7 @@ class TrashRepository(private val context: Context) {
         takenMs: Long,
         addedSec: Long,
         modSec: Long,
-    ) {
+    ): String {
         val dest = if (TrashFiles.looksIdentical(trashFile, wanted, modMs)) wanted else {
             val target = TrashFiles.uniqueDestination(wanted)
             check(TrashFiles.copyVerified(trashFile, target)) { "restore copy failed" }
@@ -574,6 +581,7 @@ class TrashRepository(private val context: Context) {
                 context.contentResolver.update(uri, values, null, null)
             }
         }
+        return dest.absolutePath
     }
 
     /** Runs the media scanner on [path] and waits (bounded) for it to finish; returns the MediaStore uri when known. */
