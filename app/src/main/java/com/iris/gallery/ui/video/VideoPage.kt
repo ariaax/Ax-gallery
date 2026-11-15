@@ -133,6 +133,8 @@ fun VideoPage(
     engine: VideoEngine,
     active: Boolean,
     controlsVisible: Boolean,
+    /** Space kept free under the seek bar for the viewer's own bottom stack (tips, filmstrip, action bar). */
+    bottomReserve: androidx.compose.ui.unit.Dp = 122.dp,
     autoPlay: Boolean = true,
     loop: Boolean = true,
     doubleTapToZoom: Boolean = false,
@@ -853,7 +855,7 @@ fun VideoPage(
             modifier = Modifier.widthIn(max = if (compactLandscape) 500.dp else 460.dp).fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(start = 15.dp, end = 15.dp, top = if (compactLandscape) 4.dp else 128.dp,
-                    bottom = if (compactLandscape) 10.dp else 122.dp)
+                    bottom = if (compactLandscape) 10.dp else bottomReserve)
                 .clip(AxRound(14.dp))
                 .background(Color(0xFFCFE0FF).copy(alpha = 0.20f))
                 .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.05f))))
