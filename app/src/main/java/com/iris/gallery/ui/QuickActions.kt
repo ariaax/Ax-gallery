@@ -18,6 +18,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.draw.drawBehind
@@ -87,35 +93,68 @@ fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, fo
             },
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        actions.forEach { action ->
+        actions.forEachIndexed { index, action ->
+            val source = remember { MutableInteractionSource() }
+            val pressed by source.collectIsPressedAsState()
+            // press: quick, calm spring (no bounce); release: settles back
+            val press = animateFloatAsState(
+                if (pressed) 1f else 0f,
+                spring(dampingRatio = 0.85f, stiffness = 650f),
+                label = "shortcut press",
+            )
+            // first appearance: each shortcut rises and fades in, 45 ms apart
+            val enter = remember { Animatable(0f) }
+            LaunchedEffect(Unit) {
+                delay(index * 45L)
+                enter.animateTo(1f, tween(320, easing = FastOutSlowInEasing))
+            }
+            val base = MaterialTheme.colorScheme.surfaceContainerHigh
+            val accent = MaterialTheme.colorScheme.primary
+            val rimColor = MaterialTheme.colorScheme.outlineVariant
+            val iconTint = MaterialTheme.colorScheme.onSurface
+            val tile = com.iris.gallery.ui.AxRound(19.dp)
             Column(
                 Modifier
-                    .clip(com.iris.gallery.ui.AxRound(18.dp))
+                    .graphicsLayer {
+                        val e = enter.value
+                        alpha = e
+                        translationY = (1f - e) * 10.dp.toPx()
+                        val sc = 1f - 0.07f * press.value
+                        scaleX = sc
+                        scaleY = sc
+                    }
+                    .clip(com.iris.gallery.ui.AxRound(20.dp))
                     .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
+                        interactionSource = source,
                         indication = null,
+                        role = androidx.compose.ui.semantics.Role.Button,
                         onClick = { if (enabled && fold < 0.5f) action.onClick() },
                     )
                     .padding(horizontal = 6.dp, vertical = 2.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                val chip = androidx.compose.foundation.shape.CircleShape
                 Box(
-                    Modifier.size(54.dp).clip(chip)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .border(
-                            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            chip,
-                        ),
+                    Modifier
+                        .size(52.dp)
+                        .clip(tile)
+                        .drawBehind {
+                            val p = press.value
+                            drawRect(base.copy(alpha = 0.78f))
+                            // soft light from the top edge
+                            drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.07f), Color.Transparent), endY = size.height * 0.6f))
+                            // press tint
+                            if (p > 0.01f) drawRect(accent.copy(alpha = 0.16f * p))
+                        }
+                        .border(1.dp, rimColor.copy(alpha = 0.55f), tile),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(action.icon, action.label, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(24.dp))
+                    Icon(action.icon, action.label, tint = iconTint, modifier = Modifier.size(25.dp))
                 }
                 Text(
                     action.label,
                     fontSize = 11.sp,
                     letterSpacing = 0.2.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Clip,
                     textAlign = TextAlign.Center,

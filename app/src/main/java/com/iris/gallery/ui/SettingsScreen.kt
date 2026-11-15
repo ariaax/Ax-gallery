@@ -95,6 +95,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.BorderStroke
@@ -223,38 +225,18 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            modifier = Modifier.weight(1f),
-                            selected = settings.dateSortMode == DateSortMode.HYBRID,
-                            onClick = { preferences.setDateSortMode(DateSortMode.HYBRID) },
-                            label = { Text("Hybrid", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                        )
-                        FilterChip(
-                            modifier = Modifier.weight(1f),
-                            selected = settings.dateSortMode == DateSortMode.DATE_ADDED,
-                            onClick = { preferences.setDateSortMode(DateSortMode.DATE_ADDED) },
-                            label = { Text("Date added", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                        )
-                        FilterChip(
-                            modifier = Modifier.weight(1f),
-                            selected = settings.dateSortMode == DateSortMode.DATE_TAKEN,
-                            onClick = { preferences.setDateSortMode(DateSortMode.DATE_TAKEN) },
-                            label = { Text("Date taken", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                        )
-                    }
+                    AxSegmented(
+                        options = listOf("Hybrid" to DateSortMode.HYBRID, "Date added" to DateSortMode.DATE_ADDED, "Date taken" to DateSortMode.DATE_TAKEN),
+                        selected = settings.dateSortMode,
+                        onSelect = { preferences.setDateSortMode(it) },
+                    )
                     if (settings.dateSortMode == DateSortMode.HYBRID) {
-                        Text("Recent window: ${settings.recentWindowDays} days", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            for (d in listOf(3, 7, 14, 30)) {
-                                FilterChip(
-                                    modifier = Modifier.weight(1f),
-                                    selected = settings.recentWindowDays == d,
-                                    onClick = { preferences.setRecentWindowDays(d) },
-                                    label = { Text("$d d", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1) }
-                                )
-                            }
-                        }
+                        Text("Recent window", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        AxSegmented(
+                            options = listOf(3, 7, 14, 30).map { "$it days" to it },
+                            selected = settings.recentWindowDays,
+                            onSelect = { preferences.setRecentWindowDays(it) },
+                        )
                     }
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
@@ -269,7 +251,8 @@ fun SettingsScreen(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
                     SettingsSwitchRow(
-                        title = "Real liquid glass (experimental)",
+                        title = "Real liquid glass",
+                        badge = "Experimental",
                         subtitle = "Light bends through the bottom bar like real glass (Android 13+). Turn off if the bar looks wrong or the app feels slower.",
                         checked = settings.realGlass,
                         onCheckedChange = { preferences.setRealGlass(it) }
@@ -2253,7 +2236,7 @@ private fun SettingsSectionHeader(icon: ImageVector, title: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 2.dp),
+            .padding(start = 4.dp, end = 4.dp, top = 10.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -2272,18 +2255,88 @@ private fun SettingsSwitchRow(
     title: String,
     subtitle: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    badge: String? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f, fill = false))
+                if (badge != null) {
+                    Text(
+                        badge,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .clip(AxRound(8.dp))
+                            .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f))
+                            .padding(horizontal = 7.dp, vertical = 2.dp),
+                    )
+                }
+            }
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+/** Segmented control: one sliding highlight, full labels (no ellipsis), calm 220 ms move. */
+@Composable
+private fun <T> AxSegmented(options: List<Pair<String, T>>, selected: T, onSelect: (T) -> Unit) {
+    val idx = options.indexOfFirst { it.second == selected }.coerceAtLeast(0)
+    val pos = androidx.compose.animation.core.animateFloatAsState(
+        idx.toFloat(),
+        androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "segment",
+    )
+    val primary = MaterialTheme.colorScheme.primary
+    val track = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f)
+    val idle = MaterialTheme.colorScheme.onSurfaceVariant
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .clip(AxRound(14.dp))
+            .background(track)
+            .padding(3.dp)
+            .drawBehind {
+                val w = size.width / options.size
+                drawRoundRect(
+                    primary.copy(alpha = 0.22f),
+                    topLeft = androidx.compose.ui.geometry.Offset(pos.value * w, 0f),
+                    size = androidx.compose.ui.geometry.Size(w, size.height),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(11.dp.toPx()),
+                )
+            },
+    ) {
+        Row(Modifier.fillMaxSize()) {
+            options.forEachIndexed { i, (label, value) ->
+                val sel = i == idx
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(AxRound(11.dp))
+                        .clickable(role = androidx.compose.ui.semantics.Role.RadioButton) { onSelect(value) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        label,
+                        fontSize = 13.sp,
+                        fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Medium,
+                        color = if (sel) primary else idle,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -2318,12 +2371,13 @@ private fun BackgroundColorCard(current: Int, onChange: (Int) -> Unit) {
     ) {
         Column(Modifier.padding(horizontal = 18.dp, vertical = 20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                val shown by androidx.compose.animation.animateColorAsState(Color(current), androidx.compose.animation.core.tween(240), label = "bg preview")
                 Box(
                     Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(Color(current))
-                        .border(1.dp, ink.copy(alpha = 0.18f), CircleShape)
+                        .size(56.dp)
+                        .clip(AxRound(18.dp))
+                        .background(shown)
+                        .border(1.dp, ink.copy(alpha = 0.20f), AxRound(18.dp))
                 )
                 Column(Modifier.weight(1f)) {
                     Text("Gallery background", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -2338,13 +2392,19 @@ private fun BackgroundColorCard(current: Int, onChange: (Int) -> Unit) {
                 presets.forEach { (label, argb) ->
                     val selected = current == argb
                     val onColour = if (Color(argb).luminance() > 0.5f) Color.Black else Color.White
+                    val pop = androidx.compose.animation.core.animateFloatAsState(
+                        if (selected) 1.1f else 1f,
+                        androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 600f),
+                        label = "swatch",
+                    )
                     Box(
                         Modifier
+                            .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
                             .size(40.dp)
                             .clip(CircleShape)
                             .background(Color(argb))
                             .border(
-                                if (selected) 2.dp else 1.dp,
+                                if (selected) 2.5.dp else 1.dp,
                                 if (selected) MaterialTheme.colorScheme.primary else ink.copy(alpha = 0.18f),
                                 CircleShape,
                             )
