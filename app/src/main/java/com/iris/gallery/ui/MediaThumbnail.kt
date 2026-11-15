@@ -63,6 +63,14 @@ private fun backgroundPool(name: String, threads: Int) = java.util.concurrent.Ex
 
 private val thumbDispatcher = backgroundPool("ax-thumb", 3)
 
+/**
+ * Video frames take far longer to extract than photo thumbnails. On the shared lane a few videos in a row filled all
+ * the threads and the photos next to them waited behind them (a stall right when a scroll goes from photos into videos),
+ * so videos get their own small lane, for visible tiles and for look-ahead.
+ */
+private val videoThumbDispatcher = backgroundPool("ax-thumb-video", 2)
+private val videoPrefetchDispatcher = backgroundPool("ax-prefetch-video", 1)
+
 /** Badge detection (HDR/depth) is low priority: a single background lane so it never competes with thumbnails. */
 private val detectDispatcher = backgroundPool("ax-detect", 1)
 
@@ -73,7 +81,7 @@ private val prefetchDispatcher = backgroundPool("ax-prefetch", 1)
 suspend fun prefetchThumbnail(context: Context, image: MediaImage, targetSizePx: Int) {
     val key = (image.id shl 16) xor (targetSizePx.toLong() and 0xFFFFL)
     if (ThumbnailCache.get(key) != null) return
-    withContext(prefetchDispatcher) {
+    withContext(if (image.isVideo) videoPrefetchDispatcher else prefetchDispatcher) {
         if (ThumbnailCache.get(key) == null) loadThumbnail(context, image, targetSizePx)
     }
 }
@@ -463,7 +471,7 @@ fun MediaThumbnail(
 
     if (bitmap == null) {
         LaunchedEffect(cacheKey, image.uri) {
-            val loaded = withContext(thumbDispatcher) { loadThumbnail(context, image, targetSizePx) }
+            val loaded = withContext(if (image.isVideo) videoThumbDispatcher else thumbDispatcher) { loadThumbnail(context, image, targetSizePx) }
             if (loaded != null) {
                 bitmap = loaded
             } else {
