@@ -401,7 +401,15 @@ fun AxGlassNavBar(
                 .shadow(8.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.24f))
                 .clip(shape)
                 .then(
-                    if (realGlass != null) Modifier.liquidGlass(realGlass, shape, GlassStyle.DarkChrome)
+                    if (realGlass != null) Modifier
+                        .liquidGlass(realGlass, shape, GlassStyle.DarkChrome)
+                        // heavy frost over the glass: washes out the thumbnails behind the tabs so the buttons stand out
+                        .background(
+                            Brush.verticalGradient(
+                                if (darkBg) listOf(Color(0xFF0B0B0D).copy(alpha = 0.62f), Color(0xFF0B0B0D).copy(alpha = 0.72f))
+                                else listOf(Color.White.copy(alpha = 0.66f), Color.White.copy(alpha = 0.76f))
+                            )
+                        )
                     else Modifier.background(tint)
                 )
                 .drawBehind {
