@@ -133,13 +133,13 @@ fun ViewerHeaderBottomSheet(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
                 shape = AxRound(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF141416)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
             ) {
                 Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
                     Text(
                         text = stringResource(R.string.settings_viewer_header_preview),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(Modifier.height(8.dp))
@@ -150,21 +150,21 @@ fun ViewerHeaderBottomSheet(
                         Icon(
                             Icons.Outlined.ArrowBack,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = previewLine1,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.titleMedium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = previewLine2,
-                                color = Color.White.copy(alpha = 0.75f),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
                                 style = MaterialTheme.typography.labelMedium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -174,7 +174,7 @@ fun ViewerHeaderBottomSheet(
                         Icon(
                             Icons.Outlined.Info,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.85f),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(Modifier.width(8.dp))
