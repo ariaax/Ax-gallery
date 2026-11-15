@@ -1156,8 +1156,12 @@ private fun GalleryApp(
                             }
                         },
                         onPick = onPick,
-                        onTrash = { media, onConfirmed ->
-                            if (media.isNotEmpty()) {
+                        onTrash = { mediaIn, onConfirmed ->
+                            // One list per operation (no repeated ids), and no second request while a system confirmation is
+                            // still open: the pending slots hold a single operation, a second one would overwrite it and the
+                            // answer to the first dialog would be applied to the wrong files.
+                            val media = mediaIn.distinctBy { it.id }
+                            if (media.isNotEmpty() && pendingTrashMove == null && pendingSystemTrashMedia == null) {
                                 val systemMedia = media.filter { it.id > 0 && !it.path.startsWith(context.filesDir.absolutePath) }
                                 val internalMedia = media.filter { it.id < 0 || it.path.startsWith(context.filesDir.absolutePath) }
                                 if (settings.useSystemTrash && Build.VERSION.SDK_INT >= 30 && systemMedia.isNotEmpty()) {

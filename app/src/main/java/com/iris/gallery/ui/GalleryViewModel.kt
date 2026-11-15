@@ -65,12 +65,15 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         viewModelScope.launch {
+            var lastSystemTrash: List<MediaImage> = emptyList()
             trashRepository.trashedMedia.collect { trashedList ->
-                val systemTrash = if (android.os.Build.VERSION.SDK_INT >= 30) {
-                    runCatching { repository.loadImages(trashed = true) }.getOrDefault(emptyList())
-                } else emptyList()
-                val combined = (trashedList + systemTrash).distinctBy { it.id }
-                _uiState.value = _uiState.value.copy(trashed = combined)
+                // Show the in-app change at once; the full MediaStore query for the platform trash can take a while on a
+                // big library and used to hold the Trash screen back until it finished.
+                _uiState.value = _uiState.value.copy(trashed = (trashedList + lastSystemTrash).distinctBy { it.id })
+                if (android.os.Build.VERSION.SDK_INT >= 30) {
+                    lastSystemTrash = runCatching { repository.loadImages(trashed = true) }.getOrDefault(lastSystemTrash)
+                    _uiState.value = _uiState.value.copy(trashed = (trashedList + lastSystemTrash).distinctBy { it.id })
+                }
             }
         }
         viewModelScope.launch {
