@@ -495,7 +495,7 @@ class MainActivity : ComponentActivity() {
             ) {
               var introDone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
               val showIntro = !introDone && !pickerMode && viewUri == null
-              // With the intro, the gallery is only built once the liquid has covered the screen (smooth animation).
+              // With the intro, the gallery is only built once the logo has settled, so its first composition lands in the hold.
               var appShown by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!showIntro) }
               Box(Modifier.fillMaxSize()) {
                 if (appShown) GalleryApp(
@@ -518,7 +518,7 @@ class MainActivity : ComponentActivity() {
                     }} else null,
                 )
                 if (showIntro) {
-                    com.iris.gallery.ui.AxLiquidIntro(onCovered = { appShown = true }, onFinished = { introDone = true })
+                    com.iris.gallery.ui.AxPremiumIntro(onCovered = { appShown = true }, onFinished = { introDone = true })
                 }
               }
             }
