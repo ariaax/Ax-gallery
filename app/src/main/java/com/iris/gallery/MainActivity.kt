@@ -2818,7 +2818,7 @@ private fun GalleryScaffold(
           scaffoldPadding
       }
       when {
-        loading && images.isEmpty() -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        loading && images.isEmpty() -> com.iris.gallery.ui.AxSkeletonGrid(padding)
         error != null && images.isEmpty() -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { Text(error) }
         else -> HorizontalPager(
           state = tabPagerState,
@@ -2909,7 +2909,7 @@ private fun GalleryScaffold(
                     onSetDateSelection = if (onPick == null) ::setDateSelection else null,
                     onInvalidMedia = onInvalidMedia,
                   ) { if (selectedIds.isNotEmpty()) toggleSelection(it.id) else if (onPick != null) onPick(it) else { viewerImages = displayedPhotos; selectedId = it.id } }
-                  else if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding)
+                  else if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding, AxIcons.Search)
                   else EmptyState(stringResource(R.string.empty_photos), padding)
                   // drawn AFTER the grid: the grid now runs under it, so the row must be on top to get the touches
                   if (destination == 0 && fileSearchQuery.isBlank() && !isFileSearching) QuickActionRow(
@@ -2980,7 +2980,7 @@ private fun GalleryScaffold(
                       onSetSelection = if (onPick == null) ::setSelection else null,
                       onSetDateSelection = if (onPick == null) ::setDateSelection else null,
                     ) { if (selectedIds.isNotEmpty()) toggleSelection(it.id) else if (onPick != null) onPick(it) else { viewerImages = displayedAlbumPhotos; selectedId = it.id } }
-                    else if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding)
+                    else if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding, AxIcons.Search)
                     else EmptyState(stringResource(R.string.empty_photos), padding)
                   } else AlbumsGrid(
                     images = images,
@@ -3018,7 +3018,7 @@ private fun GalleryScaffold(
               key(librarySection) {
                Box(Modifier.fillMaxSize().axPushIn(forward = librarySection != null)) {
                 when (librarySection) {
-                        "trash" -> if (trashed.isEmpty()) EmptyState(stringResource(R.string.empty_trash), padding) else PhotoGrid(
+                        "trash" -> if (trashed.isEmpty()) EmptyState(stringResource(R.string.empty_trash), padding, AxIcons.Trash) else PhotoGrid(
                             images = trashed,
                             padding = padding,
                             gridState = libraryGridState,
@@ -3042,7 +3042,7 @@ private fun GalleryScaffold(
                         }
                         "locked" -> if (!lockedAuthorized) {
                             LaunchedEffect(Unit) { onRequestUnlock() }
-                            EmptyState(stringResource(R.string.empty_locked_locked_state), padding)
+                            EmptyState(stringResource(R.string.empty_locked_locked_state), padding, AxIcons.Lock)
                         } else {
                             val locked = lockedMedia
                             val lockedAlbumList = remember(locked) {
@@ -3058,7 +3058,7 @@ private fun GalleryScaffold(
                                     }.sortedWith(compareByDescending<MediaAlbum> { it.images.size }.thenBy { it.name.lowercase() })
                             }
                             if (locked.isEmpty()) {
-                                EmptyState(stringResource(R.string.empty_locked), padding)
+                                EmptyState(stringResource(R.string.empty_locked), padding, AxIcons.Lock)
                             } else if (selectedLockedAlbum != null) {
                                 val albumImages = remember(locked, selectedLockedAlbum) {
                                     locked.filter { it.bucketName.ifBlank { "Locked" } == selectedLockedAlbum }
@@ -3269,7 +3269,7 @@ private fun GalleryScaffold(
                                     }
                                 }
 
-                                if (memories.isEmpty()) EmptyState(stringResource(R.string.empty_memories), PaddingValues(0.dp)) else PhotoGrid(
+                                if (memories.isEmpty()) EmptyState(stringResource(R.string.empty_memories), PaddingValues(0.dp), AxIcons.Sparkle) else PhotoGrid(
                                     memories, PaddingValues(0.dp), libraryGridState, cellSize = photoCellSize, onCellSizeChange = onCellSizeChange, showTimeline = true,
                                     timelineDateFormat = settings.timelineDateFormat,
                                     customTimelineDateFormat = settings.customTimelineDateFormat,
@@ -3487,7 +3487,7 @@ private fun GalleryScaffold(
                         "videos" -> {
                             val videos = displayedVideos
                             if (videos.isEmpty()) {
-                                if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding)
+                                if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding, AxIcons.Search)
                                 else EmptyState(stringResource(R.string.empty_videos), padding)
                             } else {
                                 PhotoGrid(
@@ -3533,8 +3533,8 @@ private fun GalleryScaffold(
             }
             GalleryTab.FAVORITES -> {
                 if (displayedFavoritePhotos.isEmpty()) {
-                    if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding)
-                    else EmptyState(stringResource(R.string.empty_favorites), padding)
+                    if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding, AxIcons.Search)
+                    else EmptyState(stringResource(R.string.empty_favorites), padding, AxIcons.Heart)
                 } else PhotoGrid(
                     images = displayedFavoritePhotos,
                     padding = padding,
@@ -8222,8 +8222,6 @@ private fun RenameFileDialog(
 }
 
 @Composable
-private fun EmptyState(message: String, padding: PaddingValues) {
-    Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-        Text(message, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+private fun EmptyState(message: String, padding: PaddingValues, icon: androidx.compose.ui.graphics.vector.ImageVector = AxIcons.Photos) {
+    com.iris.gallery.ui.AxEmptyState(message, padding, icon)
 }
