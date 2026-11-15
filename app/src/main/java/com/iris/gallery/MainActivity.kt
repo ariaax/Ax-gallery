@@ -4791,24 +4791,12 @@ private fun PhotoGrid(
                             .animateItem(fadeInSpec = null)
                             .fillMaxWidth()
                             .then(headerClickModifier)
-                            .padding(start = 14.dp, end = 12.dp, top = 22.dp, bottom = 8.dp),
+                            .padding(start = 14.dp, end = 12.dp, top = 18.dp, bottom = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(group.key, style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        // a clean white rule after the date: bright next to the name, fading out to the right edge
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .padding(start = 12.dp, end = 4.dp)
-                                .height(2.dp)
-                                .clip(AxRound(30))
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f), MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f), MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
-                                    )
-                                )
-                        )
+                            fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                        androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                         AnimatedVisibility(selectedIds.isNotEmpty()) {
                             Text(if (wholeDateSelected) stringResource(R.string.action_deselect_date) else stringResource(R.string.action_select_date),
                                 style = MaterialTheme.typography.labelMedium,
@@ -4820,14 +4808,16 @@ private fun PhotoGrid(
               items(group.value, key = { it.id }, contentType = { "photo" }) { image ->
                 val selected = image.id in selectedIds
                 val heroCell = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
+                // square tiles with softly rounded corners (never pill/circle): the corner setting is kept but capped
+                val tileRadius = if (cornerStyle.dp == 0) 0.dp else cornerStyle.dp.coerceIn(5, 10).dp
                 Box(Modifier.aspectRatio(1f)
                     .onGloballyPositioned { heroCell[0] = it }
-                    .clip(AxRound(if (selected) 20.dp else maxOf(cornerStyle.dp, 18).dp))
+                    .clip(AxRound(tileRadius))
                     // thin glass rim around every tile (glowing accent ring when selected), drawn in this same node
                     // instead of an extra Box + border per tile
                     .drawWithContent {
                         drawContent()
-                        val r = (if (selected) 20.dp else maxOf(cornerStyle.dp, 18).dp).toPx()
+                        val r = tileRadius.toPx()
                         val w = (if (selected) 2.5.dp else 0.8.dp).toPx()
                         drawRoundRect(
                             color = if (selected) rimAccent else Color.White.copy(alpha = 0.14f),

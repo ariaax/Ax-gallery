@@ -570,9 +570,9 @@ fun MediaThumbnail(
         }
         if (image.isVideo && showVideoDuration) {
             Row(
-                modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)
-                    .background(Color.Black.copy(alpha = .68f), AxRound(4.dp))
-                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(5.dp)
+                    .background(Color.Black.copy(alpha = .55f), AxRound(7.dp))
+                    .padding(horizontal = 5.dp, vertical = 1.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
