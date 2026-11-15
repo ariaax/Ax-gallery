@@ -2925,10 +2925,10 @@ private fun GalleryScaffold(
                       fold = quickFold,
                       enabled = selectedIds.isEmpty(),
                       actions = listOf(
-                          QuickAction(AxIcons.Trash, "Trash") { openLibrarySection("trash") },
-                          QuickAction(AxIcons.Video, "Videos") { openLibrarySection("videos") },
-                          QuickAction(AxIcons.Lock, "Locked") { openLibrarySection("locked") },
-                          QuickAction(AxIcons.Folder, "Trips") { openLibrarySection("trips") },
+                          QuickAction(AxIcons.QaTrash, "Trash") { openLibrarySection("trash") },
+                          QuickAction(AxIcons.QaVideo, "Videos") { openLibrarySection("videos") },
+                          QuickAction(AxIcons.QaLock, "Locked") { openLibrarySection("locked") },
+                          QuickAction(AxIcons.QaFolder, "Trips") { openLibrarySection("trips") },
                       ),
                       modifier = Modifier.padding(top = padding.calculateTopPadding() + 8.dp),
                   )

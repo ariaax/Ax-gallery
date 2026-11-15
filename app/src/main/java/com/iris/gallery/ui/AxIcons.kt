@@ -516,6 +516,47 @@ object AxIcons {
         }
     }
 
+    // Home shortcut family: same 1.8 round stroke and 24 grid, one simple idea each.
+    /** Bin with an arrow rising out of it: deleted items, and they can come back. */
+    val QaTrash: ImageVector by lazy {
+        line("AxQaTrash") {
+            moveTo(4.5f, 7f); lineTo(19.5f, 7f)
+            moveTo(9.5f, 7f); lineTo(9.5f, 5.2f)
+            curveTo(9.5f, 4.5f, 10f, 4f, 10.7f, 4f); lineTo(13.3f, 4f)
+            curveTo(14f, 4f, 14.5f, 4.5f, 14.5f, 5.2f); lineTo(14.5f, 7f)
+            moveTo(6.5f, 7f); lineTo(7.3f, 18.5f)
+            curveTo(7.4f, 19.3f, 8f, 20f, 8.9f, 20f); lineTo(15.1f, 20f)
+            curveTo(16f, 20f, 16.6f, 19.3f, 16.7f, 18.5f); lineTo(17.5f, 7f)
+            moveTo(12f, 16.4f); lineTo(12f, 10.8f)
+            moveTo(9.9f, 12.8f); lineTo(12f, 10.7f); lineTo(14.1f, 12.8f)
+        }
+    }
+
+    /** Rounded frame with a play triangle. */
+    val QaVideo: ImageVector by lazy {
+        line("AxQaVideo") {
+            box(3.5f, 5.5f, 17f, 13f, 4f)
+            moveTo(10.3f, 9.3f); lineTo(14.9f, 12f); lineTo(10.3f, 14.7f); close()
+        }
+    }
+
+    /** Padlock with a keyhole dot. */
+    val QaLock: ImageVector by lazy {
+        line("AxQaLock") {
+            box(5f, 10.5f, 14f, 9.8f, 3.5f)
+            moveTo(8f, 10.5f); lineTo(8f, 8f)
+            curveTo(8f, 5.8f, 9.8f, 4f, 12f, 4f)
+            curveTo(14.2f, 4f, 16f, 5.8f, 16f, 8f)
+            lineTo(16f, 10.5f)
+            moveTo(12f, 14.2f); lineTo(12f, 16.2f)
+        }
+    }
+
+    /** Folder with a shelf line: albums and collections. */
+    val QaFolder: ImageVector by lazy {
+        line("AxQaFolder") { folderBody(); moveTo(8f, 14f); lineTo(16f, 14f) }
+    }
+
     val Sliders: ImageVector by lazy {
         line("AxSliders") {
             moveTo(4.5f, 7f); lineTo(6.6f, 7f); moveTo(11.4f, 7f); lineTo(19.5f, 7f); circle(9f, 7f, 2.4f)
