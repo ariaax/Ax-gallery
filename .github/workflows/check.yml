@@ -30,6 +30,11 @@ jobs:
             sed -i '/android.aapt2FromMavenOverride/d' gradle.properties
           fi
 
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          ./gradlew testDebugUnitTest 2>&1 | tee test.log
+
       - name: Build release APK (no signing)
         run: |
           set -o pipefail
