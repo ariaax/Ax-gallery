@@ -459,7 +459,8 @@ class MediaRepository(private val context: Context) {
 
                         val cursorDateTaken = cursor.getLong(taken)
                         val cursorDateModified = cursor.getLong(modified) * 1_000L
-                        val cursorDateAdded = cursor.getLong(added) * 1_000L
+                        // a restored-from-trash file keeps the date it was originally added (see RestoredDates)
+                        val cursorDateAdded = RestoredDates.dateAddedFor(context, filePath) ?: (cursor.getLong(added) * 1_000L)
                         val itemWidth = cursor.getInt(width)
                         val itemHeight = cursor.getInt(height)
                         val itemDuration = cursor.getLong(duration)
