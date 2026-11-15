@@ -275,6 +275,7 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.material3.Checkbox
@@ -5548,6 +5549,8 @@ private fun PhotoViewer(
 
     var isDismissing by remember { mutableStateOf(false) }
     var viewerHeightPx by remember { mutableFloatStateOf(context.resources.displayMetrics.heightPixels.toFloat()) }
+    // Real height of the stack under the picture (tips + filmstrip + action bar). The video seek bar sits above it, so it must follow this, not a fixed number.
+    var bottomStackPx by remember { mutableIntStateOf(0) }
     val dismissThresholdPx = remember(context) { 120f * context.resources.displayMetrics.density }
     val flingThresholdPx = remember(context) { 30f * context.resources.displayMetrics.density }
 
@@ -5732,6 +5735,7 @@ private fun PhotoViewer(
                     engine = videoEngine,
                     active = page == pagerState.currentPage,
                     controlsVisible = controlsVisible,
+                    bottomReserve = maxOf(122.dp, with(LocalDensity.current) { bottomStackPx.toDp() } + 6.dp),
                     onHudActive = { gestureHudActive = it },
                     autoPlay = autoPlay,
                     loop = loop,
@@ -6160,7 +6164,8 @@ private fun PhotoViewer(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .widthIn(max = 540.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .onSizeChanged { bottomStackPx = it.height },
         ) {
             // Floating User Comment Overlay positioned directly above filmstrip/bar
             if (showViewerUserComments && !viewerComment.isNullOrBlank()) {
