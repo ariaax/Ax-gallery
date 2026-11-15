@@ -104,6 +104,18 @@ object ThumbnailCache {
         return null
     }
 
+    /**
+     * A thumbnail of this item that is already decoded at [minPx] or larger (any bucket), so a smaller tile
+     * (viewer filmstrip, 180 px) reuses what the grid already decoded instead of extracting the frame again.
+     */
+    fun findAtLeast(id: Long, minPx: Int): Bitmap? {
+        for (bucket in intArrayOf(180, 256, 320, 512, 768)) {
+            if (bucket < minPx) continue
+            cache.get((id shl 16) xor (bucket.toLong() and 0xFFFFL))?.let { return it }
+        }
+        return null
+    }
+
     fun remove(id: Long) {
         cache.remove(id)
         for (bucket in listOf(320, 180, 512, 768, 256)) {
@@ -462,7 +474,7 @@ fun MediaThumbnail(
 ) {
     val context = LocalContext.current
     val cacheKey = remember(image.id, targetSizePx) { (image.id shl 16) xor (targetSizePx.toLong() and 0xFFFFL) }
-    val cached = remember(cacheKey) { ThumbnailCache.get(cacheKey) }
+    val cached = remember(cacheKey) { ThumbnailCache.get(cacheKey) ?: ThumbnailCache.findAtLeast(image.id, targetSizePx) }
     var bitmap by remember(cacheKey) { mutableStateOf(cached) }
     val cachedHdr = remember(image.id) { ThumbnailCache.isHdr(image.id) ?: false }
     var isHdr by remember(image.id) { mutableStateOf(cachedHdr) }
