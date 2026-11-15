@@ -139,7 +139,8 @@ private fun BentoRow(vararg tiles: BentoSpec) {
 private fun BentoTile(spec: BentoSpec, modifier: Modifier) {
     val shape = com.iris.gallery.ui.AxRound(26.dp)
     val accent = MaterialTheme.colorScheme.primary
-    val fill = remember { Color(0xFF14161B).copy(alpha = 0.92f) }
+    val fill = MaterialTheme.colorScheme.surfaceContainerHigh
+    val ink = MaterialTheme.colorScheme.onSurface
     val rim = remember {
         Brush.linearGradient(listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.03f), Color.White.copy(alpha = 0.10f)))
     }
@@ -169,14 +170,14 @@ private fun BentoTile(spec: BentoSpec, modifier: Modifier) {
                 .size(42.dp)
                 .clip(com.iris.gallery.ui.AxRound(14.dp))
                 .background(accent.copy(alpha = if (spec.hero) 0.30f else 0.18f))
-                .border(1.dp, Color.White.copy(alpha = 0.14f), com.iris.gallery.ui.AxRound(14.dp)),
+                .border(1.dp, ink.copy(alpha = 0.14f), com.iris.gallery.ui.AxRound(14.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(spec.icon, null, tint = if (spec.hero) Color.White else accent)
+            Icon(spec.icon, null, tint = if (spec.hero) ink else accent)
         }
         Column(Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(spec.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 2)
-            Text(spec.subtitle, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.62f), maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(spec.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = ink, maxLines = 2)
+            Text(spec.subtitle, style = MaterialTheme.typography.bodySmall, color = ink.copy(alpha = 0.62f), maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
     }
 }

@@ -2410,7 +2410,7 @@ private fun GalleryScaffold(
                             shape = AxRound(30),
                             colors = OutlinedTextFieldDefaults.colors(
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                focusedContainerColor = Color(0xFF121B33),
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f),
                                 focusedBorderColor = MaterialTheme.colorScheme.primary
                             )
