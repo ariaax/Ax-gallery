@@ -1062,26 +1062,6 @@ fun resolveMediaUri(context: Context, uri: Uri): MediaImage {
     val physicalPath = resolvePhysicalPath(context, uri)
     val physicalFile = physicalPath?.let { File(it) }?.takeIf { it.exists() }
 
-    var mimeType = cr.getType(uri)
-    if (mimeType.isNullOrBlank()) {
-        val extension = android.webkit.MimeTypeMap.getFileExtensionFromUrl(uri.toString())
-            .ifBlank { uri.path.orEmpty().substringAfterLast('.', "") }
-            .ifBlank { physicalPath.orEmpty().substringAfterLast('.', "") }
-        if (extension.isNotBlank()) {
-            mimeType = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase())
-        }
-    }
-    val resolvedMime = mimeType.orEmpty().ifBlank {
-        val path = physicalPath ?: uri.path.orEmpty()
-        if (path.endsWith(".mp4", ignoreCase = true) ||
-            path.endsWith(".mkv", ignoreCase = true) ||
-            path.endsWith(".webm", ignoreCase = true) ||
-            path.endsWith(".mov", ignoreCase = true) ||
-            path.endsWith(".3gp", ignoreCase = true)
-        ) "video/mp4" else "image/jpeg"
-    }
-    val isVideo = resolvedMime.startsWith("video/", ignoreCase = true)
-
     var name = ""
     var size = 0L
 
@@ -1106,6 +1086,33 @@ fun resolveMediaUri(context: Context, uri: Uri): MediaImage {
         size = physicalFile?.length()
             ?: runCatching { cr.openFileDescriptor(uri, "r")?.use { it.statSize } ?: 0L }.getOrDefault(0L)
     }
+
+    // Many file managers hand out FileProviders that answer "application/octet-stream" (or nothing) for the type.
+    // Only an image/ or video/ answer is trusted; otherwise the type comes from the extension of the display name / path.
+    var mimeType = cr.getType(uri)?.takeIf {
+        it.startsWith("image/", ignoreCase = true) || it.startsWith("video/", ignoreCase = true)
+    }
+    if (mimeType.isNullOrBlank()) {
+        val extension = sequenceOf(
+            name.substringAfterLast('.', ""),
+            android.webkit.MimeTypeMap.getFileExtensionFromUrl(uri.toString()),
+            uri.path.orEmpty().substringAfterLast('.', ""),
+            physicalPath.orEmpty().substringAfterLast('.', ""),
+        ).firstOrNull { it.isNotBlank() && it.length <= 5 }.orEmpty()
+        if (extension.isNotBlank()) {
+            mimeType = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase())
+        }
+    }
+    val resolvedMime = mimeType.orEmpty().ifBlank {
+        val path = physicalPath ?: uri.path.orEmpty()
+        if (path.endsWith(".mp4", ignoreCase = true) ||
+            path.endsWith(".mkv", ignoreCase = true) ||
+            path.endsWith(".webm", ignoreCase = true) ||
+            path.endsWith(".mov", ignoreCase = true) ||
+            path.endsWith(".3gp", ignoreCase = true)
+        ) "video/mp4" else "image/jpeg"
+    }
+    val isVideo = resolvedMime.startsWith("video/", ignoreCase = true)
 
     var width = 0
     var height = 0

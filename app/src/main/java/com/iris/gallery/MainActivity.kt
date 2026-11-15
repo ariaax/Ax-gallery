@@ -2087,7 +2087,11 @@ private fun GalleryScaffold(
                 val matched = images.firstOrNull {
                     it.uri == initialViewUri ||
                     (resolved.path.isNotBlank() && it.path == resolved.path) ||
-                    it.uri.lastPathSegment == initialViewUri.lastPathSegment
+                    // The last path segment is only a reliable id for MediaStore URIs; for a FileProvider it is a file
+                    // name, and equal names in different folders must not open the wrong item.
+                    (initialViewUri.authority == android.provider.MediaStore.AUTHORITY &&
+                        it.uri.authority == android.provider.MediaStore.AUTHORITY &&
+                        it.uri.lastPathSegment == initialViewUri.lastPathSegment)
                 }
                 if (matched != null) {
                     if (initialEditMode) {
