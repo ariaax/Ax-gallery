@@ -248,7 +248,7 @@ class TrashRepository(private val context: Context) {
         val originalList = mutableListOf<MediaImage>()
         val hasManagerAccess = hasAllFilesAccess()
 
-        for (item in mediaList.distinctBy { it.id }) {
+        for (item in mediaList.distinctBy { it.id to it.uri }) {
             if (item.path.isNotBlank()) RestoredDates.forget(context, item.path)
             val uniqueId = generateUniqueId(currentItems)
             val cleanName = sanitizeFileName(item.name.ifBlank { "media_${uniqueId}" })
