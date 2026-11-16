@@ -92,6 +92,20 @@ object ThumbnailCache {
         override fun sizeOf(key: Long, value: Bitmap): Int = value.allocationByteCount / 1024
     }
 
+    // modified time each id was cached at, so an edit made by another app does not keep showing the old picture
+    private val stamps = java.util.concurrent.ConcurrentHashMap<Long, Long>()
+
+    fun markFresh(id: Long, stamp: Long) { if (stamp > 0L) stamps[id] = stamp }
+
+    /** Removes cached copies of [id] when it was cached at a different modified time. Returns true if it did. */
+    fun invalidateIfStale(id: Long, stamp: Long): Boolean {
+        val seen = stamps[id] ?: return false
+        if (stamp <= 0L || seen == stamp) return false
+        remove(id)
+        stamps.remove(id)
+        return true
+    }
+
     fun get(key: Long): Bitmap? = cache.get(key)
     fun put(key: Long, bitmap: Bitmap) = cache.put(key, bitmap)
 
@@ -128,6 +142,7 @@ object ThumbnailCache {
         cache.evictAll()
         hdrCache.evictAll()
         depthCache.evictAll()
+        stamps.clear()
     }
 
     private val hdrCache = LruCache<Long, Boolean>(2000)
@@ -216,13 +231,69 @@ private object ThumbDiskCache {
 
 private fun loadThumbnail(context: Context, image: MediaImage, targetSizePx: Int = 320): Bitmap? {
     val key = (image.id shl 16) xor (targetSizePx.toLong() and 0xFFFFL)
+    // a file edited elsewhere keeps its id: drop the memory copies when its modified time moved
+    ThumbnailCache.invalidateIfStale(image.id, image.dateModified)
     ThumbnailCache.get(key)?.let { return it }
     if (image.id > 0 && image.dateModified > 0L) {
-        ThumbDiskCache.read(context, image, targetSizePx)?.let { ThumbnailCache.put(key, it); return it }
+        ThumbDiskCache.read(context, image, targetSizePx)?.let { ThumbnailCache.put(key, it); ThumbnailCache.markFresh(image.id, image.dateModified); return it }
     }
     val bmp = loadThumbnailRaw(context, image, targetSizePx)
+    if (bmp != null) ThumbnailCache.markFresh(image.id, image.dateModified)
     if (bmp != null && image.id > 0 && image.dateModified > 0L) ThumbDiskCache.write(context, image, targetSizePx, bmp)
     return bmp
+}
+
+/**
+ * AVIF fallback (Android 13 has no platform AVIF thumbnail). The file is memory-mapped instead of being read into a
+ * heap array and copied again, and files whose full decode would not fit comfortably are skipped. The library can only
+ * decode at full size, so the full bitmap is shrunk and released immediately.
+ */
+private const val AVIF_MAX_DECODE_BYTES = 100L * 1024 * 1024 // about 25 megapixels of ARGB_8888
+
+private fun decodeAvifThumbnail(context: Context, image: MediaImage, targetSizePx: Int): Bitmap? {
+    var pfd: android.os.ParcelFileDescriptor? = null
+    var full: Bitmap? = null
+    return try {
+        val buffer: java.nio.ByteBuffer
+        val length: Int
+        val file = java.io.File(image.path)
+        if (image.path.isNotBlank() && file.isFile) {
+            java.io.RandomAccessFile(file, "r").use { raf ->
+                length = raf.length().toInt()
+                buffer = raf.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, length.toLong())
+            }
+        } else {
+            pfd = context.contentResolver.openFileDescriptor(image.uri, "r") ?: return null
+            java.io.FileInputStream(pfd.fileDescriptor).use { input ->
+                length = input.channel.size().toInt()
+                buffer = input.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, length.toLong())
+            }
+        }
+        if (length <= 0 || !org.aomedia.avif.android.AvifDecoder.isAvifImage(buffer)) return null
+        val info = org.aomedia.avif.android.AvifDecoder.Info()
+        if (!org.aomedia.avif.android.AvifDecoder.getInfo(buffer, length, info)) return null
+        if (info.width <= 0 || info.height <= 0 || info.width.toLong() * info.height * 4L > AVIF_MAX_DECODE_BYTES) return null
+        val bmp = Bitmap.createBitmap(info.width, info.height, Bitmap.Config.ARGB_8888)
+        full = bmp
+        if (!org.aomedia.avif.android.AvifDecoder.decode(buffer, length, bmp)) return null
+        val scale = minOf(1f, targetSizePx.toFloat() / maxOf(info.width, info.height))
+        if (scale >= 1f) {
+            full = null // handed to the caller, must not be recycled below
+            bmp
+        } else {
+            Bitmap.createScaledBitmap(
+                bmp,
+                (info.width * scale).toInt().coerceAtLeast(1),
+                (info.height * scale).toInt().coerceAtLeast(1),
+                true,
+            )
+        }
+    } catch (_: Throwable) {
+        null
+    } finally {
+        runCatching { pfd?.close() }
+        full?.let { if (!it.isRecycled) it.recycle() } // the full-size bitmap is never kept past this call
+    }
 }
 
 private fun loadThumbnailRaw(context: Context, image: MediaImage, targetSizePx: Int = 320): Bitmap? {
@@ -286,37 +357,7 @@ private fun loadThumbnailRaw(context: Context, image: MediaImage, targetSizePx: 
     }
     val finalBitmap = bitmap ?: run {
         if (image.mimeType.contains("avif", ignoreCase = true) || image.name.endsWith(".avif", ignoreCase = true)) {
-            runCatching {
-                val bytes = if (image.uri.scheme == "file" || image.path.startsWith(context.filesDir.absolutePath)) {
-                    java.io.File(image.path).readBytes()
-                } else {
-                    context.contentResolver.openInputStream(image.uri)?.use { it.readBytes() }
-                }
-                if (bytes != null && bytes.isNotEmpty()) {
-                    val byteBuffer = java.nio.ByteBuffer.allocateDirect(bytes.size).apply {
-                        put(bytes)
-                        flip()
-                    }
-                    if (org.aomedia.avif.android.AvifDecoder.isAvifImage(byteBuffer)) {
-                        val info = org.aomedia.avif.android.AvifDecoder.Info()
-                        if (org.aomedia.avif.android.AvifDecoder.getInfo(byteBuffer, bytes.size, info)) {
-                            val fullBmp = Bitmap.createBitmap(info.width, info.height, Bitmap.Config.ARGB_8888)
-                            if (org.aomedia.avif.android.AvifDecoder.decode(byteBuffer, bytes.size, fullBmp)) {
-                                val scale = minOf(1f, targetSizePx.toFloat() / maxOf(info.width, info.height))
-                                val tw = (info.width * scale).toInt().coerceAtLeast(1)
-                                val th = (info.height * scale).toInt().coerceAtLeast(1)
-                                if (tw < info.width || th < info.height) {
-                                    Bitmap.createScaledBitmap(fullBmp, tw, th, true).also {
-                                        if (it !== fullBmp) fullBmp.recycle()
-                                    }
-                                } else {
-                                    fullBmp
-                                }
-                            } else null
-                        } else null
-                    } else null
-                } else null
-            }.getOrNull()
+            decodeAvifThumbnail(context, image, targetSizePx)
         } else if (image.isSvg) {
             runCatching {
                 val req = coil3.request.ImageRequest.Builder(context)
@@ -474,15 +515,18 @@ fun MediaThumbnail(
 ) {
     val context = LocalContext.current
     val cacheKey = remember(image.id, targetSizePx) { (image.id shl 16) xor (targetSizePx.toLong() and 0xFFFFL) }
-    val cached = remember(cacheKey) { ThumbnailCache.get(cacheKey) ?: ThumbnailCache.findAtLeast(image.id, targetSizePx) }
-    var bitmap by remember(cacheKey) { mutableStateOf(cached) }
+    val cached = remember(cacheKey, image.dateModified) {
+        ThumbnailCache.invalidateIfStale(image.id, image.dateModified)
+        ThumbnailCache.get(cacheKey) ?: ThumbnailCache.findAtLeast(image.id, targetSizePx)
+    }
+    var bitmap by remember(cacheKey, image.dateModified) { mutableStateOf(cached) }
     val cachedHdr = remember(image.id) { ThumbnailCache.isHdr(image.id) ?: false }
     var isHdr by remember(image.id) { mutableStateOf(cachedHdr) }
     val cachedDepth = remember(image.id) { ThumbnailCache.isDepth(image.id) ?: false }
     var isDepth by remember(image.id) { mutableStateOf(cachedDepth) }
 
     if (bitmap == null) {
-        LaunchedEffect(cacheKey, image.uri) {
+        LaunchedEffect(cacheKey, image.uri, image.dateModified) {
             val loaded = withContext(if (image.isVideo) videoThumbDispatcher else thumbDispatcher) { loadThumbnail(context, image, targetSizePx) }
             if (loaded != null) {
                 bitmap = loaded
