@@ -124,7 +124,7 @@ class VaultRepository(private val context: Context) {
         val added = mutableListOf<Triple<VaultItem, MediaImage, MediaImage>>() // item, vault media, original
         val hasManagerAccess = hasAllFilesAccess()
 
-        for (item in mediaList.distinctBy { it.id }) {
+        for (item in mediaList.distinctBy { it.id to it.uri }) {
             val uniqueId = generateUniqueId(currentItems)
             val cleanName = sanitizeFileName(item.name.ifBlank { "media_${uniqueId}" })
             val vaultFileName = "${uniqueId}_${cleanName}"

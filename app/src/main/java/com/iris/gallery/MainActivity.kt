@@ -1161,7 +1161,7 @@ private fun GalleryApp(
                             // One list per operation (no repeated ids), and no second request while a system confirmation is
                             // still open: the pending slots hold a single operation, a second one would overwrite it and the
                             // answer to the first dialog would be applied to the wrong files.
-                            val media = mediaIn.distinctBy { it.id }
+                            val media = mediaIn.distinctBy { it.id to it.uri }
                             if (media.isNotEmpty() && pendingTrashMove == null && pendingSystemTrashMedia == null) {
                                 val systemMedia = media.filter { it.id > 0 && !it.path.startsWith(context.filesDir.absolutePath) }
                                 val internalMedia = media.filter { it.id < 0 || it.path.startsWith(context.filesDir.absolutePath) }
