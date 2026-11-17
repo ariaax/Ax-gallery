@@ -3,6 +3,7 @@ package com.iris.gallery.data
 import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import android.os.Bundle
 import android.os.Environment
