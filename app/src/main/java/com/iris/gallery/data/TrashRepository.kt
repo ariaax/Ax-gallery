@@ -440,6 +440,7 @@ class TrashRepository(private val context: Context) {
             }
         }
 
+        flushScans()
         if (restoredList.isNotEmpty() && writeIndex(currentItems)) {
             RestoredDates.recordAll(context, restoredDateEntries)
             itemsToRestore.filter { it !in currentItems }.forEach { item ->
@@ -638,30 +639,46 @@ class TrashRepository(private val context: Context) {
             target
         }
         if (modMs > 0L) dest.setLastModified(modMs)
-        val uri = scanBlocking(dest.absolutePath, item.mimeType.ifBlank { null })
-        if (uri != null) {
+        // the media scanner runs once for the whole batch (see flushScans), not once per file
+        scanQueue.add(ScanJob(dest.absolutePath, item.mimeType.ifBlank { null }, takenMs, addedSec, modSec))
+        return dest.absolutePath
+    }
+
+    private class ScanJob(val path: String, val mime: String?, val takenMs: Long, val addedSec: Long, val modSec: Long)
+
+    /** Only touched while holding [indexLock]. */
+    private val scanQueue = mutableListOf<ScanJob>()
+
+    /**
+     * One scanner call for every restored file; the wait is bounded (8 s in total, not per file). Afterwards the
+     * original dates are written back so the photos return to their old place in the timeline.
+     */
+    private fun flushScans() {
+        val jobs = scanQueue.toList()
+        scanQueue.clear()
+        if (jobs.isEmpty()) return
+        val latch = java.util.concurrent.CountDownLatch(jobs.size)
+        val uris = java.util.concurrent.ConcurrentHashMap<String, Uri>()
+        MediaScannerConnection.scanFile(
+            context,
+            jobs.map { it.path }.toTypedArray(),
+            jobs.map { it.mime }.toTypedArray(),
+        ) { path, uri ->
+            if (uri != null) uris[path] = uri
+            latch.countDown()
+        }
+        latch.await(8, java.util.concurrent.TimeUnit.SECONDS)
+        for (job in jobs) {
+            val uri = uris[job.path] ?: continue
             runCatching {
                 val values = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DATE_TAKEN, takenMs)
-                    put(MediaStore.MediaColumns.DATE_ADDED, addedSec)
-                    put(MediaStore.MediaColumns.DATE_MODIFIED, modSec)
+                    put(MediaStore.MediaColumns.DATE_TAKEN, job.takenMs)
+                    put(MediaStore.MediaColumns.DATE_ADDED, job.addedSec)
+                    put(MediaStore.MediaColumns.DATE_MODIFIED, job.modSec)
                 }
                 context.contentResolver.update(uri, values, null, null)
             }
         }
-        return dest.absolutePath
-    }
-
-    /** Runs the media scanner on [path] and waits (bounded) for it to finish; returns the MediaStore uri when known. */
-    private fun scanBlocking(path: String, mimeType: String?): Uri? {
-        val latch = java.util.concurrent.CountDownLatch(1)
-        val result = java.util.concurrent.atomic.AtomicReference<Uri?>(null)
-        MediaScannerConnection.scanFile(context, arrayOf(path), arrayOf(mimeType)) { _, uri ->
-            result.set(uri)
-            latch.countDown()
-        }
-        latch.await(8, java.util.concurrent.TimeUnit.SECONDS)
-        return result.get()
     }
 
     private fun computeRelativePath(originalPath: String, isVideo: Boolean): String {
