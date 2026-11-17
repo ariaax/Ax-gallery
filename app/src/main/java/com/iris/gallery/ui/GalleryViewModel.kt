@@ -134,7 +134,27 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
         val result = trashRepository.restoreFromTrash(mediaList)
         val restoredPaths = result.map { it.path }.filter { it.isNotBlank() }.toSet()
         repository.clearRecentMovedOrDeleted(result.mapTo(HashSet(result.size)) { it.stableKey }, restoredPaths)
-        refresh(forceClearCache = true)
+        if (result.isNotEmpty()) {
+            // Show the restored photos right away (their files are verified by the repository and exist on disk),
+            // in their original timeline position, instead of waiting for a full reload. The light refresh that follows
+            // replaces these stand-ins with the real MediaStore rows; nothing is cleared or re-verified library-wide.
+            val shown = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                result.filter { it.path.isNotBlank() && java.io.File(it.path).isFile }
+                    .map { it.copy(uri = android.net.Uri.fromFile(java.io.File(it.path))) }
+            }
+            _uiState.update { state ->
+                val merged = com.iris.gallery.data.mergeRestored(state.images, shown, { it.path }, { it.stableKey })
+                if (merged === state.images) state else state.copy(
+                    images = merged.sortedWith(
+                        compareByDescending<MediaImage> { it.sortDate }
+                            .thenByDescending { it.dateModified }
+                            .thenByDescending { it.dateAdded }
+                            .thenByDescending { it.id }
+                    )
+                )
+            }
+        }
+        refresh(showLoading = false, light = true)
         return result
     }
 
