@@ -10,7 +10,7 @@ import android.content.Context
  * reads the original value from here instead, which puts the photo back where it was in every sort mode.
  */
 internal object RestoredDatesCodec {
-    const val MAX_ENTRIES = 400
+    const val MAX_ENTRIES = 5_000
     const val TTL_MS = 90L * 86_400_000L
 
     data class Entry(val recordedAt: Long, val dateAdded: Long, val path: String)
@@ -56,9 +56,18 @@ object RestoredDates {
 
     @Synchronized
     fun record(context: Context, path: String, dateAddedMs: Long) {
-        if (path.isBlank() || dateAddedMs <= 0L) return
+        recordAll(context, listOf(path to dateAddedMs))
+    }
+
+    @Synchronized
+    fun recordAll(context: Context, entries: Collection<Pair<String, Long>>) {
         val now = System.currentTimeMillis()
-        write(context, RestoredDatesCodec.prune(read(context) + RestoredDatesCodec.Entry(now, dateAddedMs, path), now))
+        val additions = entries.mapIndexedNotNull { index, (path, dateAddedMs) ->
+            if (path.isBlank() || dateAddedMs <= 0L) null
+            else RestoredDatesCodec.Entry(now + index, dateAddedMs, path)
+        }
+        if (additions.isEmpty()) return
+        write(context, RestoredDatesCodec.prune(read(context) + additions, now))
     }
 
     @Synchronized

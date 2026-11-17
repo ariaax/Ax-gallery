@@ -85,17 +85,17 @@ object AxHero {
     val settledState = androidx.compose.runtime.mutableStateOf(true)
 
     private var coords: LayoutCoordinates? = null
-    private var mediaId: Long = Long.MIN_VALUE
+    private var mediaKey: String? = null
 
-    fun mark(c: LayoutCoordinates?, id: Long) {
+    fun mark(c: LayoutCoordinates?, stableKey: String) {
         coords = c
-        mediaId = id
+        mediaKey = stableKey
     }
 
     /** Bounds (in window coordinates) of the tapped cell, only if it belongs to [id] and is still on screen. */
-    fun rectFor(id: Long?): Rect? {
+    fun rectFor(stableKey: String?): Rect? {
         val c = coords ?: return null
-        if (id == null || id != mediaId || !c.isAttached) return null
+        if (stableKey == null || stableKey != mediaKey || !c.isAttached) return null
         val r = c.boundsInRoot()
         return if (r.width > 8f && r.height > 8f) r else null
     }

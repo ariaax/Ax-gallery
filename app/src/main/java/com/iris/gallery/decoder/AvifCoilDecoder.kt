@@ -17,8 +17,13 @@ class AvifCoilDecoder(
 ) : Decoder {
 
     override suspend fun decode(): DecodeResult? {
-        val bytes = source.source().readByteArray()
-        if (bytes.isEmpty()) return null
+        // Never let a single source allocate an unbounded heap array + direct buffer. AVIF decoding
+        // currently requires a full-resolution bitmap, so very large files are delegated to another decoder.
+        val buffered = source.source()
+        if (!buffered.request(MAX_INPUT_BYTES + 1L) && buffered.buffer.size == 0L) return null
+        if (buffered.buffer.size > MAX_INPUT_BYTES) return null
+        val bytes = buffered.readByteArray()
+        if (bytes.isEmpty() || bytes.size.toLong() > MAX_INPUT_BYTES) return null
 
         val byteBuffer = ByteBuffer.allocateDirect(bytes.size).apply {
             put(bytes)
@@ -30,9 +35,9 @@ class AvifCoilDecoder(
         }
 
         val info = AvifDecoder.Info()
-        if (!AvifDecoder.getInfo(byteBuffer, bytes.size, info)) {
-            return null
-        }
+        if (!AvifDecoder.getInfo(byteBuffer, bytes.size, info)) return null
+        if (info.width <= 0 || info.height <= 0 ||
+            info.width.toLong() * info.height.toLong() > MAX_DECODE_PIXELS) return null
 
         val bitmap = Bitmap.createBitmap(info.width, info.height, Bitmap.Config.ARGB_8888)
         if (!AvifDecoder.decode(byteBuffer, bytes.size, bitmap)) {
@@ -44,6 +49,11 @@ class AvifCoilDecoder(
             image = bitmap.asImage(),
             isSampled = false,
         )
+    }
+
+    private companion object {
+        const val MAX_INPUT_BYTES = 16L * 1024L * 1024L
+        const val MAX_DECODE_PIXELS = 8_000_000L
     }
 
     class Factory : Decoder.Factory {

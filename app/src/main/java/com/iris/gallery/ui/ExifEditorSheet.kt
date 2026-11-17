@@ -101,12 +101,12 @@ fun ExifEditorSheet(
     var showStripDialog by remember { mutableStateOf(false) }
 
     // Media & EXIF State
-    val initialTitle = remember(image.id, image.title, image.name, exif) {
+    val initialTitle = remember(image.stableKey, image.title, image.name, exif) {
         val t = exif?.title?.takeIf { it.isNotBlank() } ?: image.title
         if (t.isBlank() || t == image.name || t == image.name.substringBeforeLast('.')) "" else t
     }
-    var mediaTitle by remember(image.id, exif, initialTitle) { mutableStateOf(initialTitle) }
-    val initialDateStr = remember(image.id, exif?.dateTimeOriginal, photoTimeZone) {
+    var mediaTitle by remember(image.stableKey, exif, initialTitle) { mutableStateOf(initialTitle) }
+    val initialDateStr = remember(image.stableKey, exif?.dateTimeOriginal, photoTimeZone) {
         val raw = exif?.dateTimeOriginal?.trim()
         if (!raw.isNullOrBlank() && raw.length >= 19) {
             val parts = raw.split(" ")
@@ -121,15 +121,15 @@ fun ExifEditorSheet(
             ""
         }
     }
-    var dateTakenStr by remember(image.id, initialDateStr) { mutableStateOf(initialDateStr) }
-    var orientation by remember(image.id) { mutableIntStateOf((image.orientation % 360 + 360) % 360) }
+    var dateTakenStr by remember(image.stableKey, initialDateStr) { mutableStateOf(initialDateStr) }
+    var orientation by remember(image.stableKey) { mutableIntStateOf((image.orientation % 360 + 360) % 360) }
 
     // Notes & Info State
-    var userComment by remember(image.id, exif) { mutableStateOf(exif?.userComment ?: "") }
-    var imageDescription by remember(image.id, exif) { mutableStateOf(exif?.imageDescription ?: image.description) }
-    var artist by remember(image.id, exif) { mutableStateOf(exif?.artist ?: "") }
-    var copyright by remember(image.id, exif) { mutableStateOf(exif?.copyright ?: "") }
-    var software by remember(image.id, exif) { mutableStateOf(exif?.software ?: "") }
+    var userComment by remember(image.stableKey, exif) { mutableStateOf(exif?.userComment ?: "") }
+    var imageDescription by remember(image.stableKey, exif) { mutableStateOf(exif?.imageDescription ?: image.description) }
+    var artist by remember(image.stableKey, exif) { mutableStateOf(exif?.artist ?: "") }
+    var copyright by remember(image.stableKey, exif) { mutableStateOf(exif?.copyright ?: "") }
+    var software by remember(image.stableKey, exif) { mutableStateOf(exif?.software ?: "") }
 
     // Camera & Lens State
     val initialMake = exif?.cameraMake.orEmpty()
@@ -139,18 +139,18 @@ fun ExifEditorSheet(
     } else {
         initialModelRaw
     }
-    var cameraMake by remember(image.id, exif) { mutableStateOf(initialMake) }
-    var cameraModel by remember(image.id, exif) { mutableStateOf(initialModel) }
-    var lensModel by remember(image.id, exif) { mutableStateOf(exif?.lensModel ?: "") }
-    var isoStr by remember(image.id, exif) { mutableStateOf(exif?.isoValue?.toString() ?: "") }
-    var apertureStr by remember(image.id, exif) { mutableStateOf(exif?.apertureValue?.let { "%.1f".format(Locale.US, it).replace(".0", "") } ?: "") }
-    var shutterSpeedStr by remember(image.id, exif) { mutableStateOf(exif?.shutterSpeed?.removeSuffix(" s") ?: "") }
-    var focalLengthStr by remember(image.id, exif) { mutableStateOf(exif?.focalLengthValue?.let { "%.1f".format(Locale.US, it).replace(".0", "") } ?: "") }
-    var whiteBalance by remember(image.id, exif) { mutableStateOf(exif?.whiteBalanceValue) }
+    var cameraMake by remember(image.stableKey, exif) { mutableStateOf(initialMake) }
+    var cameraModel by remember(image.stableKey, exif) { mutableStateOf(initialModel) }
+    var lensModel by remember(image.stableKey, exif) { mutableStateOf(exif?.lensModel ?: "") }
+    var isoStr by remember(image.stableKey, exif) { mutableStateOf(exif?.isoValue?.toString() ?: "") }
+    var apertureStr by remember(image.stableKey, exif) { mutableStateOf(exif?.apertureValue?.let { "%.1f".format(Locale.US, it).replace(".0", "") } ?: "") }
+    var shutterSpeedStr by remember(image.stableKey, exif) { mutableStateOf(exif?.shutterSpeed?.removeSuffix(" s") ?: "") }
+    var focalLengthStr by remember(image.stableKey, exif) { mutableStateOf(exif?.focalLengthValue?.let { "%.1f".format(Locale.US, it).replace(".0", "") } ?: "") }
+    var whiteBalance by remember(image.stableKey, exif) { mutableStateOf(exif?.whiteBalanceValue) }
 
     // Location State
-    var latitudeStr by remember(image.id, exif) { mutableStateOf(exif?.latitude?.let { "%.6f".format(Locale.US, it) } ?: "") }
-    var longitudeStr by remember(image.id, exif) { mutableStateOf(exif?.longitude?.let { "%.6f".format(Locale.US, it) } ?: "") }
+    var latitudeStr by remember(image.stableKey, exif) { mutableStateOf(exif?.latitude?.let { "%.6f".format(Locale.US, it) } ?: "") }
+    var longitudeStr by remember(image.stableKey, exif) { mutableStateOf(exif?.longitude?.let { "%.6f".format(Locale.US, it) } ?: "") }
     var removeGps by remember { mutableStateOf(false) }
     var stripAllExif by remember { mutableStateOf(false) }
 

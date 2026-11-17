@@ -27,7 +27,13 @@ data class MediaImage(
     val description: String = "",
     val dateModified: Long = 0L,
     val dateAdded: Long = 0L,
-)
+    /** Exact MediaStore volume (for example external_primary or an SD-card UUID). */
+    val volumeName: String = "",
+) {
+    /** Collision-safe identity for a MediaStore row across volumes and media tables. */
+    val stableKey: String get() = MediaIdentity.key(volumeName, path, isVideo, id)
+}
+
 
 /** How the timeline is ordered and grouped. */
 enum class DateSortMode {
@@ -956,6 +962,45 @@ private fun queryDataColumn(context: Context, uri: Uri): String? {
     }.getOrNull()
 }
 
+/** Resolves MediaDocumentsProvider's ID-only document IDs without guessing across volumes. */
+private fun resolveMediaDocumentPath(context: Context, type: String, id: Long): String? {
+    fun collection(volume: String): Uri = when (type) {
+        "image" -> if (Build.VERSION.SDK_INT >= 29) MediaStore.Images.Media.getContentUri(volume) else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        "video" -> if (Build.VERSION.SDK_INT >= 29) MediaStore.Video.Media.getContentUri(volume) else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        "audio" -> if (Build.VERSION.SDK_INT >= 29) MediaStore.Audio.Media.getContentUri(volume) else MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        else -> if (Build.VERSION.SDK_INT >= 29) MediaStore.Files.getContentUri(volume) else MediaStore.Files.getContentUri("external")
+    }
+    if (Build.VERSION.SDK_INT < 29) {
+        return queryDataColumn(context, ContentUris.withAppendedId(collection("external"), id))
+    }
+    val volumes = runCatching { MediaStore.getExternalVolumeNames(context).toList() }.getOrDefault(emptyList())
+    val matches = volumes.mapNotNull { volume ->
+        val uri = ContentUris.withAppendedId(collection(volume), id)
+        runCatching {
+            context.contentResolver.query(
+                uri,
+                arrayOf(MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.RELATIVE_PATH, MediaStore.MediaColumns.DISPLAY_NAME),
+                null, null, null,
+            )?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use null
+                val dataIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
+                val data = if (dataIndex >= 0) cursor.getString(dataIndex).orEmpty() else ""
+                if (data.isNotBlank()) return@use data
+                val relIndex = cursor.getColumnIndex(MediaStore.MediaColumns.RELATIVE_PATH)
+                val nameIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+                val relative = if (relIndex >= 0) cursor.getString(relIndex).orEmpty() else ""
+                val name = if (nameIndex >= 0) cursor.getString(nameIndex).orEmpty() else ""
+                if (relative.isBlank() || name.isBlank()) null else {
+                    val root = if (volume == "external_primary") "/storage/emulated/0" else "/storage/$volume"
+                    File(root, relative + name).absolutePath
+                }
+            }
+        }.getOrNull()
+    }.distinct()
+    // The document ID contains no volume. If two volumes have the same numeric ID, do not return an arbitrary file.
+    return matches.singleOrNull()
+}
+
 fun resolvePhysicalPath(context: Context, uri: Uri): String? {
     val scheme = uri.scheme
     if (scheme.equals("file", ignoreCase = true)) {
@@ -1014,15 +1059,7 @@ fun resolvePhysicalPath(context: Context, uri: Uri): String? {
                     val split = docId.split(":")
                     val type = split.getOrNull(0).orEmpty()
                     val id = split.getOrNull(1)?.toLongOrNull()
-                    if (id != null) {
-                        val mediaUri = when (type) {
-                            "image" -> ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
-                            "video" -> ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
-                            "audio" -> ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
-                            else -> ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id)
-                        }
-                        queryDataColumn(context, mediaUri)?.let { return it }
-                    }
+                    if (id != null) resolveMediaDocumentPath(context, type, id)?.let { return it }
                 }
             }
         }

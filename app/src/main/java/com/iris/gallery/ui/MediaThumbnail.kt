@@ -61,7 +61,7 @@ private fun backgroundPool(name: String, threads: Int) = java.util.concurrent.Ex
     }, name).apply { isDaemon = true }
 }.asCoroutineDispatcher()
 
-private val thumbDispatcher = backgroundPool("ax-thumb", 3)
+private val thumbDispatcher = backgroundPool("ax-thumb", 2)
 
 /**
  * Video frames take far longer to extract than photo thumbnails. On the shared lane a few videos in a row filled all
@@ -79,7 +79,7 @@ private val prefetchDispatcher = backgroundPool("ax-prefetch", 1)
 
 /** Decodes a thumbnail into the memory cache without showing it (no-op when it is already cached). */
 suspend fun prefetchThumbnail(context: Context, image: MediaImage, targetSizePx: Int) {
-    val key = (image.id shl 16) xor (targetSizePx.toLong() and 0xFFFFL)
+    val key = "${image.stableKey}:$targetSizePx"
     if (ThumbnailCache.get(key) != null) return
     withContext(if (image.isVideo) videoPrefetchDispatcher else prefetchDispatcher) {
         if (ThumbnailCache.get(key) == null) loadThumbnail(context, image, targetSizePx)
@@ -87,77 +87,70 @@ suspend fun prefetchThumbnail(context: Context, image: MediaImage, targetSizePx:
 }
 
 object ThumbnailCache {
-    private val maxKilobytes = (Runtime.getRuntime().maxMemory() / 1024 / 4).toInt() // 25% heap
-    private val cache = object : LruCache<Long, Bitmap>(maxKilobytes) {
-        override fun sizeOf(key: Long, value: Bitmap): Int = value.allocationByteCount / 1024
+    private val maxKilobytes = (Runtime.getRuntime().maxMemory() / 1024 / 8).toInt() // 12.5% heap
+    private val cache = object : LruCache<String, Bitmap>(maxKilobytes) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount / 1024
     }
 
     // modified time each id was cached at, so an edit made by another app does not keep showing the old picture
-    private val stamps = java.util.concurrent.ConcurrentHashMap<Long, Long>()
+    // Bounded metadata cache: previously this ConcurrentHashMap grew for every file ever visited.
+    private val stamps = object : LruCache<String, Long>(4096) {}
 
-    fun markFresh(id: Long, stamp: Long) { if (stamp > 0L) stamps[id] = stamp }
+    fun markFresh(key: String, stamp: Long) { if (stamp > 0L) stamps.put(key, stamp) }
 
-    /** Removes cached copies of [id] when it was cached at a different modified time. Returns true if it did. */
-    fun invalidateIfStale(id: Long, stamp: Long): Boolean {
-        val seen = stamps[id] ?: return false
+    /** Removes cached copies when the source's modification stamp changes. */
+    fun invalidateIfStale(key: String, stamp: Long): Boolean {
+        val seen = stamps.get(key) ?: return false
         if (stamp <= 0L || seen == stamp) return false
-        remove(id)
-        stamps.remove(id)
+        remove(key)
+        stamps.remove(key)
         return true
     }
 
-    fun get(key: Long): Bitmap? = cache.get(key)
-    fun put(key: Long, bitmap: Bitmap) = cache.put(key, bitmap)
+    fun get(key: String): Bitmap? = cache.get(key)
+    fun put(key: String, bitmap: Bitmap) { cache.put(key, bitmap) }
 
-    fun findForImage(id: Long): Bitmap? {
-        cache.get(id)?.let { return it }
+    fun findForImage(stableKey: String): Bitmap? {
         for (bucket in listOf(320, 180, 512, 768, 256)) {
-            val key = (id shl 16) xor (bucket.toLong() and 0xFFFFL)
-            cache.get(key)?.let { return it }
+            cache.get("$stableKey:$bucket")?.let { return it }
         }
         return null
     }
 
-    /**
-     * A thumbnail of this item that is already decoded at [minPx] or larger (any bucket), so a smaller tile
-     * (viewer filmstrip, 180 px) reuses what the grid already decoded instead of extracting the frame again.
-     */
-    fun findAtLeast(id: Long, minPx: Int): Bitmap? {
+    /** Reuse a larger cached bucket for a smaller tile. */
+    fun findAtLeast(stableKey: String, minPx: Int): Bitmap? {
         for (bucket in intArrayOf(180, 256, 320, 512, 768)) {
             if (bucket < minPx) continue
-            cache.get((id shl 16) xor (bucket.toLong() and 0xFFFFL))?.let { return it }
+            cache.get("$stableKey:$bucket")?.let { return it }
         }
         return null
     }
 
-    fun remove(id: Long) {
-        cache.remove(id)
-        for (bucket in listOf(320, 180, 512, 768, 256)) {
-            val key = (id shl 16) xor (bucket.toLong() and 0xFFFFL)
-            cache.remove(key)
-        }
+    fun remove(stableKey: String) {
+        cache.snapshot().keys.filter { it.startsWith("$stableKey:") }.forEach(cache::remove)
+        stamps.remove(stableKey)
+        hdrCache.remove(stableKey)
+        depthCache.remove(stableKey)
     }
+
+    /** Legacy id-only invalidation removes every matching volume key rather than leaving stale images behind. */
 
     fun clear() {
         cache.evictAll()
         hdrCache.evictAll()
         depthCache.evictAll()
-        stamps.clear()
+        stamps.evictAll()
     }
 
-    private val hdrCache = LruCache<Long, Boolean>(2000)
+    private val hdrCache = LruCache<String, Boolean>(2000)
 
-    fun isHdr(id: Long): Boolean? = hdrCache.get(id)
-    fun setHdr(id: Long, isHdr: Boolean) {
-        hdrCache.put(id, isHdr)
-    }
+    fun isHdr(stableKey: String): Boolean? = hdrCache.get(stableKey)
+    fun setHdr(stableKey: String, isHdr: Boolean) { hdrCache.put(stableKey, isHdr) }
 
-    private val depthCache = LruCache<Long, Boolean>(2000)
+    private val depthCache = LruCache<String, Boolean>(2000)
 
-    fun isDepth(id: Long): Boolean? = depthCache.get(id)
-    fun setDepth(id: Long, isDepth: Boolean) {
-        depthCache.put(id, isDepth)
-    }
+    fun isDepth(stableKey: String): Boolean? = depthCache.get(stableKey)
+    fun setDepth(stableKey: String, isDepth: Boolean) { depthCache.put(stableKey, isDepth) }
 }
 
 fun loadThumbnailSync(context: Context, image: MediaImage, targetSizePx: Int = 320): Bitmap? =
@@ -194,8 +187,10 @@ private object ThumbDiskCache {
     private fun dir(context: Context): java.io.File =
         dir ?: java.io.File(context.cacheDir, "ax_thumbs").also { it.mkdirs(); dir = it }
 
-    private fun file(context: Context, image: MediaImage, size: Int) =
-        java.io.File(dir(context), "${image.id}_${size}_${image.dateModified}_${image.sizeBytes}.w")
+    private fun file(context: Context, image: MediaImage, size: Int): java.io.File {
+        val safeKey = image.stableKey.replace(Regex("[^A-Za-z0-9._-]"), "_").take(180)
+        return java.io.File(dir(context), "${safeKey}_${size}_${image.dateModified}_${image.sizeBytes}.w")
+    }
 
     fun read(context: Context, image: MediaImage, size: Int): Bitmap? = runCatching {
         val f = file(context, image, size)
@@ -230,15 +225,15 @@ private object ThumbDiskCache {
 }
 
 private fun loadThumbnail(context: Context, image: MediaImage, targetSizePx: Int = 320): Bitmap? {
-    val key = (image.id shl 16) xor (targetSizePx.toLong() and 0xFFFFL)
+    val key = "${image.stableKey}:$targetSizePx"
     // a file edited elsewhere keeps its id: drop the memory copies when its modified time moved
-    ThumbnailCache.invalidateIfStale(image.id, image.dateModified)
+    ThumbnailCache.invalidateIfStale(image.stableKey, image.dateModified)
     ThumbnailCache.get(key)?.let { return it }
     if (image.id > 0 && image.dateModified > 0L) {
-        ThumbDiskCache.read(context, image, targetSizePx)?.let { ThumbnailCache.put(key, it); ThumbnailCache.markFresh(image.id, image.dateModified); return it }
+        ThumbDiskCache.read(context, image, targetSizePx)?.let { ThumbnailCache.put(key, it); ThumbnailCache.markFresh(image.stableKey, image.dateModified); return it }
     }
     val bmp = loadThumbnailRaw(context, image, targetSizePx)
-    if (bmp != null) ThumbnailCache.markFresh(image.id, image.dateModified)
+    if (bmp != null) ThumbnailCache.markFresh(image.stableKey, image.dateModified)
     if (bmp != null && image.id > 0 && image.dateModified > 0L) ThumbDiskCache.write(context, image, targetSizePx, bmp)
     return bmp
 }
@@ -248,34 +243,40 @@ private fun loadThumbnail(context: Context, image: MediaImage, targetSizePx: Int
  * heap array and copied again, and files whose full decode would not fit comfortably are skipped. The library can only
  * decode at full size, so the full bitmap is shrunk and released immediately.
  */
-private const val AVIF_MAX_DECODE_BYTES = 100L * 1024 * 1024 // about 25 megapixels of ARGB_8888
+private const val AVIF_MAX_DECODE_BYTES = 48L * 1024 * 1024 // 12 megapixels of ARGB_8888
+private const val AVIF_MAX_INPUT_BYTES = 24L * 1024 * 1024
 
 private fun decodeAvifThumbnail(context: Context, image: MediaImage, targetSizePx: Int): Bitmap? {
     var pfd: android.os.ParcelFileDescriptor? = null
     var full: Bitmap? = null
     return try {
-        val buffer: java.nio.ByteBuffer
-        val length: Int
+        var buffer: java.nio.ByteBuffer? = null
+        var length = 0
         val file = java.io.File(image.path)
         if (image.path.isNotBlank() && file.isFile) {
             java.io.RandomAccessFile(file, "r").use { raf ->
-                length = raf.length().toInt()
-                buffer = raf.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, length.toLong())
+                val fileLength = raf.length()
+                if (fileLength <= 0L || fileLength > AVIF_MAX_INPUT_BYTES || fileLength > Int.MAX_VALUE) return null
+                length = fileLength.toInt()
+                buffer = raf.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, fileLength)
             }
         } else {
             pfd = context.contentResolver.openFileDescriptor(image.uri, "r") ?: return null
             java.io.FileInputStream(pfd.fileDescriptor).use { input ->
-                length = input.channel.size().toInt()
-                buffer = input.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, length.toLong())
+                val fileLength = input.channel.size()
+                if (fileLength <= 0L || fileLength > AVIF_MAX_INPUT_BYTES || fileLength > Int.MAX_VALUE) return null
+                length = fileLength.toInt()
+                buffer = input.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, fileLength)
             }
         }
-        if (length <= 0 || !org.aomedia.avif.android.AvifDecoder.isAvifImage(buffer)) return null
+        val encoded = buffer ?: return null
+        if (length <= 0 || !org.aomedia.avif.android.AvifDecoder.isAvifImage(encoded)) return null
         val info = org.aomedia.avif.android.AvifDecoder.Info()
-        if (!org.aomedia.avif.android.AvifDecoder.getInfo(buffer, length, info)) return null
+        if (!org.aomedia.avif.android.AvifDecoder.getInfo(encoded, length, info)) return null
         if (info.width <= 0 || info.height <= 0 || info.width.toLong() * info.height * 4L > AVIF_MAX_DECODE_BYTES) return null
         val bmp = Bitmap.createBitmap(info.width, info.height, Bitmap.Config.ARGB_8888)
         full = bmp
-        if (!org.aomedia.avif.android.AvifDecoder.decode(buffer, length, bmp)) return null
+        if (!org.aomedia.avif.android.AvifDecoder.decode(encoded, length, bmp)) return null
         val scale = minOf(1f, targetSizePx.toFloat() / maxOf(info.width, info.height))
         if (scale >= 1f) {
             full = null // handed to the caller, must not be recycled below
@@ -297,7 +298,7 @@ private fun decodeAvifThumbnail(context: Context, image: MediaImage, targetSizeP
 }
 
 private fun loadThumbnailRaw(context: Context, image: MediaImage, targetSizePx: Int = 320): Bitmap? {
-    val cacheKey = (image.id shl 16) xor (targetSizePx.toLong() and 0xFFFFL)
+    val cacheKey = "${image.stableKey}:$targetSizePx"
     ThumbnailCache.get(cacheKey)?.let { return it }
 
     // For .livp (Apple Live Photo zip) files, make sure the inner JPEG has been
@@ -423,7 +424,10 @@ private fun loadThumbnailRaw(context: Context, image: MediaImage, targetSizePx: 
                             targetSizePx
                         )
                     } else {
-                        mmr.getFrameAtTime(-1L)
+                        val width = mmr.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+                        val height = mmr.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
+                        if (width <= 0 || height <= 0 || width.toLong() * height.toLong() > 12_000_000L) null
+                        else mmr.getFrameAtTime(-1L)
                     }
                 }
             }.getOrNull()
@@ -433,7 +437,7 @@ private fun loadThumbnailRaw(context: Context, image: MediaImage, targetSizePx: 
     finalBitmap?.let { ThumbnailCache.put(cacheKey, it) }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !image.isVideo && !image.isRaw && !image.isGif) {
         if (finalBitmap != null && finalBitmap.hasGainmap()) {
-            ThumbnailCache.setHdr(image.id, true)
+            ThumbnailCache.setHdr(image.stableKey, true)
         }
     }
     return finalBitmap
@@ -514,16 +518,16 @@ fun MediaThumbnail(
     onInvalidMedia: ((MediaImage) -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    val cacheKey = remember(image.id, targetSizePx) { (image.id shl 16) xor (targetSizePx.toLong() and 0xFFFFL) }
+    val cacheKey = remember(image.stableKey, targetSizePx) { "${image.stableKey}:$targetSizePx" }
     val cached = remember(cacheKey, image.dateModified) {
-        ThumbnailCache.invalidateIfStale(image.id, image.dateModified)
-        ThumbnailCache.get(cacheKey) ?: ThumbnailCache.findAtLeast(image.id, targetSizePx)
+        ThumbnailCache.invalidateIfStale(image.stableKey, image.dateModified)
+        ThumbnailCache.get(cacheKey) ?: ThumbnailCache.findAtLeast(image.stableKey, targetSizePx)
     }
     var bitmap by remember(cacheKey, image.dateModified) { mutableStateOf(cached) }
-    val cachedHdr = remember(image.id) { ThumbnailCache.isHdr(image.id) ?: false }
-    var isHdr by remember(image.id) { mutableStateOf(cachedHdr) }
-    val cachedDepth = remember(image.id) { ThumbnailCache.isDepth(image.id) ?: false }
-    var isDepth by remember(image.id) { mutableStateOf(cachedDepth) }
+    val cachedHdr = remember(image.stableKey) { ThumbnailCache.isHdr(image.stableKey) ?: false }
+    var isHdr by remember(image.stableKey) { mutableStateOf(cachedHdr) }
+    val cachedDepth = remember(image.stableKey) { ThumbnailCache.isDepth(image.stableKey) ?: false }
+    var isDepth by remember(image.stableKey) { mutableStateOf(cachedDepth) }
 
     if (bitmap == null) {
         LaunchedEffect(cacheKey, image.uri, image.dateModified) {
@@ -566,20 +570,20 @@ fun MediaThumbnail(
     // already on screen. Skipped completely when badges are switched off.
     val needHdr = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !image.isVideo && !image.isRaw && !image.isGif
     val needDepth = !image.isVideo && !image.isRaw && !image.isGif && !image.isSvg && !image.isMotionPhoto
-    val knownHdr = if (needHdr) ThumbnailCache.isHdr(image.id) else null
-    val knownDepth = if (needDepth) ThumbnailCache.isDepth(image.id) else null
+    val knownHdr = if (needHdr) ThumbnailCache.isHdr(image.stableKey) else null
+    val knownDepth = if (needDepth) ThumbnailCache.isDepth(image.stableKey) else null
     if (knownHdr != null && isHdr != knownHdr) isHdr = knownHdr
     if (knownDepth != null && isDepth != knownDepth) isDepth = knownDepth
     if (showFormatBadge && bitmap != null && ((needHdr && knownHdr == null) || (needDepth && knownDepth == null))) {
-        LaunchedEffect(image.id) {
-            if (needHdr && ThumbnailCache.isHdr(image.id) == null) {
+        LaunchedEffect(image.stableKey) {
+            if (needHdr && ThumbnailCache.isHdr(image.stableKey) == null) {
                 val detected = withContext(detectDispatcher) { checkIsUltraHdrFast(context, image) }
-                ThumbnailCache.setHdr(image.id, detected)
+                ThumbnailCache.setHdr(image.stableKey, detected)
                 isHdr = detected
             }
-            if (needDepth && ThumbnailCache.isDepth(image.id) == null) {
+            if (needDepth && ThumbnailCache.isDepth(image.stableKey) == null) {
                 val detected = withContext(detectDispatcher) { checkIsDepthPhotoFast(context, image) }
-                ThumbnailCache.setDepth(image.id, detected)
+                ThumbnailCache.setDepth(image.stableKey, detected)
                 isDepth = detected
             }
         }

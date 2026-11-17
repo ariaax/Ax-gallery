@@ -177,7 +177,7 @@ fun VideoPage(
 
     var playing by remember { mutableStateOf(false) }
     var isMuted by remember(engine.isMuted) { mutableStateOf(engine.isMuted) }
-    var isLooping by remember(media.id, loop) { mutableStateOf(engine.player.repeatMode == Player.REPEAT_MODE_ONE || loop) }
+    var isLooping by remember(media.stableKey, loop) { mutableStateOf(engine.player.repeatMode == Player.REPEAT_MODE_ONE || loop) }
     var muteFeedbackEvent by remember { mutableStateOf<Pair<Boolean, Long>?>(null) }
     var lastMuteFeedback by remember { mutableStateOf<Boolean?>(null) }
     var playPauseFeedbackEvent by remember { mutableStateOf<Pair<Boolean, Long>?>(null) }
@@ -185,18 +185,18 @@ fun VideoPage(
     var progress by remember { mutableFloatStateOf(0f) }
     var scrubbing by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf<Bitmap?>(null) }
-    var scale by remember(media.id) { mutableFloatStateOf(1f) }
-    var offset by remember(media.id) { mutableStateOf(Offset.Zero) }
+    var scale by remember(media.stableKey) { mutableFloatStateOf(1f) }
+    var offset by remember(media.stableKey) { mutableStateOf(Offset.Zero) }
     var size by remember { mutableStateOf(IntSize.Zero) }
     var gestureFeedback by remember { mutableStateOf<String?>(null) }
-    var showRemaining by remember(media.id) { mutableStateOf(false) }
-    var playbackError by remember(media.id) { mutableStateOf<String?>(null) }
+    var showRemaining by remember(media.stableKey) { mutableStateOf(false) }
+    var playbackError by remember(media.stableKey) { mutableStateOf<String?>(null) }
     val hudActive = brightnessHudVisible || volumeHudVisible
     LaunchedEffect(hudActive, active) { if (active) onHudActive(hudActive) }
     var feedbackOnLeft by remember { mutableStateOf(false) }
-    var isFirstFrameRendered by remember(media.id) { mutableStateOf(false) }
+    var isFirstFrameRendered by remember(media.stableKey) { mutableStateOf(false) }
     var suppressTapUntil by remember { mutableLongStateOf(0L) }
-    var displayAspect by remember(media.id) {
+    var displayAspect by remember(media.stableKey) {
         val quarterTurn = ((media.orientation % 360) + 360) % 360 in setOf(90, 270)
         val initialWidth = if (quarterTurn) media.height else media.width
         val initialHeight = if (quarterTurn) media.width else media.height
@@ -228,7 +228,7 @@ fun VideoPage(
     // A video whose picture cannot be decoded on this device (MPEG-2, MJPEG, ProRes, FFV1...) used to leave a silent black
     // screen: the audio track plays (or nothing does) and no error is raised. If no frame shows up after the player is
     // ready, say so and offer another app.
-    LaunchedEffect(media.id, active) {
+    LaunchedEffect(media.stableKey, active) {
         if (!active) return@LaunchedEffect
         delay(3500)
         if (!isFirstFrameRendered && playbackError == null) {
@@ -292,7 +292,7 @@ fun VideoPage(
             volumeHudVisible = false
         }
     }
-    LaunchedEffect(media.id) {
+    LaunchedEffect(media.stableKey) {
         val fetched = withContext(Dispatchers.IO) {
             val retriever = MediaMetadataRetriever()
             try {
@@ -323,8 +323,14 @@ fun VideoPage(
                 val retriever = MediaMetadataRetriever()
                 try {
                     retriever.setDataSource(context, media.uri)
-                    if (Build.VERSION.SDK_INT >= 27) retriever.getScaledFrameAtTime(positionUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
-                    else retriever.getFrameAtTime(positionUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    if (Build.VERSION.SDK_INT >= 27) {
+                        retriever.getScaledFrameAtTime(positionUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
+                    } else {
+                        val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+                        val height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
+                        if (width <= 0 || height <= 0 || width.toLong() * height.toLong() > 12_000_000L) null
+                        else retriever.getFrameAtTime(positionUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    }
                 } catch (_: Exception) { null } finally { retriever.release() }
             }
         }
@@ -348,7 +354,7 @@ fun VideoPage(
     }
 
     // ---- double-tap seek (-10 s / +10 s, repeatable) ----
-    val seekSeries = remember(media.id) { SeekSeries() }
+    val seekSeries = remember(media.stableKey) { SeekSeries() }
     var seekFeedback by remember { mutableStateOf<SeekFeedbackState?>(null) }
     LaunchedEffect(seekFeedback?.token) {
         if (seekFeedback != null) {
