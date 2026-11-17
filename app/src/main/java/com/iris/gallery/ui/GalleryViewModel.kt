@@ -385,6 +385,8 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private var firstContentLogged = false
+
     fun refresh(showLoading: Boolean = true, forceClearCache: Boolean = false, light: Boolean = false) {
         val current = refreshJob
         if (current?.isActive == true) {
@@ -414,7 +416,11 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                         _uiState.update { it.copy(loading = true, trashed = trashList, error = null) }
                     }
                     try {
+                        val loadStart = android.os.SystemClock.elapsedRealtime()
                         val loaded = repository.loadImages()
+                        com.iris.gallery.data.LatencyLog.add(
+                            "load: " + loaded.size + " items in " + (android.os.SystemClock.elapsedRealtime() - loadStart) + " ms" + (if (light) " (light)" else "")
+                        )
                         val loadedPaths = loaded.mapTo(HashSet(loaded.size)) { it.path }
                         val loadedKeys = loaded.mapTo(HashSet(loaded.size)) { it.stableKey }
                         val currentPending = _uiState.value.images.filter { item ->
@@ -435,6 +441,11 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                             loaded
                         }
                         _uiState.update { it.copy(images = combined, loading = false, trashed = trashList, error = null) }
+                        if (!firstContentLogged && combined.isNotEmpty()) {
+                            firstContentLogged = true
+                            val sinceStart = android.os.SystemClock.elapsedRealtime() - android.os.Process.getStartElapsedRealtime()
+                            com.iris.gallery.data.LatencyLog.add("first content: " + sinceStart + " ms after process start")
+                        }
                         run {
                             val newest = combined.maxOfOrNull { it.dateAdded } ?: 0L
                             com.iris.gallery.data.LatencyLog.add("2 on screen: " + combined.size + " items, newest MediaStore dateAdded=" + com.iris.gallery.data.LatencyLog.time(newest * 1000L))
