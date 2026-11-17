@@ -3,10 +3,12 @@ package com.iris.gallery.data
 import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import android.os.Bundle
 import android.os.Environment
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import android.util.AtomicFile
 import java.io.DataInputStream
@@ -18,8 +20,15 @@ private const val ENABLE_EXIF_ON_LOAD = false
 // Ax Gallery: per-file exists()/lastModified()/length() on every load is very slow; trust MediaStore.
 private const val ENABLE_DISK_VERIFY = false
 
+private fun volumeNameFromPath(path: String): String = when {
+    path.startsWith("/storage/emulated/0/") -> "external_primary"
+    path.startsWith("/storage/") -> path.removePrefix("/storage/").substringBefore('/').takeIf { it.isNotBlank() } ?: "external_primary"
+    else -> "external_primary"
+}
+
 class MediaRepository(private val context: Context) {
     private val snapshot = AtomicFile(File(context.filesDir, "media_snapshot.bin"))
+    private val snapshotLock = Any()
     private val libraryPreferences = LibraryPreferences(context)
 
     companion object {
@@ -27,70 +36,71 @@ class MediaRepository(private val context: Context) {
         private const val TOMBSTONE_TTL_MS = 24 * 60 * 60 * 1_000L // 24 hours
     }
 
-    private val inMemoryCache = java.util.concurrent.ConcurrentHashMap<Long, MediaImage>()
-    private val recentMovedOrDeletedIds = java.util.concurrent.ConcurrentHashMap<Long, Long>()
+    private val inMemoryCache = java.util.concurrent.ConcurrentHashMap<String, MediaImage>()
+    private val recentMovedOrDeletedKeys = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val recentMovedOrDeletedPaths = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val verifiedPathsCache = java.util.concurrent.ConcurrentHashMap<String, Long>()
     // Stat-ing every cached row costs seconds on a big library (it kept the spinner up for 10-20 s after install),
     // so cached rows are only re-checked once, right after something was restored or deleted.
     @Volatile private var verifyCachedRows = false
 
-    fun loadSnapshot(): List<MediaImage> = runCatching {
+    fun loadSnapshot(): List<MediaImage> = synchronized(snapshotLock) { runCatching {
         DataInputStream(snapshot.openRead().buffered()).use { input ->
-            if (input.readInt() != 3) return@use emptyList()
+            val version = input.readInt()
+            if (version !in 3..4) return@use emptyList()
             val list = List(input.readInt().coerceIn(0, 100_000)) {
                 val id = input.readLong(); val isVideo = input.readBoolean()
-                val collection = if (isVideo) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                val savedVolume = if (version >= 4) input.readUTF() else ""
+                val pathV4 = if (version >= 4) input.readUTF() else null
                 val name = input.readUTF(); val dateTaken = input.readLong()
                 val width = input.readInt(); val height = input.readInt()
-                val path = input.readUTF(); val bucketId = input.readLong(); val bucketName = input.readUTF()
+                val savedPath = pathV4 ?: input.readUTF()
+                val volumeName = savedVolume.ifBlank { volumeNameFromPath(savedPath) }
+                val volume = if (android.os.Build.VERSION.SDK_INT >= 29) volumeName else "external"
+                val collection = if (isVideo) MediaStore.Video.Media.getContentUri(volume) else MediaStore.Images.Media.getContentUri(volume)
+                val bucketId = input.readLong(); val bucketName = input.readUTF()
                 val durationMs = input.readLong(); val mimeType = input.readUTF(); val sizeBytes = input.readLong()
                 val orientation = input.readInt(); val savedTitle = input.readUTF()
                 val dateModified = input.readLong(); val dateAdded = input.readLong()
                 val title = libraryPreferences.getCustomTitle(id) ?: savedTitle
                 MediaImage(id, ContentUris.withAppendedId(collection, id), name, dateTaken,
-                    width, height, path, bucketId, bucketName,
+                    width, height, savedPath, bucketId, bucketName,
                     isVideo, durationMs, mimeType, sizeBytes, orientation, title,
-                    dateModified = dateModified, dateAdded = dateAdded)
+                    dateModified = dateModified, dateAdded = dateAdded, volumeName = volumeName)
             }
             list.forEach { item ->
-                inMemoryCache[item.id] = item
+                inMemoryCache[item.stableKey] = item
             }
             list
         }
-    }.getOrDefault(emptyList())
+    }.getOrDefault(emptyList()) }
 
-    fun markMovedOrDeleted(ids: Set<Long>, paths: Set<String>) {
+    fun markMovedOrDeleted(items: Collection<MediaImage>) {
         val now = System.currentTimeMillis()
-        ids.forEach {
-            if (it > 0) {
-                recentMovedOrDeletedIds[it] = now
-                inMemoryCache.remove(it)
-            }
-        }
-        paths.forEach {
-            if (it.isNotBlank()) {
-                recentMovedOrDeletedPaths[it] = now
-                verifiedPathsCache.remove(it)
+        items.forEach { item ->
+            recentMovedOrDeletedKeys[item.stableKey] = now
+            inMemoryCache.remove(item.stableKey)
+            if (item.path.isNotBlank()) {
+                recentMovedOrDeletedPaths[item.path] = now
+                verifiedPathsCache.remove(item.path)
             }
         }
     }
 
-    fun isMarkedMovedOrDeleted(id: Long, path: String): Boolean {
+    fun isMarkedMovedOrDeleted(stableKey: String, path: String): Boolean {
         val now = System.currentTimeMillis()
-        if (id > 0) {
-            val timestamp = recentMovedOrDeletedIds[id]
-            if (timestamp != null && now - timestamp < TOMBSTONE_TTL_MS) return true
-        }
-        if (path.isNotBlank()) {
-            val timestamp = recentMovedOrDeletedPaths[path]
-            if (timestamp != null && now - timestamp < TOMBSTONE_TTL_MS) return true
-        }
-        return false
+        val keyTime = recentMovedOrDeletedKeys[stableKey]
+        if (keyTime != null && now - keyTime < TOMBSTONE_TTL_MS) return true
+        val pathTime = if (path.isNotBlank()) recentMovedOrDeletedPaths[path] else null
+        return pathTime != null && now - pathTime < TOMBSTONE_TTL_MS
     }
 
-    fun clearRecentMovedOrDeleted(ids: Set<Long>, paths: Set<String> = emptySet()) {
-        ids.forEach { recentMovedOrDeletedIds.remove(it) }
+    fun clearRecentMovedOrDeleted(keys: Set<String>, paths: Set<String> = emptySet()) {
+        keys.forEach { recentMovedOrDeletedKeys.remove(it) }
+        paths.forEach { recentMovedOrDeletedPaths.remove(it) }
+    }
+
+    fun clearRecentMovedOrDeletedPaths(paths: Set<String>) {
         paths.forEach { recentMovedOrDeletedPaths.remove(it) }
     }
 
@@ -99,36 +109,16 @@ class MediaRepository(private val context: Context) {
         verifyCachedRows = true
     }
 
-    fun purgeGhostMedia(id: Long, path: String, uri: Uri) {
+    fun purgeGhostMedia(image: MediaImage) {
         val now = System.currentTimeMillis()
-        if (id > 0) {
-            recentMovedOrDeletedIds[id] = now
-            inMemoryCache.remove(id)
+        recentMovedOrDeletedKeys[image.stableKey] = now
+        inMemoryCache.remove(image.stableKey)
+        if (image.path.isNotBlank()) {
+            recentMovedOrDeletedPaths[image.path] = now
+            verifiedPathsCache.remove(image.path)
+            android.media.MediaScannerConnection.scanFile(context, arrayOf(image.path), null, null)
         }
-        if (path.isNotBlank()) {
-            recentMovedOrDeletedPaths[path] = now
-            verifiedPathsCache.remove(path)
-            android.media.MediaScannerConnection.scanFile(context, arrayOf(path), null, null)
-        }
-        runCatching { context.contentResolver.delete(uri, null, null) }
-        if (id > 0) {
-            runCatching {
-                context.contentResolver.delete(
-                    MediaStore.Files.getContentUri("external"),
-                    "${MediaStore.MediaColumns._ID}=?",
-                    arrayOf(id.toString())
-                )
-            }
-            if (android.os.Build.VERSION.SDK_INT >= 29) {
-                runCatching {
-                    context.contentResolver.delete(
-                        MediaStore.Files.getContentUri("external_primary"),
-                        "${MediaStore.MediaColumns._ID}=?",
-                        arrayOf(id.toString())
-                    )
-                }
-            }
-        }
+        runCatching { context.contentResolver.delete(image.uri.buildUpon().clearQuery().build(), null, null) }
     }
 
     private fun resolveDateTaken(
@@ -244,13 +234,16 @@ class MediaRepository(private val context: Context) {
         }
 
         for (collection in collectionsToQuery) {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
             runCatching {
                 context.contentResolver.query(collection, projection, selection, selectionArgs, null)?.use { cursor ->
                     val dataCol = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
                     val modCol = cursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED)
                     val sizeCol = cursor.getColumnIndex(MediaStore.MediaColumns.SIZE)
                     if (dataCol >= 0 && modCol >= 0 && sizeCol >= 0) {
+                        var scannedRows = 0
                         while (cursor.moveToNext()) {
+                            if (scannedRows++ % 128 == 0) kotlinx.coroutines.currentCoroutineContext().ensureActive()
                             val path = cursor.getString(dataCol)
                             if (!path.isNullOrBlank()) {
                                 val mod = cursor.getLong(modCol)
@@ -260,14 +253,16 @@ class MediaRepository(private val context: Context) {
                         }
                     }
                 }
-            }
+            }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
         }
 
         val pathsToScan = mutableListOf<String>()
         val ghostPathsToPurge = mutableListOf<String>()
 
         for (folder in candidateFolders) {
-            runCatching {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            try {
+                var visited = 0
                 folder.walkTopDown()
                     .maxDepth(12)
                     .onEnter { dir ->
@@ -276,28 +271,32 @@ class MediaRepository(private val context: Context) {
                         !File(dir, ".nomedia").exists()
                     }
                     .forEach { file ->
+                        if (visited++ % 256 == 0) kotlinx.coroutines.currentCoroutineContext().ensureActive()
                         if (file.isFile && !file.name.startsWith(".")) {
                             val ext = file.extension.lowercase(java.util.Locale.ROOT)
                             if (ext in mediaExtensions) {
                                 val path = file.absolutePath
                                 val known = knownMap[path]
-                                if (known == null) {
-                                    pathsToScan.add(path)
-                                } else {
+                                if (known == null) pathsToScan.add(path)
+                                else {
                                     val (msModSec, msSize) = known
                                     val diskModSec = file.lastModified() / 1000L
                                     val diskSize = file.length()
-                                    if (Math.abs(diskModSec - msModSec) > 1L || (diskSize > 0L && diskSize != msSize)) {
-                                        pathsToScan.add(path)
-                                    }
+                                    if (Math.abs(diskModSec - msModSec) > 1L || (diskSize > 0L && diskSize != msSize)) pathsToScan.add(path)
                                 }
                             }
                         }
                     }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // A denied or disappearing directory should not abort scanning other volumes.
             }
         }
 
+        var checkedKnown = 0
         for ((knownPath, _) in knownMap) {
+            if (checkedKnown++ % 256 == 0) kotlinx.coroutines.currentCoroutineContext().ensureActive()
             if (!File(knownPath).exists()) {
                 ghostPathsToPurge.add(knownPath)
             }
@@ -310,6 +309,7 @@ class MediaRepository(private val context: Context) {
 
         var scannedCount = 0
         for (chunk in allPaths.chunked(200)) {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
             val latch = kotlinx.coroutines.CompletableDeferred<Unit>()
             val counter = java.util.concurrent.atomic.AtomicInteger(0)
             android.media.MediaScannerConnection.scanFile(
@@ -335,7 +335,7 @@ class MediaRepository(private val context: Context) {
         ExifDateStore.ensureLoaded(context)
         TimelineSort.refreshNow()
         val now = System.currentTimeMillis()
-        recentMovedOrDeletedIds.entries.removeIf { now - it.value > TOMBSTONE_TTL_MS }
+        recentMovedOrDeletedKeys.entries.removeIf { now - it.value > TOMBSTONE_TTL_MS }
         recentMovedOrDeletedPaths.entries.removeIf { now - it.value > TOMBSTONE_TTL_MS }
 
         val collectionsToQuery = if (android.os.Build.VERSION.SDK_INT >= 29) {
@@ -396,6 +396,7 @@ class MediaRepository(private val context: Context) {
             val order = "${MediaStore.Images.Media.DATE_TAKEN} DESC, ${MediaStore.Images.Media.DATE_ADDED} DESC"
 
             for (collection in collectionsToQuery) {
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 val cursorResult = if (android.os.Build.VERSION.SDK_INT >= 30) {
                     context.contentResolver.query(collection, projection, Bundle().apply {
                         putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, mediaSelection)
@@ -427,16 +428,16 @@ class MediaRepository(private val context: Context) {
                     val relPathCol = if (android.os.Build.VERSION.SDK_INT >= 29) cursor.getColumnIndex(MediaStore.Images.Media.RELATIVE_PATH) else -1
                     val volCol = if (android.os.Build.VERSION.SDK_INT >= 29) cursor.getColumnIndex(MediaStore.MediaColumns.VOLUME_NAME) else -1
 
+                    var scannedRows = 0
                     while (cursor.moveToNext()) {
+                        if (scannedRows++ % 128 == 0) kotlinx.coroutines.currentCoroutineContext().ensureActive()
                         val mediaId = cursor.getLong(id)
-                        if (!trashed && recentMovedOrDeletedIds.containsKey(mediaId)) {
-                            continue
-                        }
                         val isVid = cursor.getInt(mediaType) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
                         val displayName = cursor.getString(name).orEmpty()
                         val rawData = if (dataCol >= 0) cursor.getString(dataCol).orEmpty() else ""
                         val relPath = if (relPathCol >= 0) cursor.getString(relPathCol).orEmpty() else ""
                         val volName = if (volCol >= 0) cursor.getString(volCol).orEmpty() else ""
+                        val identityKey = MediaIdentity.key(volName, rawData, isVid, mediaId)
 
                         val filePath = when {
                             rawData.isNotBlank() -> rawData
@@ -444,8 +445,9 @@ class MediaRepository(private val context: Context) {
                             relPath.isNotBlank() -> "/storage/emulated/0/$relPath$displayName"
                             else -> ""
                         }
+                        if (!trashed && isMarkedMovedOrDeleted(identityKey, filePath)) continue
 
-                        val volumeForUri = if (volName.isNotBlank() && volName != "external_primary") volName else "external"
+                        val volumeForUri = if (volName.isNotBlank()) volName else "external"
                         val baseMediaUri = if (isVid) {
                             ContentUris.withAppendedId(MediaStore.Video.Media.getContentUri(volumeForUri), mediaId)
                         } else {
@@ -474,14 +476,14 @@ class MediaRepository(private val context: Context) {
                             val seenAt = verifiedPathsCache[filePath]
                             if (seenAt == null || now - seenAt > 300_000L) {
                                 if (!File(filePath).exists()) {
-                                    inMemoryCache.remove(mediaId)
+                                    inMemoryCache.remove(identityKey)
                                     continue
                                 }
                                 verifiedPathsCache[filePath] = now
                             }
                         }
 
-                        val existing = inMemoryCache[mediaId]
+                        val existing = inMemoryCache[identityKey]
                         if (!trashed && existing != null &&
                             existing.name == displayName &&
                             existing.path == filePath &&
@@ -511,18 +513,10 @@ class MediaRepository(private val context: Context) {
                                 }.getOrDefault(false)
                             }
                             if (!exists) {
-                                inMemoryCache.remove(mediaId)
-                                recentMovedOrDeletedIds[mediaId] = now
+                                inMemoryCache.remove(identityKey)
                                 recentMovedOrDeletedPaths[filePath] = now
                                 android.media.MediaScannerConnection.scanFile(context, arrayOf(filePath), null, null)
                                 runCatching { context.contentResolver.delete(mediaUri, null, null) }
-                                runCatching {
-                                    context.contentResolver.delete(
-                                        MediaStore.Files.getContentUri("external"),
-                                        "${MediaStore.MediaColumns._ID}=?",
-                                        arrayOf(mediaId.toString())
-                                    )
-                                }
                                 if (android.os.Build.VERSION.SDK_INT >= 29 && volName.isNotBlank() && volName != "external") {
                                     runCatching {
                                         context.contentResolver.delete(
@@ -569,7 +563,7 @@ class MediaRepository(private val context: Context) {
                         }
 
                         if (!isVid && takenTime == cursorDateTaken && (cursorDateTaken <= 0L || isSyntheticDateTaken)) {
-                            val storedExif = ExifDateStore.get(mediaId)
+                            val storedExif = ExifDateStore.get(identityKey)
                             if (storedExif != null) takenTime = storedExif
                         }
 
@@ -603,16 +597,17 @@ class MediaRepository(private val context: Context) {
                             title = itemTitle,
                             dateModified = effectiveModified,
                             dateAdded = cursorDateAdded,
+                            volumeName = volName.ifBlank { volumeNameFromPath(filePath) },
                         )
                         if (!trashed) {
-                            inMemoryCache[mediaId] = newImage
+                            inMemoryCache[newImage.stableKey] = newImage
                         }
                         add(newImage)
                     }
                 }
             }
         }
-        val sorted = result.distinctBy { it.id }.sortedWith(
+        val sorted = result.distinctBy { it.stableKey }.sortedWith(
             compareByDescending<MediaImage> { it.sortDate }
                 .thenByDescending { it.dateModified }
                 .thenByDescending { it.dateAdded }
@@ -620,8 +615,8 @@ class MediaRepository(private val context: Context) {
         )
         if (!trashed) {
             verifyCachedRows = false
-            val validIds = sorted.mapTo(HashSet(sorted.size)) { it.id }
-            inMemoryCache.keys.retainAll(validIds)
+            val validKeys = sorted.mapTo(HashSet(sorted.size)) { it.stableKey }
+            inMemoryCache.keys.retainAll(validKeys)
             saveSnapshot(sorted)
         }
         sorted
@@ -643,15 +638,15 @@ class MediaRepository(private val context: Context) {
         if (!ExifDateStore.enabled) return@withContext 0
         val candidates = images.filter {
             !it.isVideo && it.id > 0L && it.path.isNotBlank() &&
-                !ExifDateStore.isChecked(it.id) && looksSyntheticDate(it)
+                !ExifDateStore.isChecked(it.stableKey) && looksSyntheticDate(it)
         }
         if (candidates.isEmpty()) return@withContext 0
-        val updates = HashMap<Long, Long>()
+        val updates = HashMap<String, Long>()
         for ((index, img) in candidates.withIndex()) {
             val exif = runCatching { extractExifDateTaken(context, img.uri, img.path) }.getOrNull()
-            ExifDateStore.put(img.id, exif ?: 0L)
+            ExifDateStore.put(img.stableKey, exif ?: 0L)
             if (exif != null && exif > 0L && Math.abs(exif - img.dateTaken) > 1_000L) {
-                updates[img.id] = exif
+                updates[img.stableKey] = exif
             }
             if (index % 100 == 99) ExifDateStore.save()
             kotlinx.coroutines.yield()
@@ -661,9 +656,9 @@ class MediaRepository(private val context: Context) {
         updates.size
     }
 
-    fun applyExifDates(updates: Map<Long, Long>) {
-        for ((id, millis) in updates) {
-            inMemoryCache.computeIfPresent(id) { _, old -> old.copy(dateTaken = millis) }
+    fun applyExifDates(updates: Map<String, Long>) {
+        for ((stableKey, millis) in updates) {
+            inMemoryCache.computeIfPresent(stableKey) { _, old -> old.copy(dateTaken = millis) }
         }
     }
 
@@ -680,10 +675,14 @@ class MediaRepository(private val context: Context) {
 
         val canonicalUri = if (item.uri.authority == "media") {
             item.uri.buildUpon().clearQuery().build()
-        } else if (item.isVideo) {
-            ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, item.id)
         } else {
-            ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, item.id)
+            val volume = if (Build.VERSION.SDK_INT >= 29) item.volumeName.ifBlank { volumeNameFromPath(item.path) } else "external"
+            val collection = if (item.isVideo) {
+                if (Build.VERSION.SDK_INT >= 29) MediaStore.Video.Media.getContentUri(volume) else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            } else {
+                if (Build.VERSION.SDK_INT >= 29) MediaStore.Images.Media.getContentUri(volume) else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            }
+            ContentUris.withAppendedId(collection, item.id)
         }
 
         var updatedInMediaStore = false
@@ -718,7 +717,10 @@ class MediaRepository(private val context: Context) {
                         val relPath = if (relCol >= 0) cursor.getString(relCol) else null
                         val resolvedPath = when {
                             !rawData.isNullOrBlank() -> rawData
-                            !relPath.isNullOrBlank() && !resolvedName.isNullOrBlank() -> "/storage/emulated/0/$relPath$resolvedName"
+                            !relPath.isNullOrBlank() && !resolvedName.isNullOrBlank() -> {
+                                val root = if (item.volumeName == "external_primary") "/storage/emulated/0/" else "/storage/${item.volumeName}/"
+                                root + relPath + resolvedName
+                            }
                             else -> null
                         }
                         Pair(resolvedName, resolvedPath)
@@ -738,7 +740,7 @@ class MediaRepository(private val context: Context) {
             android.media.MediaScannerConnection.scanFile(context, arrayOf(renamedPath), null, null)
 
             val updatedItem = item.copy(name = resolvedFinalName, path = renamedPath)
-            inMemoryCache[item.id] = updatedItem
+            inMemoryCache[updatedItem.stableKey] = updatedItem
             return@withContext updatedItem
         }
 
@@ -780,7 +782,7 @@ class MediaRepository(private val context: Context) {
                     null
                 )
                 val updatedItem = item.copy(name = resolvedFinalName, path = renamedPath)
-                inMemoryCache[item.id] = updatedItem
+                inMemoryCache[updatedItem.stableKey] = updatedItem
                 return@withContext updatedItem
             }
         }
@@ -788,22 +790,24 @@ class MediaRepository(private val context: Context) {
         null
     }
 
-    private fun saveSnapshot(media: List<MediaImage>) {
+    private fun saveSnapshot(media: List<MediaImage>) = synchronized(snapshotLock) {
         var stream: java.io.FileOutputStream? = null
         runCatching {
             stream = snapshot.startWrite()
             val output = DataOutputStream(stream!!.buffered())
-            output.writeInt(3); output.writeInt(media.size)
+            output.writeInt(4); output.writeInt(media.size)
             media.forEach { item ->
-                output.writeLong(item.id); output.writeBoolean(item.isVideo); output.writeUTF(item.name.take(8_000))
+                output.writeLong(item.id); output.writeBoolean(item.isVideo)
+                output.writeUTF(item.volumeName.ifBlank { volumeNameFromPath(item.path) }.take(256))
+                output.writeUTF(item.path.take(16_000)); output.writeUTF(item.name.take(8_000))
                 output.writeLong(item.dateTaken); output.writeInt(item.width); output.writeInt(item.height)
-                output.writeUTF(item.path.take(16_000)); output.writeLong(item.bucketId); output.writeUTF(item.bucketName.take(8_000))
+                output.writeLong(item.bucketId); output.writeUTF(item.bucketName.take(8_000))
                 output.writeLong(item.durationMs); output.writeUTF(item.mimeType.take(1_000)); output.writeLong(item.sizeBytes)
                 output.writeInt(item.orientation); output.writeUTF(item.title.take(8_000))
                 output.writeLong(item.dateModified); output.writeLong(item.dateAdded)
             }
             output.flush()
             snapshot.finishWrite(stream)
-        }.onFailure { snapshot.failWrite(stream) }
+        }.onFailure { stream?.let { snapshot.failWrite(it) } }
     }
 }

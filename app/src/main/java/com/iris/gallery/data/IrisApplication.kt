@@ -22,6 +22,7 @@ import coil3.decode.StaticImageDecoder
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import com.iris.gallery.decoder.AvifCoilDecoder
+import com.iris.gallery.data.EditorOverwriteRecovery
 
 class IrisApplication : Application(), SingletonImageLoader.Factory {
     companion object {
@@ -144,6 +145,9 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         instance = this
         installDiagnostics()
+        Thread {
+            runCatching { EditorOverwriteRecovery.recover(this) }
+        }.apply { name = "ax-editor-recovery"; isDaemon = true }.start()
         // Open the preference files on a background thread so the main thread finds them already cached.
         Thread {
             runCatching {

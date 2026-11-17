@@ -19,6 +19,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.security.MessageDigest
 import kotlin.math.abs
 
 data class TrashMoveResult(
@@ -47,6 +48,8 @@ data class TrashItem(
     val description: String = "",
     val dateModified: Long = 0L,
     val dateAdded: Long = 0L,
+    val originalVolumeName: String = "external_primary",
+    val originalMediaId: Long = 0L,
 )
 
 /** File helpers for the trash, free of Android types so they can be unit-tested on the JVM. */
@@ -70,20 +73,95 @@ internal object TrashFiles {
      * Refuses to touch a [dst] that already exists, and removes only a partial copy it created itself.
      */
     fun copyVerified(src: File, dst: File): Boolean {
-        if (dst.exists() || !src.isFile) return false
+        if (!src.isFile || !copyStreamVerified(src.inputStream(), dst, src.length())) return false
+        if (looksIdentical(src, dst, expectedModifiedMs = 0L)) return true
+        runCatching { dst.delete() }
+        return false
+    }
+
+    /** Compares a provider stream with a local file without buffering the full payload in memory. */
+    fun streamMatchesFile(input: java.io.InputStream?, expected: File): Boolean {
+        if (input == null || !expected.isFile) { runCatching { input?.close() }; return false }
+        return runCatching {
+            val digest = MessageDigest.getInstance("SHA-256")
+            var count = 0L
+            input.use { stream ->
+                val buffer = ByteArray(64 * 1024)
+                while (true) {
+                    val read = stream.read(buffer)
+                    if (read < 0) break
+                    digest.update(buffer, 0, read)
+                    count += read
+                }
+            }
+            count == expected.length() && MessageDigest.isEqual(digest.digest(), sha256(expected))
+        }.getOrDefault(false)
+    }
+
+    /** Stream to a sibling .part file, verify its byte count, sync it, then atomically publish it. */
+    fun copyStreamVerified(input: java.io.InputStream?, dst: File, expectedSize: Long): Boolean {
+        if (input == null || dst.exists()) { runCatching { input?.close() }; return false }
+        val part = File(dst.parentFile, dst.name + ".part")
         return try {
-            src.copyTo(dst, overwrite = false)
-            if (dst.length() == src.length()) true else { dst.delete(); false }
-        } catch (e: Exception) {
-            runCatching { dst.delete() }
+            dst.parentFile?.mkdirs()
+            val sourceDigest = MessageDigest.getInstance("SHA-256")
+            val written = input.use { src ->
+                FileOutputStream(part).use { out ->
+                    val buffer = ByteArray(64 * 1024)
+                    var total = 0L
+                    while (true) {
+                        val count = src.read(buffer)
+                        if (count < 0) break
+                        sourceDigest.update(buffer, 0, count)
+                        out.write(buffer, 0, count)
+                        total += count
+                    }
+                    out.flush()
+                    out.fd.sync()
+                    total
+                }
+            }
+            val verified = written > 0L && part.length() == written &&
+                (expectedSize <= 0L || written == expectedSize) &&
+                MessageDigest.isEqual(sourceDigest.digest(), sha256(part))
+            verified && !dst.exists() && part.renameTo(dst)
+        } catch (_: Exception) {
             false
+        } finally {
+            runCatching { part.delete() }
         }
     }
 
-    /** True when [dst] already holds what [src] would restore: same length and (nearly) the same modified time. */
+    /** A backup may be discarded only when the original path contains the exact same bytes. */
+    fun canDiscardBackup(originalPath: String, backup: File): Boolean {
+        if (originalPath.isBlank()) return false
+        val original = runCatching { File(originalPath) }.getOrNull() ?: return false
+        return looksIdentical(backup, original, expectedModifiedMs = 0L)
+    }
+
+    fun <T> deleteIndependently(items: List<T>, delete: (T) -> Boolean): List<Pair<T, Boolean>> =
+        items.map { item -> item to runCatching { delete(item) }.getOrDefault(false) }
+
+    private fun sha256(file: File): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) { val count = input.read(buffer); if (count < 0) break; digest.update(buffer, 0, count) }
+        }
+        return digest.digest()
+    }
+
+    /** Same-length files are not assumed identical: compare their SHA-256 content digests. */
     fun looksIdentical(src: File, dst: File, expectedModifiedMs: Long): Boolean =
-        dst.isFile && dst.length() == src.length() &&
-            (expectedModifiedMs <= 0L || abs(dst.lastModified() - expectedModifiedMs) < 2000L)
+        src.isFile && dst.isFile && src.length() > 0L && src.length() == dst.length() &&
+            (expectedModifiedMs <= 0L || abs(dst.lastModified() - expectedModifiedMs) < 2000L) &&
+            runCatching { MessageDigest.isEqual(sha256(src), sha256(dst)) }.getOrDefault(false)
+}
+
+private fun volumeNameFromOriginalPath(path: String): String = when {
+    path.startsWith("/storage/emulated/0/") -> "external_primary"
+    path.startsWith("/storage/") -> path.removePrefix("/storage/").substringBefore('/').takeIf { it.isNotBlank() } ?: "external_primary"
+    else -> "external_primary"
 }
 
 class TrashRepository(private val context: Context) {
@@ -112,7 +190,10 @@ class TrashRepository(private val context: Context) {
     private val indexLock = Any()
 
     init {
-        initScope.launch { loadTrashItems() }
+        initScope.launch {
+            trashDir.listFiles { file -> file.name.endsWith(".part") }?.forEach { runCatching { it.delete() } }
+            loadTrashItems()
+        }
     }
 
     fun hasAllFilesAccess(): Boolean {
@@ -126,21 +207,12 @@ class TrashRepository(private val context: Context) {
     fun autoPurgeOldItems(): Int = synchronized(indexLock) {
         val items = runCatching { readIndex().toMutableList() }.getOrNull() ?: return@synchronized 0
         val now = System.currentTimeMillis()
-        var purgedCount = 0
-        val iterator = items.iterator()
-        while (iterator.hasNext()) {
-            val item = iterator.next()
-            if (now - item.dateTrashed > TRASH_RETENTION_MS) {
-                val file = File(trashDir, item.trashFileName)
-                runCatching { file.delete() }
-                iterator.remove()
-                purgedCount++
-            }
-        }
-        if (purgedCount > 0) {
-            writeIndex(items)
-        }
-        purgedCount
+        val expired = items.filter { now - it.dateTrashed > TRASH_RETENTION_MS }
+        if (expired.isEmpty()) return@synchronized 0
+        val retained = items - expired.toSet()
+        if (!writeIndex(retained)) return@synchronized 0
+        expired.forEach { item -> runCatching { File(trashDir, item.trashFileName).delete() } }
+        expired.size
     }
 
     fun loadTrashItems(): List<MediaImage> = synchronized(indexLock) {
@@ -170,6 +242,7 @@ class TrashRepository(private val context: Context) {
                     description = item.description,
                     dateModified = item.dateModified,
                     dateAdded = item.dateAdded,
+                    volumeName = item.originalVolumeName,
                 )
             } else {
                 null
@@ -180,66 +253,15 @@ class TrashRepository(private val context: Context) {
     }
 
     fun deleteFromStorage(item: MediaImage): Boolean {
-        var deleted = false
-        if (item.path.isNotBlank()) {
-            val file = File(item.path)
-            if (file.exists()) {
-                val fDel = runCatching { file.delete() }.getOrDefault(false)
-                val cDel = if (!fDel && file.exists()) runCatching { file.canonicalFile.delete() }.getOrDefault(false) else false
-                deleted = fDel || cDel
-            }
-        }
-        val mediaStoreUri = if (item.id > 0) {
-            if (item.isVideo) ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, item.id)
-            else ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, item.id)
-        } else {
-            item.uri
-        }
-        val contentDeleted = runCatching {
-            context.contentResolver.delete(mediaStoreUri, null, null) > 0
+        val pathFile = item.path.takeIf { it.isNotBlank() }?.let(::File)
+        var fileDeleted = false
+        if (pathFile?.isFile == true) fileDeleted = runCatching { pathFile.delete() }.getOrDefault(false)
+        // The MediaImage URI is already volume-specific. Do not issue a second ID-only delete on
+        // the synthetic external collection, where an SD-card row can share the same numeric ID.
+        val rowDeleted = runCatching {
+            context.contentResolver.delete(item.uri.buildUpon().clearQuery().build(), null, null) > 0
         }.getOrDefault(false)
-        deleted = deleted || contentDeleted
-
-        if (item.id > 0) {
-            val table = if (item.isVideo) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            val idDeleted = runCatching {
-                context.contentResolver.delete(table, "${MediaStore.MediaColumns._ID}=?", arrayOf(item.id.toString())) > 0
-            }.getOrDefault(false)
-            deleted = deleted || idDeleted
-            runCatching {
-                context.contentResolver.delete(MediaStore.Files.getContentUri("external"), "${MediaStore.MediaColumns._ID}=?", arrayOf(item.id.toString()))
-            }
-            if (Build.VERSION.SDK_INT >= 29) {
-                runCatching {
-                    context.contentResolver.delete(MediaStore.Files.getContentUri("external_primary"), "${MediaStore.MediaColumns._ID}=?", arrayOf(item.id.toString()))
-                }
-            }
-        }
-
-        if (item.uri != mediaStoreUri) {
-            val genericDeleted = runCatching {
-                context.contentResolver.delete(item.uri, null, null) > 0
-            }.getOrDefault(false)
-            deleted = deleted || genericDeleted
-        }
-
-        if (item.path.isNotBlank()) {
-            val table = if (item.isVideo) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            val pathDeleted = runCatching {
-                context.contentResolver.delete(table, "${MediaStore.MediaColumns.DATA}=?", arrayOf(item.path)) > 0
-            }.getOrDefault(false)
-            deleted = deleted || pathDeleted
-            runCatching {
-                context.contentResolver.delete(MediaStore.Files.getContentUri("external"), "${MediaStore.MediaColumns.DATA}=?", arrayOf(item.path))
-            }
-            if (Build.VERSION.SDK_INT >= 29) {
-                runCatching {
-                    context.contentResolver.delete(MediaStore.Files.getContentUri("external_primary"), "${MediaStore.MediaColumns.DATA}=?", arrayOf(item.path))
-                }
-            }
-            MediaScannerConnection.scanFile(context, arrayOf(item.path), null, null)
-        }
-        return deleted
+        return (pathFile == null || !pathFile.exists()) && (fileDeleted || rowDeleted || item.path.isBlank())
     }
 
     suspend fun moveToTrash(mediaList: List<MediaImage>): TrashMoveResult = withContext(Dispatchers.IO) { synchronized(indexLock) {
@@ -249,7 +271,6 @@ class TrashRepository(private val context: Context) {
         val hasManagerAccess = hasAllFilesAccess()
 
         for (item in mediaList.distinctBy { it.id to it.uri }) {
-            if (item.path.isNotBlank()) RestoredDates.forget(context, item.path)
             val uniqueId = generateUniqueId(currentItems)
             val cleanName = sanitizeFileName(item.name.ifBlank { "media_${uniqueId}" })
             val trashFileName = "${uniqueId}_${cleanName}"
@@ -260,18 +281,16 @@ class TrashRepository(private val context: Context) {
 
             if (srcFile != null && srcFile.exists()) {
                 // A truncated copy followed by deleting the original would lose the photo: the copy must match in size.
-                targetFile.delete()
                 copied = TrashFiles.copyVerified(srcFile, targetFile)
             }
 
             if (!copied) {
                 copied = runCatching {
-                    context.contentResolver.openInputStream(item.uri)?.use { input ->
-                        FileOutputStream(targetFile).use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                    targetFile.exists() && targetFile.length() > 0
+                    TrashFiles.copyStreamVerified(
+                        context.contentResolver.openInputStream(item.uri),
+                        targetFile,
+                        expectedSourceSize(item)
+                    ) && TrashFiles.streamMatchesFile(context.contentResolver.openInputStream(item.uri), targetFile)
                 }.getOrDefault(false)
             }
 
@@ -305,6 +324,8 @@ class TrashRepository(private val context: Context) {
                     description = item.description,
                     dateModified = effectiveMod,
                     dateAdded = item.dateAdded,
+                    originalVolumeName = item.volumeName.ifBlank { "external_primary" },
+                    originalMediaId = item.id,
                 )
                 currentItems.add(trashItem)
                 val media = MediaImage(
@@ -326,6 +347,7 @@ class TrashRepository(private val context: Context) {
                     description = item.description,
                     dateModified = effectiveMod,
                     dateAdded = item.dateAdded,
+                    volumeName = item.volumeName,
                 )
                 trashedList.add(media)
                 originalList.add(item)
@@ -341,12 +363,12 @@ class TrashRepository(private val context: Context) {
 
         var silentSuccess = false
         if (hasManagerAccess && trashedList.isNotEmpty()) {
-            val allDeleted = originalList.all { item ->
-                deleteFromStorage(item)
+            // Evaluate every item independently. all() short-circuits and can leave later originals untouched.
+            val deleteResults = TrashFiles.deleteIndependently(originalList, ::deleteFromStorage)
+            deleteResults.filter { it.second }.forEach { (item, _) ->
+                if (item.path.isNotBlank()) RestoredDates.forget(context, item.path)
             }
-            if (allDeleted) {
-                silentSuccess = true
-            }
+            silentSuccess = deleteResults.all { it.second }
         }
 
         loadTrashItems()
@@ -354,25 +376,28 @@ class TrashRepository(private val context: Context) {
     } }
 
     suspend fun rollbackTrash(trashedItems: List<MediaImage>) = withContext(Dispatchers.IO) { synchronized(indexLock) {
-        val currentItems = readIndex().toMutableList()
-        val idsToRemove = trashedItems.map { abs(it.id) }.toSet()
-
-        currentItems.removeAll { item ->
-            if (item.id in idsToRemove) {
-                val file = File(trashDir, item.trashFileName)
-                runCatching { file.delete() }
-                true
-            } else {
-                false
+        val currentItems = runCatching { readIndex() }.getOrNull()?.toMutableList() ?: return@synchronized
+        val idsToRollback = trashedItems.map { abs(it.id) }.toSet()
+        val removable = currentItems.filter { item ->
+            if (item.id !in idsToRollback) false
+            else {
+                // A backup is disposable only when the original is positively present. If path access is
+                // unavailable or the original vanished during a partial system delete, preserve the backup.
+                TrashFiles.canDiscardBackup(item.originalPath, File(trashDir, item.trashFileName))
             }
         }
-        writeIndex(currentItems)
+        if (removable.isEmpty()) { loadTrashItems(); return@synchronized }
+        currentItems.removeAll(removable.toSet())
+        if (writeIndex(currentItems)) {
+            removable.forEach { item -> runCatching { File(trashDir, item.trashFileName).delete() } }
+        }
         loadTrashItems()
     } }
 
     suspend fun restoreFromTrash(mediaList: List<MediaImage>): List<MediaImage> = withContext(Dispatchers.IO) { synchronized(indexLock) {
         val currentItems = readIndex().toMutableList()
         val restoredList = mutableListOf<MediaImage>()
+        val restoredDateEntries = mutableListOf<Pair<String, Long>>()
         val idsToRemove = mediaList.map { abs(it.id) }.toSet()
 
         val itemsToRestore = currentItems.filter { it.id in idsToRemove }
@@ -387,12 +412,11 @@ class TrashRepository(private val context: Context) {
             if (restoredPath != null) {
                 // MediaStore stamps DATE_ADDED with "now" for the new row and the timeline's default mode keeps new files on
                 // top, so remember the original value and let the loader use it: the photo returns to where it was.
-                RestoredDates.record(context, restoredPath, item.dateAdded)
-                runCatching { trashFile.delete() }
+                restoredDateEntries.add(restoredPath to item.dateAdded)
                 currentItems.remove(item)
                 restoredList.add(
                     MediaImage(
-                        id = item.id,
+                        id = item.originalMediaId.takeIf { it > 0L } ?: -item.id,
                         uri = Uri.fromFile(trashFile),
                         name = item.originalName,
                         dateTaken = item.dateTaken,
@@ -410,48 +434,44 @@ class TrashRepository(private val context: Context) {
                         description = item.description,
                         dateModified = item.dateModified,
                         dateAdded = item.dateAdded,
+                        volumeName = item.originalVolumeName,
                     )
                 )
             }
         }
 
-        writeIndex(currentItems)
+        if (restoredList.isNotEmpty() && writeIndex(currentItems)) {
+            RestoredDates.recordAll(context, restoredDateEntries)
+            itemsToRestore.filter { it !in currentItems }.forEach { item ->
+                runCatching { File(trashDir, item.trashFileName).delete() }
+            }
+        }
         loadTrashItems()
         restoredList
     } }
 
     suspend fun deletePermanently(mediaList: List<MediaImage>) = withContext(Dispatchers.IO) { synchronized(indexLock) {
-        val currentItems = readIndex().toMutableList()
+        val currentItems = runCatching { readIndex() }.getOrNull()?.toMutableList() ?: return@synchronized
         val idsToRemove = mediaList.map { abs(it.id) }.toSet()
         val pathsToRemove = mediaList.map { it.path }.toSet()
         val fileNamesToRemove = mediaList.map { File(it.path).name }.toSet()
-        val hasManagerAccess = hasAllFilesAccess()
-
-        currentItems.removeAll { item ->
-            if (item.id in idsToRemove || item.originalPath in pathsToRemove || item.trashFileName in fileNamesToRemove) {
-                val trashFile = File(trashDir, item.trashFileName)
-                runCatching { trashFile.delete() }
-                true
-            } else {
-                false
-            }
+        val removed = currentItems.filter { item ->
+            item.id in idsToRemove || item.originalPath in pathsToRemove || item.trashFileName in fileNamesToRemove
         }
-        writeIndex(currentItems)
-
-        for (media in mediaList) {
-            deleteFromStorage(media)
+        currentItems.removeAll(removed.toSet())
+        if (writeIndex(currentItems)) {
+            removed.forEach { item -> runCatching { File(trashDir, item.trashFileName).delete() } }
         }
-
+        for (media in mediaList) deleteFromStorage(media)
         loadTrashItems()
     } }
 
     suspend fun emptyTrash() = withContext(Dispatchers.IO) { synchronized(indexLock) {
-        trashDir.listFiles()?.forEach { file ->
-            if (file.name != ".nomedia") {
-                runCatching { file.delete() }
+        if (writeIndex(emptyList())) {
+            trashDir.listFiles()?.forEach { file ->
+                if (file.name != ".nomedia") runCatching { file.delete() }
             }
         }
-        writeIndex(emptyList())
         loadTrashItems()
     } }
 
@@ -500,23 +520,28 @@ class TrashRepository(private val context: Context) {
                     put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
                     put(MediaStore.MediaColumns.IS_PENDING, 1)
                 }
+                val volume = item.originalVolumeName.ifBlank { "external_primary" }
                 val collection = if (item.isVideo) {
-                    MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+                    MediaStore.Video.Media.getContentUri(volume)
                 } else {
-                    MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+                    MediaStore.Images.Media.getContentUri(volume)
                 }
+                // If the prior attempt published the row but crashed before committing the index,
+                // reuse that exact row instead of inserting a duplicate.
+                val existingPath = findExistingIdenticalMediaStoreFile(collection, volume, item.originalName, relativePath, trashFile)
+                if (existingPath != null) return existingPath
                 val newUri = context.contentResolver.insert(collection, values) ?: return null
                 val written = try {
                     val output = context.contentResolver.openOutputStream(newUri)
-                    if (output == null) false else {
-                        output.use { out -> trashFile.inputStream().use { input -> input.copyTo(out) } }
-                        true
-                    }
-                } catch (e: Exception) {
+                    VaultFiles.copyFileToStream(trashFile, output)
+                } catch (_: Exception) {
                     false
                 }
-                if (!written) {
-                    // Do not leave an empty pending row behind, and keep the trash copy (the caller only deletes it on success).
+                val contentVerified = written && TrashFiles.streamMatchesFile(
+                    context.contentResolver.openInputStream(newUri), trashFile
+                )
+                if (!contentVerified) {
+                    // Do not leave an empty/corrupt pending row behind; keep the trash copy.
                     runCatching { context.contentResolver.delete(newUri, null, null) }
                     return null
                 }
@@ -525,12 +550,21 @@ class TrashRepository(private val context: Context) {
                 values.put(MediaStore.MediaColumns.DATE_MODIFIED, effectiveModSec)
                 values.put(MediaStore.MediaColumns.DATE_TAKEN, effectiveTakenMs)
                 values.put(MediaStore.MediaColumns.DATE_ADDED, effectiveAddedSec)
-                context.contentResolver.update(newUri, values, null, null)
+                val published = runCatching { context.contentResolver.update(newUri, values, null, null) > 0 }.getOrDefault(false)
+                if (!published) {
+                    runCatching { context.contentResolver.delete(newUri, null, null) }
+                    return null
+                }
                 runCatching {
                     context.contentResolver.query(newUri, arrayOf(MediaStore.MediaColumns.DATA), null, null, null)?.use {
                         if (it.moveToFirst()) it.getString(0) else null
                     }
-                }.getOrNull().orEmpty().ifBlank { File(Environment.getExternalStorageDirectory(), relativePath + item.originalName).absolutePath }
+                }.getOrNull().orEmpty().ifBlank {
+                    val volumeRoot = if (item.originalVolumeName == "external_primary") {
+                        Environment.getExternalStorageDirectory()
+                    } else File("/storage/${item.originalVolumeName}")
+                    File(volumeRoot, relativePath + item.originalName).absolutePath
+                }
             } else {
                 @Suppress("DEPRECATION")
                 val publicDir = if (item.originalPath.isNotBlank()) {
@@ -548,6 +582,40 @@ class TrashRepository(private val context: Context) {
             null
         }
     }
+
+
+    private fun findExistingIdenticalMediaStoreFile(
+        collection: Uri,
+        volumeName: String,
+        displayName: String,
+        relativePath: String,
+        expectedFile: File,
+    ): String? = runCatching {
+        context.contentResolver.query(
+            collection,
+            arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.SIZE),
+            "${MediaStore.MediaColumns.DISPLAY_NAME}=? AND ${MediaStore.MediaColumns.RELATIVE_PATH}=?",
+            arrayOf(displayName, relativePath),
+            null,
+        )?.use { cursor ->
+            val idCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+            val dataCol = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
+            val sizeCol = cursor.getColumnIndex(MediaStore.MediaColumns.SIZE)
+            while (cursor.moveToNext()) {
+                if (sizeCol >= 0 && cursor.getLong(sizeCol) != expectedFile.length()) continue
+                val rowId = cursor.getLong(idCol)
+                val rowUri = ContentUris.withAppendedId(collection, rowId)
+                if (TrashFiles.streamMatchesFile(context.contentResolver.openInputStream(rowUri), expectedFile)) {
+                    val dataPath = if (dataCol >= 0) cursor.getString(dataCol).orEmpty() else ""
+                    return@use dataPath.ifBlank {
+                        val root = if (volumeName == "external_primary") Environment.getExternalStorageDirectory() else File("/storage/$volumeName")
+                        File(root, relativePath + displayName).absolutePath
+                    }
+                }
+            }
+            null
+        }
+    }.getOrNull()
 
     /**
      * Copies the trashed file back without ever overwriting a different file, waits for the media scanner so the
@@ -599,26 +667,31 @@ class TrashRepository(private val context: Context) {
     private fun computeRelativePath(originalPath: String, isVideo: Boolean): String {
         val defaultDir = if (isVideo) Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_PICTURES
         if (originalPath.isNotBlank()) {
-            val parent = File(originalPath).parentFile?.absolutePath.orEmpty()
-            val emulatedPrefix = "/storage/emulated/0/"
-            if (parent.startsWith(emulatedPrefix)) {
-                val rel = parent.removePrefix(emulatedPrefix).trim('/')
-                if (rel.isNotBlank()) {
-                    val root = rel.substringBefore('/')
-                    val allowed = if (isVideo) {
-                        root.equals(Environment.DIRECTORY_DCIM, ignoreCase = true) ||
-                                root.equals(Environment.DIRECTORY_MOVIES, ignoreCase = true)
-                    } else {
-                        root.equals(Environment.DIRECTORY_DCIM, ignoreCase = true) ||
-                                root.equals(Environment.DIRECTORY_PICTURES, ignoreCase = true)
-                    }
-                    if (allowed) {
-                        return "$rel/"
-                    }
+            val normalized = originalPath.replace('\\', '/')
+            val rel = when {
+                normalized.startsWith("/storage/emulated/0/") -> normalized.removePrefix("/storage/emulated/0/").substringBeforeLast('/', "")
+                normalized.startsWith("/storage/") -> normalized.removePrefix("/storage/").substringAfter('/', "").substringBeforeLast('/', "")
+                else -> ""
+            }.trim('/')
+            if (rel.isNotBlank()) {
+                val root = rel.substringBefore('/')
+                val allowed = if (isVideo) {
+                    root.equals(Environment.DIRECTORY_DCIM, ignoreCase = true) || root.equals(Environment.DIRECTORY_MOVIES, ignoreCase = true)
+                } else {
+                    root.equals(Environment.DIRECTORY_DCIM, ignoreCase = true) || root.equals(Environment.DIRECTORY_PICTURES, ignoreCase = true)
                 }
+                if (allowed) return "$rel/"
             }
         }
         return "$defaultDir/Iris/"
+    }
+
+
+    private fun expectedSourceSize(item: MediaImage): Long {
+        if (item.sizeBytes > 0L) return item.sizeBytes
+        return runCatching {
+            context.contentResolver.openAssetFileDescriptor(item.uri, "r")?.use { it.length }
+        }.getOrNull()?.takeIf { it > 0L } ?: -1L
     }
 
     private fun generateUniqueId(existing: List<TrashItem>): Long {
@@ -636,8 +709,6 @@ class TrashRepository(private val context: Context) {
 
 
     private fun readIndex(): List<TrashItem> {
-        val file = indexFile.baseFile
-        if (!file.exists()) return emptyList()
         return try {
             val json = indexFile.openRead().bufferedReader().use { it.readText() }
             val array = JSONArray(json)
@@ -665,12 +736,16 @@ class TrashRepository(private val context: Context) {
                         description = obj.optString("description"),
                         dateModified = obj.optLong("dateModified"),
                         dateAdded = obj.optLong("dateAdded"),
+                        originalVolumeName = obj.optString("originalVolumeName").ifBlank { volumeNameFromOriginalPath(obj.optString("originalPath")) },
+                        originalMediaId = obj.optLong("originalMediaId"),
                     )
                 )
             }
             list
+        } catch (e: java.io.FileNotFoundException) {
+            emptyList()
         } catch (e: Exception) {
-            // Never pretend the index is empty: the caller would write that back and wipe the trash.
+            // Never pretend a corrupt index is empty: callers must not overwrite it and orphan the backups.
             throw IllegalStateException("trash index unreadable", e)
         }
     }
@@ -700,6 +775,8 @@ class TrashRepository(private val context: Context) {
                     put("description", item.description)
                     put("dateModified", item.dateModified)
                     put("dateAdded", item.dateAdded)
+                    put("originalVolumeName", item.originalVolumeName)
+                    put("originalMediaId", item.originalMediaId)
                 }
                 array.put(obj)
             }
@@ -708,7 +785,7 @@ class TrashRepository(private val context: Context) {
             indexFile.finishWrite(stream)
             true
         } catch (e: Exception) {
-            indexFile.failWrite(stream)
+            if (stream != null) indexFile.failWrite(stream)
             false
         }
     }

@@ -133,28 +133,35 @@ class IrisPhotoWidget : AppWidgetProvider() {
         Log.i("IrisWidget", "published widget $id with ${memories.size} memories")
     }
 
-    private data class Memory(val id: Long, val date: LocalDate)
+    private data class Memory(val id: Long, val date: LocalDate, val volumeName: String)
 
     private fun loadMemories(context: Context): List<Memory> {
         val today = LocalDate.now()
         val zone = ZoneId.systemDefault()
         val locked = context.getSharedPreferences("library_preferences", Context.MODE_PRIVATE)
             .getStringSet("locked", emptySet()).orEmpty().mapNotNullTo(hashSetOf(), String::toLongOrNull)
+        val volumes = if (Build.VERSION.SDK_INT >= 29) {
+            runCatching { MediaStore.getExternalVolumeNames(context).toList().takeIf { it.isNotEmpty() } ?: listOf("external_primary") }.getOrDefault(listOf("external_primary"))
+        } else listOf("external")
         return buildList {
-            context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_TAKEN, MediaStore.Images.Media.DATE_ADDED),
-                null, null, "${MediaStore.Images.Media.DATE_TAKEN} DESC")?.use { cursor ->
-                while (cursor.moveToNext() && size < 30) {
-                    val mediaId = cursor.getLong(0)
-                    if (mediaId in locked) continue
-                    val timestamp = cursor.getLong(1).takeIf { it > 0 } ?: cursor.getLong(2) * 1_000
-                    val date = Instant.ofEpochMilli(timestamp).atZone(zone).toLocalDate()
-                    if (date.year < today.year && date.month == today.month && date.dayOfMonth == today.dayOfMonth) {
-                        add(Memory(mediaId, date))
+            for (volume in volumes) {
+                val collection = if (Build.VERSION.SDK_INT >= 29) MediaStore.Images.Media.getContentUri(volume)
+                    else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                context.contentResolver.query(collection,
+                    arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_TAKEN, MediaStore.Images.Media.DATE_ADDED),
+                    null, null, "${MediaStore.Images.Media.DATE_TAKEN} DESC")?.use { cursor ->
+                    while (cursor.moveToNext() && size < 30) {
+                        val mediaId = cursor.getLong(0)
+                        if (mediaId in locked) continue
+                        val timestamp = cursor.getLong(1).takeIf { it > 0 } ?: cursor.getLong(2) * 1_000
+                        val date = Instant.ofEpochMilli(timestamp).atZone(zone).toLocalDate()
+                        if (date.year < today.year && date.month == today.month && date.dayOfMonth == today.dayOfMonth) {
+                            add(Memory(mediaId, date, volume))
+                        }
                     }
                 }
             }
-        }
+        }.distinctBy { "${it.volumeName}:${it.id}" }
     }
 
     /** Every non-locked photo in the library (used for the random fallback). */
@@ -162,24 +169,33 @@ class IrisPhotoWidget : AppWidgetProvider() {
         val zone = ZoneId.systemDefault()
         val locked = context.getSharedPreferences("library_preferences", Context.MODE_PRIVATE)
             .getStringSet("locked", emptySet()).orEmpty().mapNotNullTo(hashSetOf(), String::toLongOrNull)
+        val volumes = if (Build.VERSION.SDK_INT >= 29) {
+            runCatching { MediaStore.getExternalVolumeNames(context).toList().takeIf { it.isNotEmpty() } ?: listOf("external_primary") }.getOrDefault(listOf("external_primary"))
+        } else listOf("external")
         return buildList {
-            context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_TAKEN, MediaStore.Images.Media.DATE_ADDED),
-                null, null, null)?.use { cursor ->
-                while (cursor.moveToNext()) {
-                    val mediaId = cursor.getLong(0)
-                    if (mediaId in locked) continue
-                    val timestamp = cursor.getLong(1).takeIf { it > 0 } ?: cursor.getLong(2) * 1_000
-                    add(Memory(mediaId, Instant.ofEpochMilli(timestamp).atZone(zone).toLocalDate()))
+            for (volume in volumes) {
+                val collection = if (Build.VERSION.SDK_INT >= 29) MediaStore.Images.Media.getContentUri(volume)
+                    else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                context.contentResolver.query(collection,
+                    arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_TAKEN, MediaStore.Images.Media.DATE_ADDED),
+                    null, null, null)?.use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val mediaId = cursor.getLong(0)
+                        if (mediaId in locked) continue
+                        val timestamp = cursor.getLong(1).takeIf { it > 0 } ?: cursor.getLong(2) * 1_000
+                        add(Memory(mediaId, Instant.ofEpochMilli(timestamp).atZone(zone).toLocalDate(), volume))
+                    }
                 }
             }
-        }
+        }.distinctBy { "${it.volumeName}:${it.id}" }
     }
 
     private fun memoryCard(context: Context, memory: Memory, index: Int, ratio: Float): Bitmap {
         val outputWidth = 840
         val outputHeight = (outputWidth / ratio).toInt().coerceIn(420, 900)
-        val uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, memory.id)
+        val collection = if (Build.VERSION.SDK_INT >= 29) MediaStore.Images.Media.getContentUri(memory.volumeName)
+            else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val uri = ContentUris.withAppendedId(collection, memory.id)
         val source = runCatching { context.contentResolver.loadThumbnail(uri, Size(outputWidth, outputHeight), null) }.getOrNull()
             ?: return emptyCard(ratio)
         val output = Bitmap.createBitmap(outputWidth, outputHeight, Bitmap.Config.ARGB_8888)

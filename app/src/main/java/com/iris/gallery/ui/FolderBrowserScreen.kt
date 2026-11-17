@@ -354,7 +354,7 @@ fun FolderBrowserScreen(
                                 modifier = Modifier.padding(top = 16.dp, bottom = 4.dp, start = 4.dp)
                             )
                         }
-                        items(mediaFiles, key = { it.id }) { image ->
+                        items(mediaFiles, key = { it.stableKey }) { image ->
                             Card(
                                 shape = AxRound(cornerStyle.dp.dp),
                                 colors = CardDefaults.cardColors(
@@ -502,7 +502,7 @@ fun FolderBrowserScreen(
                                 modifier = Modifier.padding(top = 16.dp, bottom = 4.dp, start = 4.dp)
                             )
                         }
-                        items(mediaFiles, key = { it.id }) { image ->
+                        items(mediaFiles, key = { it.stableKey }) { image ->
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()

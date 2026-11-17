@@ -23,7 +23,7 @@ class DuplicateDetector(private val context: Context) {
     ): List<DuplicateGroup> = withContext(Dispatchers.IO) {
         val photos = media.filter { !it.isVideo && it.sizeBytes > 0 }
         val exactGroups = mutableListOf<DuplicateGroup>()
-        val exactIds = mutableSetOf<Long>()
+        val exactKeys = mutableSetOf<String>()
 
         // Hash only plausible exact candidates. This avoids reading every original.
         photos.groupBy { Triple(it.sizeBytes, it.width, it.height) }.values
@@ -34,11 +34,11 @@ class DuplicateDetector(private val context: Context) {
                     .filter { it.size > 1 }
                     .forEach { group ->
                         exactGroups += DuplicateGroup(group.sortedByDescending { it.dateTaken }, exact = true)
-                        exactIds += group.map { it.id }
+                        exactKeys += group.map { it.stableKey }
                     }
             }
 
-        val remaining = photos.filterNot { it.id in exactIds }
+        val remaining = photos.filterNot { it.stableKey in exactKeys }
         val fingerprints = ArrayList<Pair<MediaImage, Long>>(remaining.size)
         remaining.forEachIndexed { index, item ->
             coroutineContext.ensureActive()

@@ -3,6 +3,8 @@ package com.iris.gallery.data
 import com.iris.gallery.data.RestoredDatesCodec.Entry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class RestoredDatesCodecTest {
@@ -34,4 +36,15 @@ class RestoredDatesCodecTest {
         val many = (1..RestoredDatesCodec.MAX_ENTRIES + 50).map { Entry(it.toLong(), 1, "/p$it") }
         assertEquals(RestoredDatesCodec.MAX_ENTRIES, RestoredDatesCodec.prune(many, now = 1000).size)
     }
+    @Test fun pruneCapsLargeRestorationBatchesWithoutDroppingNewestEntries() {
+        val now = 10_000_000L
+        val entries = (0 until RestoredDatesCodec.MAX_ENTRIES + 25).map { index ->
+            RestoredDatesCodec.Entry(now + index, index.toLong() + 1L, "/photos/$index.jpg")
+        }
+        val result = RestoredDatesCodec.prune(entries, now)
+        assertEquals(RestoredDatesCodec.MAX_ENTRIES, result.size)
+        assertTrue(result.any { it.path == "/photos/${entries.lastIndex}.jpg" })
+        assertFalse(result.any { it.path == "/photos/0.jpg" })
+    }
+
 }

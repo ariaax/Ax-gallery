@@ -13,7 +13,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import com.iris.gallery.ui.MediaAlbum
 import java.io.File
-import java.io.FileOutputStream
 import java.util.Locale
 import kotlin.math.abs
 
@@ -47,12 +46,11 @@ class AlbumRepository(private val context: Context) {
             val parts = path.split('/')
             if (parts.size > 2) {
                 val candidate = parts[2]
-                if (candidate != "emulated" && candidate != "self") {
-                    return candidate
-                }
+                if (candidate == "emulated") return "external_primary"
+                if (candidate != "self") return candidate
             }
         }
-        return "external"
+        return "external_primary"
     }
 
     private fun isSameVolume(srcPath: String, targetPath: String): Boolean {
@@ -66,7 +64,7 @@ class AlbumRepository(private val context: Context) {
         if (item.uri.authority == "media") {
             return item.uri.buildUpon().clearQuery().build()
         }
-        val vol = if (Build.VERSION.SDK_INT >= 29) resolveVolumeName(item.path) else "external"
+        val vol = if (Build.VERSION.SDK_INT >= 29) item.volumeName.ifBlank { resolveVolumeName(item.path) } else "external"
         val baseTable = if (item.isVideo) {
             if (Build.VERSION.SDK_INT >= 29) MediaStore.Video.Media.getContentUri(vol)
             else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
@@ -248,23 +246,18 @@ class AlbumRepository(private val context: Context) {
                 val destFile = getUniqueDestinationFile(targetDir, item.name.ifBlank { "media_${System.currentTimeMillis()}" })
                 var copied = false
                 if (hasManager && srcFile != null && srcFile.exists()) {
-                    copied = runCatching {
-                        srcFile.copyTo(destFile, overwrite = true).exists() && destFile.length() > 0
-                    }.getOrDefault(false)
+                    copied = TrashFiles.copyVerified(srcFile, destFile)
                 }
                 if (!copied) {
                     copied = runCatching {
-                        context.contentResolver.openInputStream(item.uri)?.use { input ->
-                            FileOutputStream(destFile).use { output ->
-                                input.copyTo(output)
-                            }
-                        }
-                        destFile.exists() && destFile.length() > 0
+                        TrashFiles.copyStreamVerified(
+                            context.contentResolver.openInputStream(item.uri),
+                            destFile,
+                            expectedSourceSize(item, srcFile)
+                        ) && TrashFiles.streamMatchesFile(context.contentResolver.openInputStream(item.uri), destFile)
                     }.getOrDefault(false)
                 }
-                val srcLen = if (srcFile != null && srcFile.exists()) srcFile.length() else item.sizeBytes
-                val copyVerified = copied && destFile.exists() && destFile.length() > 0 &&
-                    (srcLen <= 0L || destFile.length() == srcLen)
+                val copyVerified = copied && destFile.isFile && destFile.length() > 0L
 
                 if (copyVerified) {
                     if (item.dateModified > 0) {
@@ -298,7 +291,8 @@ class AlbumRepository(private val context: Context) {
                     name = finalName,
                     uri = if (finalUri.authority == "media") finalUri else Uri.fromFile(File(finalPath)),
                     bucketId = targetBucketId,
-                    bucketName = targetAlbumName
+                    bucketName = targetAlbumName,
+                    volumeName = resolveVolumeName(targetDir.absolutePath),
                 )
                 moved.add(newMedia)
             } else {
@@ -369,19 +363,16 @@ class AlbumRepository(private val context: Context) {
 
             var done = false
             if (hasManager && srcFile != null && srcFile.exists()) {
-                done = runCatching {
-                    srcFile.copyTo(destFile, overwrite = false).exists() && destFile.length() > 0
-                }.getOrDefault(false)
+                done = TrashFiles.copyVerified(srcFile, destFile)
             }
 
             if (!done) {
                 val copyOk = runCatching {
-                    context.contentResolver.openInputStream(item.uri)?.use { input ->
-                        FileOutputStream(destFile).use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                    destFile.exists() && destFile.length() > 0
+                    TrashFiles.copyStreamVerified(
+                        context.contentResolver.openInputStream(item.uri),
+                        destFile,
+                        expectedSourceSize(item, srcFile)
+                    ) && TrashFiles.streamMatchesFile(context.contentResolver.openInputStream(item.uri), destFile)
                 }.getOrDefault(false)
                 if (copyOk) done = true
             }
@@ -402,7 +393,8 @@ class AlbumRepository(private val context: Context) {
                     name = destFile.name,
                     uri = Uri.fromFile(destFile),
                     bucketId = targetBucketId,
-                    bucketName = targetAlbumName
+                    bucketName = targetAlbumName,
+                    volumeName = resolveVolumeName(targetDir.absolutePath),
                 )
                 copied.add(newMedia)
             } else {
@@ -428,7 +420,8 @@ class AlbumRepository(private val context: Context) {
                 }
                 copiedItem.copy(
                     id = resolvedId,
-                    uri = ContentUris.withAppendedId(baseTable, resolvedId)
+                    uri = ContentUris.withAppendedId(baseTable, resolvedId),
+                    volumeName = vol,
                 )
             } else {
                 copiedItem
@@ -494,6 +487,15 @@ class AlbumRepository(private val context: Context) {
         }
         val mediaStoreUri = canonicalMediaUri(item)
         val rowDeleted = runCatching { context.contentResolver.delete(mediaStoreUri, null, null) > 0 }.getOrDefault(false)
-        return fileDeleted || rowDeleted
+        val pathGone = item.path.isBlank() || !File(item.path).exists()
+        return pathGone && (fileDeleted || rowDeleted || item.path.isBlank())
+    }
+
+    private fun expectedSourceSize(item: MediaImage, srcFile: File?): Long {
+        if (srcFile?.isFile == true && srcFile.length() > 0L) return srcFile.length()
+        if (item.sizeBytes > 0L) return item.sizeBytes
+        return runCatching {
+            context.contentResolver.openAssetFileDescriptor(item.uri, "r")?.use { it.length }
+        }.getOrNull()?.takeIf { it > 0L } ?: -1L
     }
 }

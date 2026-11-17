@@ -94,22 +94,22 @@ object DepthPhotoExtractor {
     // Base64 of a JPEG SOI: "/9j/" — quick sanity check on decoded depth data.
     private val B64_JPEG_SOI = "/9j/".toByteArray(Charsets.US_ASCII)
 
-    private val cache = LruCache<Long, DepthPhoto>(8)
+    private val cache = LruCache<String, DepthPhoto>(8)
 
     /**
      * Extract [DepthPhoto] for [image]. Returns null if the image has no GDepth data.
-     * Results are cached per [MediaImage.id].
+     * Results are cached per volume-aware [MediaImage.stableKey].
      */
     fun detectDepthPhoto(context: Context, image: MediaImage): DepthPhoto? {
-        cache.get(image.id)?.let { return it }
+        cache.get(image.stableKey)?.let { return it }
         val result = runCatching { extract(context, image) }.getOrNull()
-        if (result != null) cache.put(image.id, result)
+        if (result != null) cache.put(image.stableKey, result)
         return result
     }
 
-    /** Drop the cached entry for [imageId]. */
-    fun evict(imageId: Long) {
-        cache.remove(imageId)
+    /** Drop the cached entry for [stableKey]. */
+    fun evict(stableKey: String) {
+        cache.remove(stableKey)
     }
 
     /** Clear the whole cache. */

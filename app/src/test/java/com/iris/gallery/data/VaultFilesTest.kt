@@ -95,6 +95,12 @@ class VaultFilesTest {
         assertFalse(VaultFiles.looksIdentical(a, File(tmp.root, "missing")))
     }
 
+    @Test fun sameLengthDifferentContentIsNotIdentical() {
+        val a = tmp.newFile("same-a.bin").also { it.writeBytes(byteArrayOf(1, 2, 3, 4)) }
+        val b = tmp.newFile("same-b.bin").also { it.writeBytes(byteArrayOf(4, 3, 2, 1)) }
+        assertFalse(VaultFiles.looksIdentical(a, b))
+    }
+
     @Test fun interruptedTransferPartialsAreCleaned() {
         File(tmp.root, "1_a.jpg.part").writeText("x")
         File(tmp.root, "2_b.jpg").writeText("keep")

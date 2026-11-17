@@ -60,19 +60,19 @@ object MotionPhotoExtractor {
     // bytes); 64 KiB comfortably covers them even for large embedded videos.
     private const val TAIL_SCAN_SIZE = 64 * 1024
 
-    private val cache = LruCache<Long, MotionVideo>(64)
+    private val cache = LruCache<String, MotionVideo>(64)
 
     /** Cached extraction result, or null if [image] is not a motion photo. */
     fun detectMotionPhoto(context: Context, image: MediaImage): MotionVideo? {
-        cache.get(image.id)?.let { return it }
+        cache.get(image.stableKey)?.let { return it }
         val result = runCatching { extract(context, image) }.getOrNull() ?: return null
-        if (result != null) cache.put(image.id, result)
+        if (result != null) cache.put(image.stableKey, result)
         return result
     }
 
-    /** Drop the cached entry for [imageId] (e.g. when the item is deleted). */
-    fun evict(imageId: Long) {
-        cache.remove(imageId)
+    /** Drop the cached entry for [stableKey] (e.g. when the item is deleted). */
+    fun evict(stableKey: String) {
+        cache.remove(stableKey)
     }
 
     /** Clear the whole cache. */

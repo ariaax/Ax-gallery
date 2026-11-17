@@ -609,7 +609,7 @@ private fun buildFormatLists(images: List<MediaImage>): FormatLists {
     val gifs = images.filter { it.isGif }
     val panos = images.filter { it.isPanorama }
     val motion = images.filter { it.isMotionPhoto }
-    val special = (videos + raw + gifs + panos + motion).distinctBy { it.id }.sortedByDescending { it.sortDate }
+    val special = (videos + raw + gifs + panos + motion).distinctBy { it.stableKey }.sortedByDescending { it.sortDate }
     return FormatLists(videos, raw, gifs, panos, motion, special)
 }
 
@@ -666,9 +666,7 @@ private fun GalleryApp(
         pendingPermanentDeleteCallback = null
         if (result.resultCode == Activity.RESULT_OK) {
             if (pending != null) {
-                val delIds = pending.map { it.id }.toSet()
-                val delPaths = pending.map { it.path }.toSet()
-                viewModel.markMediaDeleted(delIds, delPaths)
+                viewModel.markMediaDeleted(pending)
                 trashFeedback = TrashFeedback(TrashFeedbackType.PERMANENTLY_DELETED, pending.size)
             }
             viewModel.refresh(showLoading = false)
@@ -785,9 +783,7 @@ private fun GalleryApp(
         pendingVaultMove = null
         if (result.resultCode == Activity.RESULT_OK) {
             if (pending != null) {
-                val delIds = pending.originalMedia.map { it.id }.toSet()
-                val delPaths = pending.originalMedia.map { it.path }.toSet()
-                viewModel.markMediaDeleted(delIds, delPaths)
+                viewModel.markMediaDeleted(pending.originalMedia)
             }
             viewModel.refresh(showLoading = false)
             val count = pending?.vaultedMedia?.size ?: 0
@@ -811,9 +807,7 @@ private fun GalleryApp(
         pendingTrashCallback = null
         if (result.resultCode == Activity.RESULT_OK) {
             if (pending != null) {
-                val delIds = pending.originalMedia.map { it.id }.toSet()
-                val delPaths = pending.originalMedia.map { it.path }.toSet()
-                viewModel.markMediaDeleted(delIds, delPaths)
+                viewModel.markMediaDeleted(pending.originalMedia)
             }
             viewModel.refresh(showLoading = false)
             val count = pending?.trashedMedia?.size ?: 0
@@ -837,9 +831,7 @@ private fun GalleryApp(
         pendingSystemTrashMedia = null
         pendingSystemTrashCallback = null
         if (result.resultCode == Activity.RESULT_OK && items != null) {
-            val delIds = items.map { it.id }.toSet()
-            val delPaths = items.map { it.path }.toSet()
-            viewModel.markMediaDeleted(delIds, delPaths)
+            viewModel.markMediaDeleted(items)
             viewModel.refresh(showLoading = false)
             trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, items.size)
             cb?.invoke()
@@ -851,9 +843,7 @@ private fun GalleryApp(
         val items = pendingSystemRestoreMedia
         pendingSystemRestoreMedia = null
         if (result.resultCode == Activity.RESULT_OK && items != null) {
-            val ids = items.map { it.id }.toSet()
-            val paths = items.map { it.path }.toSet()
-            viewModel.restoreSystemTrash(ids, paths)
+            viewModel.restoreSystemTrash(items)
             trashFeedback = TrashFeedback(TrashFeedbackType.RESTORED, items.size)
             Toast.makeText(context, "${items.size} item(s) restored", Toast.LENGTH_SHORT).show()
         }
@@ -1079,9 +1069,7 @@ private fun GalleryApp(
                         val galleryLockedItems = mediaList.filter { it.id > 0 && !it.path.startsWith(context.filesDir.absolutePath) }
                         if (vaultItems.isNotEmpty()) {
                             coroutineScope.launch {
-                                val delIds = vaultItems.map { it.id }.toSet()
-                                val delPaths = vaultItems.map { it.path }.toSet()
-                                viewModel.markMediaDeleted(delIds, delPaths)
+                                viewModel.markMediaDeleted(vaultItems)
                                 viewModel.deletePermanentlyFromVault(vaultItems)
                                 viewModel.refresh(showLoading = false)
                                 Toast.makeText(context, "${vaultItems.size} item(s) permanently deleted", Toast.LENGTH_SHORT).show()
@@ -1098,9 +1086,7 @@ private fun GalleryApp(
                                 Toast.makeText(context, "Could not request deletion", Toast.LENGTH_LONG).show()
                             }
                             else runCatching {
-                                val delIds = galleryLockedItems.map { it.id }.toSet()
-                                val delPaths = galleryLockedItems.map { it.path }.toSet()
-                                viewModel.markMediaDeleted(delIds, delPaths)
+                                viewModel.markMediaDeleted(galleryLockedItems)
                                 galleryLockedItems.forEach { context.contentResolver.delete(canonicalMediaUri(it), null, null) }
                                 viewModel.refresh(showLoading = false)
                             }
@@ -1188,9 +1174,7 @@ private fun GalleryApp(
                                             val moveResult = viewModel.moveToTrash(media)
                                             if (moveResult.trashedMedia.isNotEmpty()) {
                                                 if (moveResult.silentSuccess) {
-                                                    val delIds = moveResult.originalMedia.map { it.id }.toSet()
-                                                    val delPaths = moveResult.originalMedia.map { it.path }.toSet()
-                                                    viewModel.markMediaDeleted(delIds, delPaths)
+                                                    viewModel.markMediaDeleted(moveResult.originalMedia)
                                                     viewModel.refresh(showLoading = false)
                                                     trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, moveResult.trashedMedia.size)
                                                     onConfirmed?.invoke()
@@ -1211,9 +1195,7 @@ private fun GalleryApp(
                                                             }.getOrDefault(false)
                                                         }
                                                         if (allDeleted) {
-                                                            val delIds = moveResult.originalMedia.map { it.id }.toSet()
-                                                            val delPaths = moveResult.originalMedia.map { it.path }.toSet()
-                                                            viewModel.markMediaDeleted(delIds, delPaths)
+                                                    viewModel.markMediaDeleted(moveResult.originalMedia)
                                                             viewModel.refresh(showLoading = false)
                                                             trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, moveResult.trashedMedia.size)
                                                             onConfirmed?.invoke()
@@ -1233,9 +1215,7 @@ private fun GalleryApp(
                                         val moveResult = viewModel.moveToTrash(media)
                                         if (moveResult.trashedMedia.isNotEmpty()) {
                                             if (moveResult.silentSuccess) {
-                                                val delIds = moveResult.originalMedia.map { it.id }.toSet()
-                                                val delPaths = moveResult.originalMedia.map { it.path }.toSet()
-                                                viewModel.markMediaDeleted(delIds, delPaths)
+                                                    viewModel.markMediaDeleted(moveResult.originalMedia)
                                                 viewModel.refresh(showLoading = false)
                                                 trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, moveResult.trashedMedia.size)
                                                 onConfirmed?.invoke()
@@ -1256,9 +1236,7 @@ private fun GalleryApp(
                                                         }.getOrDefault(false)
                                                     }
                                                     if (allDeleted) {
-                                                        val delIds = moveResult.originalMedia.map { it.id }.toSet()
-                                                        val delPaths = moveResult.originalMedia.map { it.path }.toSet()
-                                                        viewModel.markMediaDeleted(delIds, delPaths)
+                                                    viewModel.markMediaDeleted(moveResult.originalMedia)
                                                         viewModel.refresh(showLoading = false)
                                                         trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, moveResult.trashedMedia.size)
                                                         onConfirmed?.invoke()
@@ -1277,9 +1255,7 @@ private fun GalleryApp(
                                                     }.getOrDefault(false)
                                                 }
                                                 if (allDeleted) {
-                                                    val delIds = moveResult.originalMedia.map { it.id }.toSet()
-                                                    val delPaths = moveResult.originalMedia.map { it.path }.toSet()
-                                                    viewModel.markMediaDeleted(delIds, delPaths)
+                                                    viewModel.markMediaDeleted(moveResult.originalMedia)
                                                     viewModel.refresh(showLoading = false)
                                                     trashFeedback = TrashFeedback(TrashFeedbackType.MOVED_TO_TRASH, moveResult.trashedMedia.size)
                                                     onConfirmed?.invoke()
@@ -1330,9 +1306,7 @@ private fun GalleryApp(
                                 val externalItems = media.filter { it.id > 0 && !it.path.startsWith(context.filesDir.absolutePath) }
                                 coroutineScope.launch {
                                     if (internalItems.isNotEmpty()) {
-                                        val delIds = internalItems.map { it.id }.toSet()
-                                        val delPaths = internalItems.map { it.path }.toSet()
-                                        viewModel.markMediaDeleted(delIds, delPaths)
+                                        viewModel.markMediaDeleted(internalItems)
                                         viewModel.deletePermanently(internalItems)
                                         if (externalItems.isEmpty()) {
                                             trashFeedback = TrashFeedback(TrashFeedbackType.PERMANENTLY_DELETED, internalItems.size)
@@ -1357,9 +1331,7 @@ private fun GalleryApp(
                                                     }.getOrDefault(false)
                                                 }
                                                 if (allDeleted) {
-                                                    val delIds = externalItems.map { it.id }.toSet()
-                                                    val delPaths = externalItems.map { it.path }.toSet()
-                                                    viewModel.markMediaDeleted(delIds, delPaths)
+                                                    viewModel.markMediaDeleted(externalItems)
                                                     viewModel.deletePermanently(externalItems)
                                                     trashFeedback = TrashFeedback(TrashFeedbackType.PERMANENTLY_DELETED, externalItems.size)
                                                     onConfirmed?.invoke()
@@ -1370,9 +1342,7 @@ private fun GalleryApp(
                                                 }
                                             }
                                         } else {
-                                            val delIds = externalItems.map { it.id }.toSet()
-                                            val delPaths = externalItems.map { it.path }.toSet()
-                                            viewModel.markMediaDeleted(delIds, delPaths)
+                                                    viewModel.markMediaDeleted(externalItems)
                                             viewModel.deletePermanently(externalItems)
                                             trashFeedback = TrashFeedback(TrashFeedbackType.PERMANENTLY_DELETED, externalItems.size)
                                             onConfirmed?.invoke()
@@ -1509,7 +1479,7 @@ private fun GalleryApp(
                         initialOpenLatest = initialOpenLatest,
                         intentNonce = intentNonce,
                         onInvalidMedia = { ghost ->
-                            viewModel.markMediaDeleted(setOf(ghost.id), setOf(ghost.path))
+                            viewModel.markMediaDeleted(listOf(ghost))
                             viewModel.purgeGhostMedia(ghost)
                         },
                     )
@@ -1577,17 +1547,16 @@ private fun resolveVolumeName(path: String): String {
         val parts = path.split('/')
         if (parts.size > 2) {
             val candidate = parts[2]
-            if (candidate != "emulated" && candidate != "self") {
-                return candidate
-            }
+            if (candidate == "emulated") return "external_primary"
+            if (candidate != "self") return candidate
         }
     }
-    return "external"
+    return "external_primary"
 }
 
 private fun canonicalMediaUri(context: android.content.Context, item: MediaImage): Uri {
     if (item.id > 0) {
-        val vol = if (Build.VERSION.SDK_INT >= 29) resolveVolumeName(item.path) else "external"
+        val vol = if (Build.VERSION.SDK_INT >= 29) item.volumeName.ifBlank { resolveVolumeName(item.path) } else "external"
         val baseTable = if (item.isVideo) {
             if (Build.VERSION.SDK_INT >= 29) MediaStore.Video.Media.getContentUri(vol)
             else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
@@ -1602,7 +1571,7 @@ private fun canonicalMediaUri(context: android.content.Context, item: MediaImage
         return item.uri.buildUpon().clearQuery().build()
     }
     if (item.path.isNotBlank()) {
-        val vol = if (Build.VERSION.SDK_INT >= 29) resolveVolumeName(item.path) else "external"
+        val vol = if (Build.VERSION.SDK_INT >= 29) item.volumeName.ifBlank { resolveVolumeName(item.path) } else "external"
         val baseTable = if (item.isVideo) {
             if (Build.VERSION.SDK_INT >= 29) MediaStore.Video.Media.getContentUri(vol)
             else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
@@ -1632,7 +1601,7 @@ private fun canonicalMediaUri(context: android.content.Context, item: MediaImage
 
 private fun canonicalMediaUri(item: MediaImage): Uri {
     if (item.id > 0) {
-        val vol = if (Build.VERSION.SDK_INT >= 29) resolveVolumeName(item.path) else "external"
+        val vol = if (Build.VERSION.SDK_INT >= 29) item.volumeName.ifBlank { resolveVolumeName(item.path) } else "external"
         val baseTable = if (item.isVideo) {
             if (Build.VERSION.SDK_INT >= 29) MediaStore.Video.Media.getContentUri(vol)
             else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
@@ -2067,7 +2036,7 @@ private fun GalleryScaffold(
     }
     val currentVisibleTab = visibleTabs.getOrElse(tabPagerState.targetPage.coerceIn(0, visibleTabs.lastIndex)) { visibleTabs.first() }
     val destination = currentVisibleTab.destination
-    var selectedId by remember { mutableStateOf<Long?>(null) }
+    var selectedId by remember { mutableStateOf<String?>(null) }
     var externalMedia by remember { mutableStateOf<MediaImage?>(null) }
     var viewerImages by remember { mutableStateOf<List<MediaImage>?>(null) }
     var selectedAlbumId by remember { mutableStateOf<Long?>(null) }
@@ -2105,7 +2074,7 @@ private fun GalleryScaffold(
                         externalMedia = null
                     } else {
                         viewerImages = null
-                        selectedId = matched.id
+                        selectedId = matched.stableKey
                         externalMedia = null
                     }
                 } else {
@@ -2121,7 +2090,7 @@ private fun GalleryScaffold(
             } else if (initialOpenLatest && images.isNotEmpty()) {
                 initialUriHandled = true
                 viewerImages = null
-                selectedId = images.first().id
+                selectedId = images.first().stableKey
                 externalMedia = null
             }
         }
@@ -2141,7 +2110,7 @@ private fun GalleryScaffold(
     var confirmEmptyTrash by remember { mutableStateOf(false) }
     var showExcludedFoldersDialog by remember { mutableStateOf(false) }
     var pendingRestoreAlbum by remember { mutableStateOf<MediaAlbum?>(null) }
-    var selectedIds by remember { mutableStateOf(emptySet<Long>()) }
+    var selectedIds by remember { mutableStateOf(emptySet<String>()) }
     var selectionMenuExpanded by remember { mutableStateOf(false) }
     val photoGridState = rememberLazyGridState()
     val albumGridState = rememberLazyGridState()
@@ -2254,20 +2223,20 @@ private fun GalleryScaffold(
         }
     }
     val axHapticCtx = androidx.compose.ui.platform.LocalContext.current
-    fun toggleSelection(id: Long) {
+    fun toggleSelection(stableKey: String) {
         com.iris.gallery.ui.AxHaptics.tick(axHapticCtx)
-        selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
+        selectedIds = if (stableKey in selectedIds) selectedIds - stableKey else selectedIds + stableKey
     }
-    fun setSelection(id: Long, selected: Boolean) {
+    fun setSelection(stableKey: String, selected: Boolean) {
         com.iris.gallery.ui.AxHaptics.tick(axHapticCtx)
-        selectedIds = if (selected) selectedIds + id else selectedIds - id
+        selectedIds = if (selected) selectedIds + stableKey else selectedIds - stableKey
     }
-    fun setDateSelection(ids: List<Long>, selected: Boolean) {
-        selectedIds = if (selected) selectedIds + ids else selectedIds - ids.toSet()
+    fun setDateSelection(keys: List<String>, selected: Boolean) {
+        selectedIds = if (selected) selectedIds + keys else selectedIds - keys.toSet()
     }
     fun clearSelection() { selectedIds = emptySet() }
     fun shareSelection() {
-        val selected = activeMedia.filter { it.id in selectedIds }
+        val selected = activeMedia.filter { it.stableKey in selectedIds }
         if (selected.isEmpty()) return
         tabScope.launch {
             val uris = prepareShareUris(context, selected, settings.secureSharingMode)
@@ -2490,18 +2459,18 @@ private fun GalleryScaffold(
                 actions = { com.iris.gallery.ui.AxBarActions {
                     if (selectedIds.isNotEmpty()) {
                         if (destination == 3 && librarySection == "trash") {
-                            AxBarButton(onClick = { val selected = activeMedia.filter { it.id in selectedIds }; clearSelection(); handleRestore(selected) }) {
+                            AxBarButton(onClick = { val selected = activeMedia.filter { it.stableKey in selectedIds }; clearSelection(); handleRestore(selected) }) {
                                 Icon(AxIcons.Restore, stringResource(R.string.action_restore))
                             }
                         }
                         if (destination == 3 && librarySection == "locked") {
-                            AxBarButton(onClick = { val selected = activeMedia.filter { it.id in selectedIds }; clearSelection(); onUnlockMedia(selected) }) {
+                            AxBarButton(onClick = { val selected = activeMedia.filter { it.stableKey in selectedIds }; clearSelection(); onUnlockMedia(selected) }) {
                                 Icon(AxIcons.LockOpen, stringResource(R.string.action_remove_from_locked))
                             }
                         }
                         AxBarButton(onClick = ::shareSelection) { Icon(AxIcons.Share, stringResource(R.string.action_share)) }
                         AxBarButton(onClick = {
-                            val selected = activeMedia.filter { it.id in selectedIds }
+                            val selected = activeMedia.filter { it.stableKey in selectedIds }
                             if (selected.isNotEmpty()) {
                                 if (destination == 3 && (librarySection == "trash" || librarySection == "locked")) {
                                     pendingDeleteItems = selected
@@ -2522,10 +2491,14 @@ private fun GalleryScaffold(
                             }
                             DropdownMenu(selectionMenuExpanded, onDismissRequest = { selectionMenuExpanded = false }) {
                                 DropdownMenuItem(text = { Text(stringResource(R.string.action_select_all)) }, leadingIcon = { Icon(AxIcons.SelectAll, null) },
-                                    onClick = { selectionMenuExpanded = false; selectedIds = activeMedia.mapTo(mutableSetOf()) { it.id } })
+                                    onClick = { selectionMenuExpanded = false; selectedIds = activeMedia.mapTo(mutableSetOf()) { it.stableKey } })
                                 if (destination == 1 && selectedAlbum != null && selectedIds.size == 1) {
                                     DropdownMenuItem(text = { Text(stringResource(R.string.action_set_album_cover)) }, leadingIcon = { Icon(AxIcons.Photos, null) },
-                                        onClick = { selectionMenuExpanded = false; onSetAlbumCover(selectedAlbum!!.id, selectedIds.first()); clearSelection() })
+                                        onClick = {
+                                            selectionMenuExpanded = false
+                                            activeMedia.firstOrNull { it.stableKey == selectedIds.first() }?.let { onSetAlbumCover(selectedAlbum!!.id, it.id) }
+                                            clearSelection()
+                                        })
                                 }
                                 if (!(destination == 3 && (librarySection == "trash" || librarySection == "locked"))) {
                                     DropdownMenuItem(
@@ -2533,7 +2506,7 @@ private fun GalleryScaffold(
                                         leadingIcon = { Icon(AxIcons.MoveTo, null) },
                                         onClick = {
                                             selectionMenuExpanded = false
-                                            val selected = activeMedia.filter { it.id in selectedIds }
+                                            val selected = activeMedia.filter { it.stableKey in selectedIds }
                                             pendingAlbumMedia = selected
                                             albumPickerAction = AlbumAction.MOVE
                                         }
@@ -2543,7 +2516,7 @@ private fun GalleryScaffold(
                                         leadingIcon = { Icon(AxIcons.Copy, null) },
                                         onClick = {
                                             selectionMenuExpanded = false
-                                            val selected = activeMedia.filter { it.id in selectedIds }
+                                            val selected = activeMedia.filter { it.stableKey in selectedIds }
                                             pendingAlbumMedia = selected
                                             albumPickerAction = AlbumAction.COPY
                                         }
@@ -2553,7 +2526,7 @@ private fun GalleryScaffold(
                                         leadingIcon = { Icon(AxIcons.TrashX, null, tint = MaterialTheme.colorScheme.error) },
                                         onClick = {
                                             selectionMenuExpanded = false
-                                            val selected = activeMedia.filter { it.id in selectedIds }
+                                            val selected = activeMedia.filter { it.stableKey in selectedIds }
                                             if (selected.isNotEmpty()) {
                                                 pendingPermanentDeleteItems = selected
                                             }
@@ -2564,7 +2537,7 @@ private fun GalleryScaffold(
                                     DropdownMenuItem(text = { Text(stringResource(R.string.action_remove_from_locked)) }, leadingIcon = { Icon(AxIcons.LockOpen, null) },
                                         onClick = {
                                             selectionMenuExpanded = false
-                                            val selected = activeMedia.filter { it.id in selectedIds }
+                                            val selected = activeMedia.filter { it.stableKey in selectedIds }
                                             clearSelection()
                                             onUnlockMedia(selected)
                                         })
@@ -2572,12 +2545,13 @@ private fun GalleryScaffold(
                                     DropdownMenuItem(text = { Text(stringResource(R.string.action_move_to_locked)) }, leadingIcon = { Icon(AxIcons.Lock, null) },
                                         onClick = {
                                             selectionMenuExpanded = false
-                                            val selected = activeMedia.filter { it.id in selectedIds }
+                                            val selected = activeMedia.filter { it.stableKey in selectedIds }
                                             clearSelection()
                                             onLockMedia(selected)
                                         })
                                 }
-                                 val allSelectedAreFavorites = selectedIds.isNotEmpty() && selectedIds.all { it in favorites }
+                                 val selectedItemsForFavorite = activeMedia.filter { it.stableKey in selectedIds }
+                                 val allSelectedAreFavorites = selectedItemsForFavorite.isNotEmpty() && selectedItemsForFavorite.all { it.id in favorites }
                                 DropdownMenuItem(
                                     text = {
                                         Text(
@@ -2597,7 +2571,7 @@ private fun GalleryScaffold(
                                     onClick = {
                                         selectionMenuExpanded = false
                                         val makeFavorite = !allSelectedAreFavorites
-                                        selectedIds.forEach { id -> if ((id in favorites) != makeFavorite) onToggleFavorite(id) }
+                                        selectedItemsForFavorite.distinctBy { it.id }.forEach { media -> if ((media.id in favorites) != makeFavorite) onToggleFavorite(media.id) }
                                         clearSelection()
                                     }
                                 )
@@ -2917,7 +2891,7 @@ private fun GalleryScaffold(
                     onSetSelection = if (onPick == null) ::setSelection else null,
                     onSetDateSelection = if (onPick == null) ::setDateSelection else null,
                     onInvalidMedia = onInvalidMedia,
-                  ) { if (selectedIds.isNotEmpty()) toggleSelection(it.id) else if (onPick != null) onPick(it) else { viewerImages = displayedPhotos; selectedId = it.id } }
+                  ) { if (selectedIds.isNotEmpty()) toggleSelection(it.stableKey) else if (onPick != null) onPick(it) else { viewerImages = displayedPhotos; selectedId = it.stableKey } }
                   else if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding, AxIcons.Search)
                   else EmptyState(stringResource(R.string.empty_photos), padding)
                   // drawn AFTER the grid: the grid now runs under it, so the row must be on top to get the touches
@@ -2988,7 +2962,7 @@ private fun GalleryScaffold(
                       onToggleSelection = if (onPick == null) ::toggleSelection else null,
                       onSetSelection = if (onPick == null) ::setSelection else null,
                       onSetDateSelection = if (onPick == null) ::setDateSelection else null,
-                    ) { if (selectedIds.isNotEmpty()) toggleSelection(it.id) else if (onPick != null) onPick(it) else { viewerImages = displayedAlbumPhotos; selectedId = it.id } }
+                    ) { if (selectedIds.isNotEmpty()) toggleSelection(it.stableKey) else if (onPick != null) onPick(it) else { viewerImages = displayedAlbumPhotos; selectedId = it.stableKey } }
                     else if (fileSearchQuery.isNotBlank()) EmptyState(stringResource(R.string.empty_search_files, fileSearchQuery), padding, AxIcons.Search)
                     else EmptyState(stringResource(R.string.empty_photos), padding)
                   } else AlbumsGrid(
@@ -3043,10 +3017,10 @@ private fun GalleryScaffold(
                             onToggleSelection = ::toggleSelection,
                             onSetSelection = ::setSelection,
                         ) {
-                            if (selectedIds.isNotEmpty()) toggleSelection(it.id)
+                            if (selectedIds.isNotEmpty()) toggleSelection(it.stableKey)
                             else {
                                 viewerImages = trashed
-                                selectedId = it.id
+                                selectedId = it.stableKey
                             }
                         }
                         "locked" -> if (!lockedAuthorized) {
@@ -3087,10 +3061,10 @@ private fun GalleryScaffold(
                                     onToggleSelection = ::toggleSelection,
                                     onSetSelection = ::setSelection,
                                 ) {
-                                    if (selectedIds.isNotEmpty()) toggleSelection(it.id)
+                                    if (selectedIds.isNotEmpty()) toggleSelection(it.stableKey)
                                     else {
                                         viewerImages = albumImages
-                                        selectedId = it.id
+                                        selectedId = it.stableKey
                                     }
                                 }
                             } else if (lockedAlbumList.size > 1) {
@@ -3186,10 +3160,10 @@ private fun GalleryScaffold(
                                             onToggleSelection = ::toggleSelection,
                                             onSetSelection = ::setSelection,
                                         ) {
-                                            if (selectedIds.isNotEmpty()) toggleSelection(it.id)
+                                            if (selectedIds.isNotEmpty()) toggleSelection(it.stableKey)
                                             else {
                                                 viewerImages = locked
-                                                selectedId = it.id
+                                                selectedId = it.stableKey
                                             }
                                         }
                                     }
@@ -3210,10 +3184,10 @@ private fun GalleryScaffold(
                                     onToggleSelection = ::toggleSelection,
                                     onSetSelection = ::setSelection,
                                 ) {
-                                    if (selectedIds.isNotEmpty()) toggleSelection(it.id)
+                                    if (selectedIds.isNotEmpty()) toggleSelection(it.stableKey)
                                     else {
                                         viewerImages = locked
-                                        selectedId = it.id
+                                        selectedId = it.stableKey
                                     }
                                 }
                             }
@@ -3293,8 +3267,8 @@ private fun GalleryScaffold(
                                     onToggleSelection = ::toggleSelection,
                                     onSetSelection = ::setSelection,
                                 ) {
-                                    if (selectedIds.isNotEmpty()) toggleSelection(it.id)
-                                    else { viewerImages = memories; selectedId = it.id }
+                                    if (selectedIds.isNotEmpty()) toggleSelection(it.stableKey)
+                                    else { viewerImages = memories; selectedId = it.stableKey }
                                 }
                             }
                         }
@@ -3394,9 +3368,9 @@ private fun GalleryScaffold(
                                             onToggleSelection = if (onPick == null) ::toggleSelection else null,
                                             onSetSelection = if (onPick == null) ::setSelection else null,
                                         ) {
-                                            if (selectedIds.isNotEmpty()) toggleSelection(it.id)
+                                            if (selectedIds.isNotEmpty()) toggleSelection(it.stableKey)
                                             else if (onPick != null) onPick(it)
-                                            else { viewerImages = currentFiltered; selectedId = it.id }
+                                            else { viewerImages = currentFiltered; selectedId = it.stableKey }
                                         }
                                     }
                                 }
@@ -3442,9 +3416,9 @@ private fun GalleryScaffold(
                                         onToggleSelection = if (onPick == null) ::toggleSelection else null,
                                         onSetSelection = if (onPick == null) ::setSelection else null,
                                     ) {
-                                        if (selectedIds.isNotEmpty()) toggleSelection(it.id)
+                                        if (selectedIds.isNotEmpty()) toggleSelection(it.stableKey)
                                         else if (onPick != null) onPick(it)
-                                        else { viewerImages = activeGroup.second; selectedId = it.id }
+                                        else { viewerImages = activeGroup.second; selectedId = it.stableKey }
                                     }
                                 }
                             }
@@ -3464,12 +3438,12 @@ private fun GalleryScaffold(
                         "trips" -> TripsScreen(
                             trips = remember(images) { com.iris.gallery.data.buildTrips(images) },
                             padding = padding,
-                            onOpen = { trip -> viewerImages = trip.items; selectedId = trip.items.first().id },
+                            onOpen = { trip -> viewerImages = trip.items; selectedId = trip.items.first().stableKey },
                         )
                         "cleanup" -> CleanupScreen(
                             groups = remember(images) { com.iris.gallery.data.buildCleanupGroups(images) },
                             padding = padding,
-                            onOpen = { group, media -> viewerImages = group.items; selectedId = media.id },
+                            onOpen = { group, media -> viewerImages = group.items; selectedId = media.stableKey },
                             onTrash = { pendingDeleteItems = it },
                         )
                         "duplicates" -> DuplicateReviewScreen(
@@ -3477,7 +3451,7 @@ private fun GalleryScaffold(
                             padding = padding,
                             onScan = onScanDuplicates,
                             onCancel = onCancelDuplicateScan,
-                            onOpen = { group, media -> viewerImages = group.items; selectedId = media.id },
+                            onOpen = { group, media -> viewerImages = group.items; selectedId = media.stableKey },
                             onTrash = { pendingDeleteItems = it },
                         )
                         "folder_view" -> FolderBrowserScreen(
@@ -3489,7 +3463,7 @@ private fun GalleryScaffold(
                             favorites = favorites,
                             onOpenMedia = { media, folderMediaList ->
                                 viewerImages = folderMediaList
-                                selectedId = media.id
+                                selectedId = media.stableKey
                             },
                             onBack = { librarySection = null }
                         )
@@ -3521,9 +3495,9 @@ private fun GalleryScaffold(
                                     onSetSelection = if (onPick == null) ::setSelection else null,
                                     onSetDateSelection = if (onPick == null) ::setDateSelection else null,
                                 ) {
-                                    if (selectedIds.isNotEmpty()) toggleSelection(it.id)
+                                    if (selectedIds.isNotEmpty()) toggleSelection(it.stableKey)
                                     else if (onPick != null) onPick(it)
-                                    else { viewerImages = videos; selectedId = it.id }
+                                    else { viewerImages = videos; selectedId = it.stableKey }
                                 }
                             }
                         }
@@ -3567,7 +3541,7 @@ private fun GalleryScaffold(
                     onSetDateSelection = if (onPick == null) ::setDateSelection else null,
                     onInvalidMedia = onInvalidMedia,
                 ) {
-                    if (selectedIds.isNotEmpty()) toggleSelection(it.id) else if (onPick != null) onPick(it) else { viewerImages = displayedFavoritePhotos; selectedId = it.id }
+                    if (selectedIds.isNotEmpty()) toggleSelection(it.stableKey) else if (onPick != null) onPick(it) else { viewerImages = displayedFavoritePhotos; selectedId = it.stableKey }
                 }
             }
           }
@@ -3977,7 +3951,7 @@ private fun GalleryScaffold(
 
     selectedId?.let { id ->
         val activeImages = viewerImages ?: images
-        val index = activeImages.indexOfFirst { it.id == id }
+        val index = activeImages.indexOfFirst { it.stableKey == id }
         val isViewingLocked = destination == 3 && librarySection == "locked"
         val isViewingTrash = destination == 3 && librarySection == "trash"
         if (index >= 0 && activeImages.isNotEmpty()) PhotoViewer(
@@ -4022,7 +3996,7 @@ private fun GalleryScaffold(
             onRename = { media, newName ->
                 onRenameMedia(media, newName) { updated ->
                     if (updated != null) {
-                        viewerImages = viewerImages?.map { if (it.id == media.id) updated else it }
+                        viewerImages = viewerImages?.map { if (it.stableKey == media.stableKey) updated else it }
                         Toast.makeText(context, context.getString(R.string.toast_rename_success, updated.name), Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(context, R.string.toast_rename_failed, Toast.LENGTH_SHORT).show()
@@ -4032,14 +4006,14 @@ private fun GalleryScaffold(
             onDelete = { media, deletePermanently ->
                 val onConfirmedAction = {
                     val activeList = viewerImages ?: images
-                    val currentIndex = activeList.indexOfFirst { it.id == media.id }
+                    val currentIndex = activeList.indexOfFirst { it.stableKey == media.stableKey }
                     val nextImage = if (activeList.size > 1 && currentIndex >= 0) {
                         if (currentIndex < activeList.size - 1) activeList[currentIndex + 1]
                         else activeList[currentIndex - 1]
                     } else null
 
-                    selectedId = nextImage?.id
-                    viewerImages = viewerImages?.filterNot { it.id == media.id }
+                    selectedId = nextImage?.stableKey
+                    viewerImages = viewerImages?.filterNot { it.stableKey == media.stableKey }
                 }
 
                 if (isViewingTrash || deletePermanently) {
@@ -4058,7 +4032,7 @@ private fun GalleryScaffold(
             onEditMetadata = { media, request ->
                 onEditMetadata(media, request) { updated ->
                     if (updated != null) {
-                        viewerImages = viewerImages?.map { if (it.id == media.id) updated else it }
+                        viewerImages = viewerImages?.map { if (it.stableKey == media.stableKey) updated else it }
                     }
                 }
             },
@@ -4228,7 +4202,7 @@ private fun DuplicateReviewScreen(
     onTrash: (List<MediaImage>) -> Unit,
 ) {
     var selectedIds by remember(state.groups) {
-        mutableStateOf(state.groups.flatMap { it.items.drop(1) }.mapTo(mutableSetOf()) { it.id }.toSet())
+        mutableStateOf(state.groups.flatMap { it.items.drop(1) }.mapTo(mutableSetOf()) { it.stableKey }.toSet())
     }
     val layoutDir = LocalLayoutDirection.current
     val startPadding = padding.calculateStartPadding(layoutDir)
@@ -4271,7 +4245,7 @@ private fun DuplicateReviewScreen(
         }
         if (state.groups.isNotEmpty()) {
             item {
-                val selected = state.groups.flatMap { it.items }.filter { it.id in selectedIds }
+                val selected = state.groups.flatMap { it.items }.filter { it.stableKey in selectedIds }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Column(Modifier.weight(1f)) {
@@ -4282,7 +4256,7 @@ private fun DuplicateReviewScreen(
                     Button(enabled = selected.isNotEmpty(), onClick = { onTrash(selected) }) { Text(stringResource(R.string.duplicates_review_delete)) }
                 }
             }
-            items(state.groups, key = { group -> group.items.joinToString { it.id.toString() } }) { group ->
+            items(state.groups, key = { group -> group.items.joinToString { it.stableKey } }) { group ->
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp),
@@ -4293,11 +4267,11 @@ private fun DuplicateReviewScreen(
                         }
                         LazyRow(contentPadding = PaddingValues(horizontal = 14.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(group.items, key = { it.id }) { media ->
-                                val selected = media.id in selectedIds
+                            items(group.items, key = { it.stableKey }) { media ->
+                                val selected = media.stableKey in selectedIds
                                 Box(Modifier.size(126.dp).clip(AxRound(16.dp))
                                     .clickable { selectedIds = selectedIds.toMutableSet().apply {
-                                        if (!add(media.id)) remove(media.id)
+                                        if (!add(media.stableKey)) remove(media.stableKey)
                                     } }) {
                                     MediaThumbnail(media, Modifier.fillMaxSize())
                                     Surface(Modifier.align(Alignment.TopEnd).padding(6.dp),
@@ -4370,12 +4344,12 @@ private fun PhotoGrid(
     gridSpacing: GridSpacing = GridSpacing.STANDARD,
     showVideoDuration: Boolean = true,
     showFormatBadge: Boolean = true,
-    selectedIds: Set<Long> = emptySet(),
+    selectedIds: Set<String> = emptySet(),
     favorites: Set<Long> = emptySet(),
     showFavoriteBadge: Boolean = true,
-    onToggleSelection: ((Long) -> Unit)? = null,
-    onSetSelection: ((Long, Boolean) -> Unit)? = null,
-    onSetDateSelection: ((List<Long>, Boolean) -> Unit)? = null,
+    onToggleSelection: ((String) -> Unit)? = null,
+    onSetSelection: ((String, Boolean) -> Unit)? = null,
+    onSetDateSelection: ((List<String>, Boolean) -> Unit)? = null,
     onInvalidMedia: ((MediaImage) -> Unit)? = null,
     onOpen: (MediaImage) -> Unit,
 ) {
@@ -4539,7 +4513,7 @@ private fun PhotoGrid(
     var scrubFraction by remember { mutableFloatStateOf(0f) }
     var scrubTargetIndex by remember(timelineItems) { mutableIntStateOf(0) }
     var scrubThumbIndex by remember(timelineItems) { mutableIntStateOf(0) }
-    var suppressReleaseClickId by remember { mutableStateOf<Long?>(null) }
+    var suppressReleaseClickId by remember { mutableStateOf<String?>(null) }
     val scrubberScope = rememberCoroutineScope()
 
     val scrollFraction by remember(totalRows, rowOffsets, totalContentHeight) {
@@ -4592,6 +4566,7 @@ private fun PhotoGrid(
     } }
     // drag-select ranges must follow the order the tiles are DRAWN in (grouped by day), which is not always the order of `images`
     val currentImages by rememberUpdatedState(remember(groups) { groups.flatMap { it.value } })
+    val currentImageKeys by rememberUpdatedState(remember(groups) { groups.flatMap { it.value }.mapTo(HashSet()) { it.stableKey } })
     val currentSelection by rememberUpdatedState(selectedIds)
     val currentSetSelection by rememberUpdatedState(onSetSelection)
     val currentCellSize by rememberUpdatedState(cellSize)
@@ -4646,12 +4621,12 @@ private fun PhotoGrid(
         LaunchedEffect(gridState, groups, targetThumbnailPx) {
             val flat = groups.flatMap { it.value }
             if (flat.isEmpty()) return@LaunchedEffect
-            val indexOfId = HashMap<Long, Int>(flat.size * 2).also { m -> flat.forEachIndexed { i, im -> m[im.id] = i } }
+            val indexOfKey = HashMap<String, Int>(flat.size * 2).also { m -> flat.forEachIndexed { i, im -> m[im.stableKey] = i } }
             var lastFirst = -1
             snapshotFlow {
                 val vis = gridState.layoutInfo.visibleItemsInfo
-                val ids = vis.mapNotNull { it.key as? Long }
-                if (ids.isEmpty()) null else (indexOfId[ids.first()] ?: -1) to (indexOfId[ids.last()] ?: -1)
+                val keys = vis.mapNotNull { it.key as? String }.filter { it in indexOfKey }
+                if (keys.isEmpty()) null else (indexOfKey[keys.first()] ?: -1) to (indexOfKey[keys.last()] ?: -1)
             }.collectLatest { range ->
                 if (range == null || range.first < 0 || range.second < 0) return@collectLatest
                 val (first, last) = range
@@ -4672,10 +4647,10 @@ private fun PhotoGrid(
             modifier = Modifier.fillMaxSize().pointerInput(gridState, onSetSelection) {
                 if (currentSetSelection == null) return@pointerInput
                 var selecting = true
-                var startId: Long? = null
+                var startKey: String? = null
                 var startPosition = Offset.Zero
-                var initialSelection = emptySet<Long>()
-                var previousDragIds = emptySet<Long>()
+                var initialSelection = emptySet<String>()
+                var previousDragKeys = emptySet<String>()
                 var hasDragged = false
                 var autoScrollJob: kotlinx.coroutines.Job? = null
                 val edge = 72.dp.toPx()
@@ -4684,53 +4659,51 @@ private fun PhotoGrid(
                 // (the viewport starts at -beforeContentPadding), while `position` is measured from the grid's top edge.
                 // Without this correction the finger hit the tile that lies exactly `contentPadding` further down
                 // (the row below; the whole top-bar + shortcut-row height when the shortcut row is visible).
-                fun mediaAt(position: Offset): Long? {
+                fun mediaAt(position: Offset): String? {
                     val info = gridState.layoutInfo
                     val y = position.y - info.beforeContentPadding
                     return info.visibleItemsInfo.firstOrNull { item ->
-                        item.key is Long &&
+                        item.key is String && item.key in currentImageKeys &&
                             position.x >= item.offset.x && position.x <= item.offset.x + item.size.width &&
                             y >= item.offset.y && y <= item.offset.y + item.size.height
-                    }?.key as? Long
+                    }?.key as? String
                 }
                 detectDragGesturesAfterLongPress(
                     onDragStart = { position ->
-                        val id = mediaAt(position) ?: return@detectDragGesturesAfterLongPress
-                        startId = id
+                        val stableKey = mediaAt(position) ?: return@detectDragGesturesAfterLongPress
+                        startKey = stableKey
                         startPosition = position
                         initialSelection = currentSelection
-                        selecting = id !in initialSelection
-                        suppressReleaseClickId = id
+                        selecting = stableKey !in initialSelection
+                        suppressReleaseClickId = stableKey
                         hasDragged = false
-                        previousDragIds = setOf(id)
+                        previousDragKeys = setOf(stableKey)
                         com.iris.gallery.ui.AxHaptics.heavy(axGridCtx)
-                        currentSetSelection?.invoke(id, selecting)
+                        currentSetSelection?.invoke(stableKey, selecting)
                     },
                     onDrag = { change, _ ->
-                        val sId = startId
-                        if (sId != null) {
+                        val startStableKey = startKey
+                        if (startStableKey != null) {
                             val dist = (change.position - startPosition).getDistance()
                             if (!hasDragged && dist < dragSlop) {
                                 change.consume()
                                 return@detectDragGesturesAfterLongPress
                             }
                             hasDragged = true
-                            val currentId = mediaAt(change.position)
-                            if (currentId != null) {
+                            val currentStableKey = mediaAt(change.position)
+                            if (currentStableKey != null) {
                                 val allImages = currentImages
-                                val startIndex = allImages.indexOfFirst { it.id == sId }
-                                val currIndex = allImages.indexOfFirst { it.id == currentId }
+                                val startIndex = allImages.indexOfFirst { it.stableKey == startStableKey }
+                                val currIndex = allImages.indexOfFirst { it.stableKey == currentStableKey }
                                 if (startIndex >= 0 && currIndex >= 0) {
                                     val minIdx = minOf(startIndex, currIndex)
                                     val maxIdx = maxOf(startIndex, currIndex)
-                                    val currentRangeIds = allImages.subList(minIdx, maxIdx + 1).map { it.id }.toSet()
-                                    currentRangeIds.forEach { id ->
-                                        currentSetSelection?.invoke(id, selecting)
+                                    val currentRangeKeys = allImages.subList(minIdx, maxIdx + 1).map { it.stableKey }.toSet()
+                                    currentRangeKeys.forEach { key -> currentSetSelection?.invoke(key, selecting) }
+                                    previousDragKeys.filter { it !in currentRangeKeys }.forEach { key ->
+                                        currentSetSelection?.invoke(key, key in initialSelection)
                                     }
-                                    previousDragIds.filter { it !in currentRangeIds }.forEach { id ->
-                                        currentSetSelection?.invoke(id, id in initialSelection)
-                                    }
-                                    previousDragIds = currentRangeIds
+                                    previousDragKeys = currentRangeKeys
                                 }
                             }
                             val scrollBy = when {
@@ -4746,8 +4719,8 @@ private fun PhotoGrid(
                     },
                     onDragEnd = {
                         autoScrollJob?.cancel()
-                        startId = null
-                        previousDragIds = emptySet()
+                        startKey = null
+                        previousDragKeys = emptySet()
                         scrubberScope.launch {
                             kotlinx.coroutines.delay(250)
                             suppressReleaseClickId = null
@@ -4755,8 +4728,8 @@ private fun PhotoGrid(
                     },
                     onDragCancel = {
                         autoScrollJob?.cancel()
-                        startId = null
-                        previousDragIds = emptySet()
+                        startKey = null
+                        previousDragKeys = emptySet()
                         suppressReleaseClickId = null
                     },
                 )
@@ -4773,7 +4746,7 @@ private fun PhotoGrid(
             groups.forEach { group ->
               if (showTimeline) {
                 item(key = "header:${group.key}", span = { GridItemSpan(maxLineSpan) }, contentType = "header") {
-                    val ids = remember(group.value) { group.value.map { it.id } }
+                    val ids = remember(group.value) { group.value.map { it.stableKey } }
                     val wholeDateSelected = ids.isNotEmpty() && ids.all { it in selectedIds }
                     val headerClickModifier = if (onSetDateSelection != null) {
                         Modifier.combinedClickable(
@@ -4805,8 +4778,8 @@ private fun PhotoGrid(
                     }
                 }
               }
-              items(group.value, key = { it.id }, contentType = { "photo" }) { image ->
-                val selected = image.id in selectedIds
+              items(group.value, key = { it.stableKey }, contentType = { "photo" }) { image ->
+                val selected = image.stableKey in selectedIds
                 val heroCell = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
                 // square tiles with softly rounded corners (never pill/circle): the corner setting is kept but capped
                 val tileRadius = if (cornerStyle.dp == 0) 0.dp else cornerStyle.dp.coerceIn(5, 10).dp
@@ -4831,7 +4804,7 @@ private fun PhotoGrid(
                         // after a long-press the grid can shift under the finger (quick row hides), so the release lands on
                         // a different tile: swallow that one release click whatever tile it hit
                         if (suppressReleaseClickId != null) suppressReleaseClickId = null
-                        else { AxHero.mark(heroCell[0], image.id); onOpen(image) }
+                        else { AxHero.mark(heroCell[0], image.stableKey); onOpen(image) }
                     },
                         onLongClick = null)) {
                     MediaThumbnail(
@@ -5099,7 +5072,7 @@ private fun PhotoViewer(
     availableAlbums: List<MediaAlbum> = emptyList(),
     onToggleFavorite: (Long) -> Unit,
     onClose: () -> Unit,
-    onPageChanged: (Long) -> Unit = {},
+    onPageChanged: (String) -> Unit = {},
     onRename: (MediaImage, String) -> Unit = { _, _ -> },
     onDelete: (MediaImage, Boolean) -> Unit,
     onRestore: (MediaImage) -> Unit = {},
@@ -5190,7 +5163,7 @@ private fun PhotoViewer(
         }
     }
     val coroutineScope = rememberCoroutineScope()
-    var zoomedImageId by remember { mutableStateOf<Long?>(null) }
+    var zoomedImageId by remember { mutableStateOf<String?>(null) }
     var viewerMenuExpanded by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showWallpaperSheet by remember { mutableStateOf(false) }
@@ -5218,16 +5191,16 @@ private fun PhotoViewer(
             context.startActivity(Intent.createChooser(intent, context.getString(R.string.action_share_media)))
         }
     }
-    val currentExif by produceState<ExifMetadata?>(initialValue = null, current.id, current.uri, current.dateTaken, current.description, current.title) {
+    val currentExif by produceState<ExifMetadata?>(initialValue = null, current.stableKey, current.uri, current.dateTaken, current.description, current.title) {
         androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
         value = withContext(Dispatchers.IO) {
             loadExifMetadata(context, current.uri, current.path)
         }
     }
-    val viewerColors by produceState(Pair(Color(0xFF080808), null as Color?), current.id, current.isVideo) {
+    val viewerColors by produceState(Pair(Color(0xFF080808), null as Color?), current.stableKey, current.isVideo) {
         androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
         value = withContext(Dispatchers.Default) {
-            val bmp = com.iris.gallery.ui.ThumbnailCache.findForImage(current.id)
+            val bmp = com.iris.gallery.ui.ThumbnailCache.findForImage(current.stableKey)
                 ?: com.iris.gallery.ui.loadThumbnailSync(context, current, 256)
             if (bmp == null) Pair(Color(0xFF080808), null as Color?) else com.iris.gallery.ui.axPhotoColors(bmp)
         }
@@ -5235,10 +5208,10 @@ private fun PhotoViewer(
     val viewerBg by androidx.compose.animation.animateColorAsState(viewerColors.first, tween(120), label = "viewer bg")
     // Background gradient tinted from the picture itself (top: lighter and richer, bottom: deeper). The animated colours are
     // read in the draw lambda only, so changing page never recomposes the viewer.
-    val ambient by produceState<Pair<Color, Color>?>(null, current.id, current.isVideo) {
+    val ambient by produceState<Pair<Color, Color>?>(null, current.stableKey, current.isVideo) {
         androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
         value = withContext(Dispatchers.Default) {
-            val bmp = com.iris.gallery.ui.ThumbnailCache.findForImage(current.id)
+            val bmp = com.iris.gallery.ui.ThumbnailCache.findForImage(current.stableKey)
                 ?: com.iris.gallery.ui.loadThumbnailSync(context, current, 256)
             bmp?.let { com.iris.gallery.ui.axAmbientGradient(it) }
         }
@@ -5277,8 +5250,8 @@ private fun PhotoViewer(
         if (sensor != null && !com.iris.gallery.ui.AxPerf.lite(context)) sm?.registerListener(listener, sensor, android.hardware.SensorManager.SENSOR_DELAY_UI)
         onDispose { sm?.unregisterListener(listener) }
     }
-    var currentPhotoHasGainmap by remember(current.id) { mutableStateOf(false) }
-    val currentIsVideoHdr by produceState(initialValue = false, current.id, current.isVideo) {
+    var currentPhotoHasGainmap by remember(current.stableKey) { mutableStateOf(false) }
+    val currentIsVideoHdr by produceState(initialValue = false, current.stableKey, current.isVideo) {
         if (current.isVideo) {
             value = withContext(Dispatchers.IO) {
                 val retriever = MediaMetadataRetriever()
@@ -5301,7 +5274,7 @@ private fun PhotoViewer(
     val isCurrentHdr = if (current.isVideo) {
         currentIsVideoHdr
     } else {
-        currentPhotoHasGainmap || (currentExif?.isUltraHdr == true) || (com.iris.gallery.ui.ThumbnailCache.isHdr(current.id) == true)
+        currentPhotoHasGainmap || (currentExif?.isUltraHdr == true) || (com.iris.gallery.ui.ThumbnailCache.isHdr(current.stableKey) == true)
     }
 
     LaunchedEffect(isCurrentHdr, activity) {
@@ -5313,7 +5286,7 @@ private fun PhotoViewer(
             }
         }
     }
-    val viewerComment = remember(current.id, currentExif) {
+    val viewerComment = remember(current.stableKey, currentExif) {
         currentExif?.userComment?.ifBlank { null }
             ?: currentExif?.xpComment?.ifBlank { null }
             ?: currentExif?.jpegComments?.firstOrNull()?.ifBlank { null }
@@ -5348,12 +5321,12 @@ private fun PhotoViewer(
             videoEngine.setMuted(videoMuted)
         }
     }
-    LaunchedEffect(current.id, videoEngine) {
+    LaunchedEffect(current.stableKey, videoEngine) {
         if (current.isVideo) videoEngine.load(current.uri) else videoEngine.player.pause()
     }
 
     // ---- Motion Photo (Samsung / Google / Nokia) detection & in-place playback ----
-    val motionVideo by produceState<MotionVideo?>(initialValue = null, current.id, current.uri, current.isVideo) {
+    val motionVideo by produceState<MotionVideo?>(initialValue = null, current.stableKey, current.uri, current.isVideo) {
         if (!current.isVideo) {
             // Only images can be motion photos. Cheap filename hint or on-demand content parse.
             androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
@@ -5376,7 +5349,7 @@ private fun PhotoViewer(
         onDispose { engine?.release() }
     }
     // Stop motion playback when leaving the current page.
-    LaunchedEffect(current.id) {
+    LaunchedEffect(current.stableKey) {
         if (isPlayingMotion) {
             motionEngine = null
             isPlayingMotion = false
@@ -5427,7 +5400,7 @@ private fun PhotoViewer(
     // Hero open: grows out of the thumbnail that was tapped (when we know where it is);
     // otherwise a soft fade + scale. No bounce either way.
     // the photo grows out of the tapped thumbnail (rect captured when the viewer is first composed)
-    val heroStartRect = remember(initialPage) { AxHero.rectFor(images.getOrNull(initialPage)?.id) }
+    val heroStartRect = remember(initialPage) { AxHero.rectFor(images.getOrNull(initialPage)?.stableKey) }
     var heroRect by remember { mutableStateOf(heroStartRect) }
     val heroP = remember { Animatable(if (heroStartRect != null) 0f else 1f) }
     val openAnim = remember { Animatable(if (heroStartRect != null) 1f else 0f) }
@@ -5448,7 +5421,7 @@ private fun PhotoViewer(
     // ---- Depth Photo (Google GDepth / Nokia / OEM portrait) detection & rendering ----
     val isDepthPhoto = currentExif?.isDepthPhoto == true
     val depthPhoto by produceState<com.iris.gallery.decoder.DepthPhoto?>(
-        initialValue = null, current.id, current.uri, isDepthPhoto
+        initialValue = null, current.stableKey, current.uri, isDepthPhoto
     ) {
         if (isDepthPhoto && !current.isVideo) {
             androidx.compose.runtime.snapshotFlow { AxHero.settledState.value }.first { it }
@@ -5459,12 +5432,12 @@ private fun PhotoViewer(
             value = null
         }
     }
-    var depthEnabled by remember(current.id) { mutableStateOf(false) }
-    var depthFocus by remember(current.id) { mutableFloatStateOf(0.5f) }
-    var depthStrength by remember(current.id) { mutableStateOf(1f) }
-    var depthTransition by remember(current.id) { mutableFloatStateOf(0.15f) }
-    var depthPreviewBitmap by remember(current.id) { mutableStateOf<android.graphics.Bitmap?>(null) }
-    var depthRendering by remember(current.id) { mutableStateOf(false) }
+    var depthEnabled by remember(current.stableKey) { mutableStateOf(false) }
+    var depthFocus by remember(current.stableKey) { mutableFloatStateOf(0.5f) }
+    var depthStrength by remember(current.stableKey) { mutableStateOf(1f) }
+    var depthTransition by remember(current.stableKey) { mutableFloatStateOf(0.15f) }
+    var depthPreviewBitmap by remember(current.stableKey) { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var depthRendering by remember(current.stableKey) { mutableStateOf(false) }
     // Re-render when depth params change (debounced).
     LaunchedEffect(depthPhoto, depthEnabled, depthFocus, depthStrength, depthTransition) {
         val dp = depthPhoto
@@ -5573,7 +5546,7 @@ private fun PhotoViewer(
             if (dismissOffsetY.value < 40f) {
                 // back button / close button / tap: shrink back into the thumbnail if we can, else fade out
                 val cellNow = if (heroStartRect != null && pagerState.currentPage == initialPage) {
-                    AxHero.rectFor(images.getOrNull(initialPage)?.id)
+                    AxHero.rectFor(images.getOrNull(initialPage)?.stableKey)
                 } else null
                 if (cellNow != null && cellNow.bottom > 0f && cellNow.top < viewerHeightPx) {
                     heroRect = cellNow
@@ -5599,8 +5572,8 @@ private fun PhotoViewer(
     LaunchedEffect(pagerState.currentPage, images) {
         val currentIdx = pagerState.currentPage
         if (currentIdx in images.indices) {
-            onPageChanged(images[currentIdx].id)
-            if (zoomedImageId != null && zoomedImageId != images[currentIdx].id) {
+            onPageChanged(images[currentIdx].stableKey)
+            if (zoomedImageId != null && zoomedImageId != images[currentIdx].stableKey) {
                 zoomedImageId = null
             }
         }
@@ -5695,7 +5668,7 @@ private fun PhotoViewer(
                 state = pagerState,
                 snapAnimationSpec = tween(160, easing = com.iris.gallery.ui.TgDecelerate15),
             ),
-            userScrollEnabled = zoomedImageId != current.id && !isDismissing,
+            userScrollEnabled = zoomedImageId != current.stableKey && !isDismissing,
             pageSpacing = 16.dp,
             modifier = Modifier.axGlassSource(viewerGlass).graphicsLayer {
                 if (!viewerPortrait || zoomedImageId != null || current.isVideo) return@graphicsLayer
@@ -5759,7 +5732,7 @@ private fun PhotoViewer(
                             }
                         }
                     },
-                    onZoomChanged = { zoomed -> zoomedImageId = if (zoomed) media.id else null },
+                    onZoomChanged = { zoomed -> zoomedImageId = if (zoomed) media.stableKey else null },
                     onMuteToggled = onSetVideoMuted,
                 )
             } else {
@@ -5814,7 +5787,7 @@ private fun PhotoViewer(
                         }
                     },
                     onZoomChanged = { zoomed ->
-                        zoomedImageId = if (zoomed) media.id else null
+                        zoomedImageId = if (zoomed) media.stableKey else null
                     },
                 )
             }
@@ -5883,7 +5856,7 @@ private fun PhotoViewer(
                     }
                 }
             }
-            val viewerMeta = remember(current.id, current.width, current.height, current.sizeBytes) {
+            val viewerMeta = remember(current.stableKey, current.width, current.height, current.sizeBytes) {
                 buildList {
                     if (current.width > 0 && current.height > 0) add("${current.width}\u00D7${current.height}")
                     if (current.sizeBytes > 0) add(android.text.format.Formatter.formatShortFileSize(context, current.sizeBytes))
@@ -6305,7 +6278,7 @@ private fun PhotoViewer(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        itemsIndexed(images, key = { _, it -> it.id }) { index, item ->
+                        itemsIndexed(images, key = { _, it -> it.stableKey }) { index, item ->
                             filmThumb(index, item, 38.dp)
                         }
                     }
@@ -6453,7 +6426,7 @@ private fun PhotoViewer(
                                     verticalArrangement = Arrangement.spacedBy(6.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
-                                    itemsIndexed(images, key = { _, it -> it.id }) { index, item ->
+                                    itemsIndexed(images, key = { _, it -> it.stableKey }) { index, item ->
                                         val thumbSz by animateDpAsState(
                                             targetValue = if (index == pagerState.currentPage) 40.dp else 30.dp,
                                             animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow),
@@ -7028,11 +7001,11 @@ private fun ZoomablePhoto(
     onZoomChanged: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
-    val scaleAnim = remember(image.id) { Animatable(1f) }
-    val offsetAnim = remember(image.id) { Animatable(Offset.Zero, Offset.VectorConverter) }
-    val rotationAnim = remember(image.id) { Animatable(0f) }
+    val scaleAnim = remember(image.stableKey) { Animatable(1f) }
+    val offsetAnim = remember(image.stableKey) { Animatable(Offset.Zero, Offset.VectorConverter) }
+    val rotationAnim = remember(image.stableKey) { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
-    var containerSize by remember(image.id) { mutableStateOf(IntSize.Zero) }
+    var containerSize by remember(image.stableKey) { mutableStateOf(IntSize.Zero) }
 
     LaunchedEffect(active) {
         if (!active && (scaleAnim.value > 1.01f || offsetAnim.value != Offset.Zero || rotationAnim.value != 0f)) {
@@ -7044,9 +7017,9 @@ private fun ZoomablePhoto(
     }
 
     // Instant zero-delay preview from memory cache while full image decodes
-    var cachedThumb by remember(image.id) { mutableStateOf(com.iris.gallery.ui.ThumbnailCache.findForImage(image.id)) }
+    var cachedThumb by remember(image.stableKey) { mutableStateOf(com.iris.gallery.ui.ThumbnailCache.findForImage(image.stableKey)) }
     if (cachedThumb == null) {
-        LaunchedEffect(image.id, image.uri) {
+        LaunchedEffect(image.stableKey, image.uri) {
             val thumb = withContext(Dispatchers.IO) { com.iris.gallery.ui.loadThumbnailSync(context, image, 512) }
             if (thumb != null) cachedThumb = thumb
         }
@@ -7057,8 +7030,8 @@ private fun ZoomablePhoto(
 
     // For Apple Live Photo .livp (zip) files, the still JPEG lives inside the archive.
     // Extract it to a temp cache file and use that URI for Coil so the image displays.
-    val livpJpeg = remember(image.id, image.path) { image.livpJpegCacheFile(context) }
-    LaunchedEffect(image.id, image.path) {
+    val livpJpeg = remember(image.stableKey, image.path) { image.livpJpegCacheFile(context) }
+    LaunchedEffect(image.stableKey, image.path) {
         if (livpJpeg != null && (!livpJpeg.exists() || livpJpeg.length() == 0L)) {
             withContext(Dispatchers.IO) {
                 // Force motion extraction which also writes the JPEG cache file.
@@ -7066,14 +7039,14 @@ private fun ZoomablePhoto(
             }
         }
     }
-    val displayUri = remember(image.id, image.uri, livpJpeg?.length()) {
+    val displayUri = remember(image.stableKey, image.uri, livpJpeg?.length()) {
         val cachedJpeg = livpJpeg
         if (cachedJpeg != null && cachedJpeg.exists() && cachedJpeg.length() > 0) {
             Uri.fromFile(cachedJpeg)
         } else image.uri
     }
 
-    val imageRequest: ImageRequest = remember(image.id, displayUri) {
+    val imageRequest: ImageRequest = remember(image.stableKey, displayUri) {
         val reqBuilder = ImageRequest.Builder(context).data(displayUri)
         if (image.isSvg) {
             val metrics = context.resources.displayMetrics
@@ -8001,7 +7974,7 @@ private fun PhotoDetailsSheet(
                     }
                     if (image.orientation != 0) DetailItem(stringResource(R.string.details_orientation), "${image.orientation}°")
                     if (isVideo && image.durationMs > 0) DetailItem(stringResource(R.string.details_duration), formatMediaDuration(image.durationMs))
-                    if (!isVideo && (currentExif?.isUltraHdr == true || com.iris.gallery.ui.ThumbnailCache.isHdr(image.id) == true)) {
+                    if (!isVideo && (currentExif?.isUltraHdr == true || com.iris.gallery.ui.ThumbnailCache.isHdr(image.stableKey) == true)) {
                         DetailItem(stringResource(R.string.details_dynamic_range), stringResource(R.string.details_ultra_hdr))
                     } else if (isVideo && videoHdrTransfer != null) {
                         DetailItem(stringResource(R.string.details_dynamic_range), videoHdrTransfer!!)

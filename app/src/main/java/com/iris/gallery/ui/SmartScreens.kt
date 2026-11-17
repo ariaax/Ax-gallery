@@ -85,7 +85,7 @@ fun TripsScreen(
                     )
                     Text("${trip.items.size} photos and videos", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(trip.items.take(12), key = { it.id }) { media ->
+                        items(trip.items.take(12), key = { it.stableKey }) { media ->
                             MediaThumbnail(media, Modifier.size(72.dp).clip(AxRound(12.dp)))
                         }
                     }
@@ -106,10 +106,10 @@ fun CleanupScreen(
     onOpen: (CleanupGroup, MediaImage) -> Unit,
     onTrash: (List<MediaImage>) -> Unit,
 ) {
-    var selectedIds by remember(groups) { mutableStateOf(emptySet<Long>()) }
+    var selectedIds by remember(groups) { mutableStateOf(emptySet<String>()) }
     val layoutDir = LocalLayoutDirection.current
     val all = groups.flatMap { it.items }
-    val selected = all.filter { it.id in selectedIds }
+    val selected = all.filter { it.stableKey in selectedIds }
     LazyColumn(
         Modifier.fillMaxSize().padding(
             start = padding.calculateStartPadding(layoutDir), top = padding.calculateTopPadding(),
@@ -146,16 +146,16 @@ fun CleanupScreen(
                             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     }
                     TextButton(onClick = {
-                        val ids = group.items.map { it.id }
+                        val ids = group.items.map { it.stableKey }
                         selectedIds = if (ids.all { it in selectedIds }) selectedIds - ids.toSet() else selectedIds + ids
                     }, modifier = Modifier.padding(horizontal = 6.dp)) {
-                        Text(if (group.items.all { it.id in selectedIds }) "Clear this group" else "Select this group")
+                        Text(if (group.items.all { it.stableKey in selectedIds }) "Clear this group" else "Select this group")
                     }
                     LazyRow(contentPadding = PaddingValues(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(group.items, key = { it.id }) { media ->
-                            val isSelected = media.id in selectedIds
+                        items(group.items, key = { it.stableKey }) { media ->
+                            val isSelected = media.stableKey in selectedIds
                             Box(Modifier.size(120.dp).clip(AxRound(16.dp)).clickable {
-                                selectedIds = if (isSelected) selectedIds - media.id else selectedIds + media.id
+                                selectedIds = if (isSelected) selectedIds - media.stableKey else selectedIds + media.stableKey
                             }) {
                                 MediaThumbnail(media, Modifier.fillMaxSize())
                                 Surface(Modifier.align(Alignment.TopEnd).padding(6.dp), shape = AxRound(30),

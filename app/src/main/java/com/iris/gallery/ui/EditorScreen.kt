@@ -11,6 +11,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import com.iris.gallery.data.LibraryPreferences
+import com.iris.gallery.data.EditorOverwriteRecovery
+import com.iris.gallery.data.TrashFiles
+import com.iris.gallery.data.VaultFiles
 import com.iris.gallery.data.SettingsPreferences
 import android.content.res.Configuration
 import android.graphics.Bitmap
@@ -124,7 +127,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.aomedia.avif.android.AvifDecoder
 import androidx.exifinterface.media.ExifInterface
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import kotlin.math.roundToInt
 
@@ -170,7 +176,7 @@ fun EditorScreen(image: MediaImage, onClose: () -> Unit, onSaved: (saved: Boolea
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val scope = rememberCoroutineScope()
     val settingsPrefs = remember { SettingsPreferences.get(context) }
-    var overwriteOriginal by remember(image.id) {
+    var overwriteOriginal by remember(image.stableKey) {
         mutableStateOf(settingsPrefs.state.value.editorOverwriteOriginal)
     }
     var saving by remember { mutableStateOf(false) }
@@ -241,14 +247,14 @@ fun EditorScreen(image: MediaImage, onClose: () -> Unit, onSaved: (saved: Boolea
 
     val baseWidth = if (rotation == 90 || rotation == 270) image.height else image.width
     val baseHeight = if (rotation == 90 || rotation == 270) image.width else image.height
-    var resizeWidth by remember(image.id, rotation) { mutableStateOf(baseWidth.toString()) }
-    var resizeHeight by remember(image.id, rotation) { mutableStateOf(baseHeight.toString()) }
-    var isCustomResized by remember(image.id, rotation) { mutableStateOf(false) }
-    var targetMaxBytes by remember(image.id, rotation) { mutableStateOf<Long?>(null) }
+    var resizeWidth by remember(image.stableKey, rotation) { mutableStateOf(baseWidth.toString()) }
+    var resizeHeight by remember(image.stableKey, rotation) { mutableStateOf(baseHeight.toString()) }
+    var isCustomResized by remember(image.stableKey, rotation) { mutableStateOf(false) }
+    var targetMaxBytes by remember(image.stableKey, rotation) { mutableStateOf<Long?>(null) }
     var lockAspect by remember { mutableStateOf(true) }
     var showResizeDialog by remember { mutableStateOf(false) }
     var showSaveAsDialog by remember { mutableStateOf(false) }
-    val originalExportFormat = remember(image.id, image.mimeType, image.path, image.name) {
+    val originalExportFormat = remember(image.stableKey, image.mimeType, image.path, image.name) {
         val mime = image.mimeType.lowercase()
         val name = (image.name.ifBlank { image.path }).lowercase()
         when {
@@ -257,7 +263,7 @@ fun EditorScreen(image: MediaImage, onClose: () -> Unit, onSaved: (saved: Boolea
             else -> ExportFormat.JPEG
         }
     }
-    var selectedExportFormat by remember(image.id) { mutableStateOf(originalExportFormat) }
+    var selectedExportFormat by remember(image.stableKey) { mutableStateOf(originalExportFormat) }
 
     val activeTool = when (category) {
         EditorCategory.TRANSFORM -> EditorTool.CROP
@@ -1943,6 +1949,45 @@ private fun TextControls(
     }
 }
 
+private const val EDITOR_MAX_DECODE_DIMENSION = 3200
+private const val EDITOR_MAX_DECODE_PIXELS = 10_000_000L
+private const val EDITOR_MAX_AVIF_INPUT_BYTES = 16L * 1024L * 1024L
+
+private fun readEditorAvifBytes(context: Context, image: MediaImage, isFile: Boolean): ByteArray? {
+    val input = runCatching {
+        if (isFile) FileInputStream(File(image.path)) else context.contentResolver.openInputStream(image.uri)
+    }.getOrNull() ?: return null
+    return input.use { stream ->
+        val output = ByteArrayOutputStream(64 * 1024)
+        val buffer = ByteArray(64 * 1024)
+        var total = 0L
+        while (true) {
+            val count = stream.read(buffer)
+            if (count < 0) break
+            total += count
+            if (total > EDITOR_MAX_AVIF_INPUT_BYTES) return null
+            output.write(buffer, 0, count)
+        }
+        output.toByteArray()
+    }
+}
+
+private fun decodeSampledEditorBitmap(context: Context, image: MediaImage, isFile: Boolean, maxDimension: Int): Bitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    if (isFile) BitmapFactory.decodeFile(image.path, bounds)
+    else context.contentResolver.openInputStream(image.uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    var sample = 1
+    while (maxOf(bounds.outWidth, bounds.outHeight) / sample > maxDimension) sample *= 2
+    val options = BitmapFactory.Options().apply {
+        inJustDecodeBounds = false
+        inSampleSize = sample
+        inPreferredConfig = Bitmap.Config.ARGB_8888
+    }
+    return if (isFile) BitmapFactory.decodeFile(image.path, options)
+    else context.contentResolver.openInputStream(image.uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+}
+
 private suspend fun loadPreview(context: Context, image: MediaImage): Bitmap? = withContext(Dispatchers.IO) {
     val isFile = image.uri.scheme == "file" || image.path.startsWith(context.filesDir.absolutePath)
     val standardBitmap = runCatching {
@@ -1955,8 +2000,7 @@ private suspend fun loadPreview(context: Context, image: MediaImage): Bitmap? = 
                 decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             }
         } else {
-            if (isFile) BitmapFactory.decodeFile(image.path)
-            else context.contentResolver.openInputStream(image.uri).use(BitmapFactory::decodeStream)
+            decodeSampledEditorBitmap(context, image, isFile, 1600)
         }
     }.getOrNull()
 
@@ -1964,11 +2008,7 @@ private suspend fun loadPreview(context: Context, image: MediaImage): Bitmap? = 
 
     // Fallback using AvifDecoder if standard Android decoders fail (e.g. yuv422p AVIF)
     val avifBitmap = runCatching {
-        val bytes = if (isFile) {
-            File(image.path).readBytes()
-        } else {
-            context.contentResolver.openInputStream(image.uri)?.use { it.readBytes() }
-        }
+        val bytes = readEditorAvifBytes(context, image, isFile)
         if (bytes != null && bytes.isNotEmpty()) {
             val buffer = ByteBuffer.allocateDirect(bytes.size).apply {
                 put(bytes)
@@ -1976,7 +2016,8 @@ private suspend fun loadPreview(context: Context, image: MediaImage): Bitmap? = 
             }
             if (AvifDecoder.isAvifImage(buffer)) {
                 val info = AvifDecoder.Info()
-                if (AvifDecoder.getInfo(buffer, bytes.size, info)) {
+                if (AvifDecoder.getInfo(buffer, bytes.size, info) && info.width > 0 && info.height > 0 &&
+                    info.width.toLong() * info.height.toLong() <= EDITOR_MAX_DECODE_PIXELS) {
                     val scale = minOf(1f, 1600f / maxOf(info.width, info.height))
                     val targetW = (info.width * scale).toInt().coerceAtLeast(1)
                     val targetH = (info.height * scale).toInt().coerceAtLeast(1)
@@ -2053,12 +2094,11 @@ private val EXIF_TAGS_TO_PRESERVE = listOf(
 private fun canonicalMediaUri(context: Context, item: MediaImage): Uri {
     if (item.id > 0) {
         val vol = if (Build.VERSION.SDK_INT >= 29) {
-            if (item.path.startsWith("/storage/")) {
-                val parts = item.path.split('/')
-                if (parts.size > 2 && parts[2] != "emulated" && parts[2] != "self") {
-                    parts[2]
-                } else "external"
-            } else "external"
+            item.volumeName.ifBlank {
+                if (item.path.startsWith("/storage/emulated/0/")) "external_primary"
+                else if (item.path.startsWith("/storage/")) item.path.removePrefix("/storage/").substringBefore('/').ifBlank { "external_primary" }
+                else "external_primary"
+            }
         } else "external"
         val baseTable = if (Build.VERSION.SDK_INT >= 29) MediaStore.Images.Media.getContentUri(vol)
         else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
@@ -2150,26 +2190,24 @@ private suspend fun renderEditedBitmapToBytes(
         if (Build.VERSION.SDK_INT >= 28) {
             val source = if (isFile) ImageDecoder.createSource(File(image.path))
             else ImageDecoder.createSource(context.contentResolver, image.uri)
-            ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+            ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                val scale = minOf(1f, EDITOR_MAX_DECODE_DIMENSION.toFloat() / maxOf(info.size.width, info.size.height))
+                decoder.setTargetSize((info.size.width * scale).toInt().coerceAtLeast(1), (info.size.height * scale).toInt().coerceAtLeast(1))
                 decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             }
         } else {
-            if (isFile) BitmapFactory.decodeFile(image.path) ?: error("Could not decode image")
-            else context.contentResolver.openInputStream(image.uri).use(BitmapFactory::decodeStream) ?: error("Could not decode image")
+            decodeSampledEditorBitmap(context, image, isFile, EDITOR_MAX_DECODE_DIMENSION) ?: error("Could not decode image")
         }
     }.getOrNull() ?: runCatching {
-        val bytes = if (isFile) {
-            File(image.path).readBytes()
-        } else {
-            context.contentResolver.openInputStream(image.uri)?.use { it.readBytes() }
-        }
+        val bytes = readEditorAvifBytes(context, image, isFile)
         if (bytes != null && bytes.isNotEmpty()) {
             val buffer = ByteBuffer.allocateDirect(bytes.size).apply {
                 put(bytes)
                 flip()
             }
             val info = AvifDecoder.Info()
-            if (AvifDecoder.getInfo(buffer, bytes.size, info)) {
+            if (AvifDecoder.getInfo(buffer, bytes.size, info) && info.width > 0 && info.height > 0 &&
+                info.width.toLong() * info.height.toLong() <= EDITOR_MAX_DECODE_PIXELS) {
                 val bmp = Bitmap.createBitmap(info.width, info.height, Bitmap.Config.ARGB_8888)
                 if (AvifDecoder.decode(buffer, bytes.size, bmp)) {
                     bmp
@@ -2183,7 +2221,7 @@ private suspend fun renderEditedBitmapToBytes(
         runCatching {
             val req = coil3.request.ImageRequest.Builder(context)
                 .data(image.uri)
-                .size(coil3.size.Size.ORIGINAL)
+                .size(EDITOR_MAX_DECODE_DIMENSION, EDITOR_MAX_DECODE_DIMENSION)
                 .build()
             val res = coil3.SingletonImageLoader.get(context).execute(req)
             (res.image as? coil3.BitmapImage)?.bitmap
@@ -2343,22 +2381,30 @@ private suspend fun saveEditedCopy(
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
     }
-    val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: error("Could not create copy")
-    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-        outputStream.write(bytes)
-    } ?: error("Could not write copy")
-    copyExifMetadata(context, image, uri)
-    if (Build.VERSION.SDK_INT >= 29) {
-        val updateValues = ContentValues().apply {
-            put(MediaStore.Images.Media.IS_PENDING, 0)
-            put(MediaStore.Images.Media.DATE_ADDED, nowSec)
-            put(MediaStore.Images.Media.DATE_MODIFIED, nowSec)
-            put(MediaStore.Images.Media.DATE_TAKEN, nowMs)
-            if (effectiveTitle != null) {
-                put(MediaStore.Images.Media.TITLE, effectiveTitle)
+    val collection = if (Build.VERSION.SDK_INT >= 29) {
+        MediaStore.Images.Media.getContentUri("external_primary")
+    } else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+    val uri = context.contentResolver.insert(collection, values) ?: error("Could not create copy")
+    var published = false
+    try {
+        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+            outputStream.write(bytes)
+            outputStream.flush()
+        } ?: error("Could not write copy")
+        copyExifMetadata(context, image, uri)
+        if (Build.VERSION.SDK_INT >= 29) {
+            val updateValues = ContentValues().apply {
+                put(MediaStore.Images.Media.IS_PENDING, 0)
+                put(MediaStore.Images.Media.DATE_ADDED, nowSec)
+                put(MediaStore.Images.Media.DATE_MODIFIED, nowSec)
+                put(MediaStore.Images.Media.DATE_TAKEN, nowMs)
+                if (effectiveTitle != null) put(MediaStore.Images.Media.TITLE, effectiveTitle)
             }
+            check(context.contentResolver.update(uri, updateValues, null, null) > 0) { "Could not publish edited copy" }
         }
-        context.contentResolver.update(uri, updateValues, null, null)
+        published = true
+    } finally {
+        if (!published) runCatching { context.contentResolver.delete(uri, null, null) }
     }
     val newId = uri.lastPathSegment?.toLongOrNull()
     if (newId != null && effectiveTitle != null) {
@@ -2376,63 +2422,102 @@ private suspend fun performOverwriteWrite(
     tags: Map<String, String>
 ): Boolean = withContext(Dispatchers.IO) {
     val isFile = image.uri.scheme == "file" || image.path.startsWith(context.filesDir.absolutePath)
-    if (isFile) {
-        val targetFile = File(image.path)
-        targetFile.parentFile?.mkdirs()
-        targetFile.writeBytes(bytes)
-        applyExifToFile(targetFile, tags)
-    } else {
-        val targetUri = canonicalMediaUri(context, image)
-        val written = context.contentResolver.openOutputStream(targetUri)?.use { out ->
-            out.write(bytes)
-            true
-        } ?: false
+    val fileTarget = File(image.path.ifBlank { image.uri.path.orEmpty() })
+    val targetUri = if (isFile) Uri.fromFile(fileTarget) else canonicalMediaUri(context, image)
+    val expectedSize = if (isFile) fileTarget.takeIf { it.isFile }?.length() ?: -1L
+        else image.sizeBytes.takeIf { it > 0L }
+            ?: runCatching { context.contentResolver.openAssetFileDescriptor(targetUri, "r")?.use { it.length } }.getOrNull()?.takeIf { it > 0L }
+            ?: -1L
 
-        if (!written) return@withContext false
-
-        if (tags.isNotEmpty()) {
-            runCatching {
-                context.contentResolver.openFileDescriptor(targetUri, "rw")?.use { pfd ->
-                    val dstExif = ExifInterface(pfd.fileDescriptor)
-                    applyExifTags(dstExif, tags)
-                    dstExif.saveAttributes()
-                }
+    synchronized(EditorOverwriteRecovery.lock) {
+        val expectedFile = runCatching { File.createTempFile("ax-editor-expected-", ".bin", context.cacheDir) }.getOrNull()
+            ?: return@synchronized false
+        try {
+            FileOutputStream(expectedFile).use { out ->
+                out.write(bytes)
+                out.flush()
+                out.fd.sync()
             }
-        }
+            // Apply metadata to the staged copy, not to the only original. The recovery marker hashes
+            // this final staged payload, so a crash after publication can distinguish commit from truncation.
+            if (tags.isNotEmpty()) applyExifToFile(expectedFile, tags)
+            val recovery = EditorOverwriteRecovery.prepare(
+                context, image.stableKey, targetUri, expectedSize, EditorOverwriteRecovery.hash(expectedFile)
+            ) ?: return@synchronized false
 
-        if (image.path.isNotBlank() && File(image.path).exists()) {
-            applyExifToFile(File(image.path), tags)
+            try {
+                val written = if (isFile) {
+                    replaceEditorFileAtomically(fileTarget, expectedFile)
+                } else {
+                    val output = runCatching { context.contentResolver.openOutputStream(targetUri, "wt") }.getOrNull()
+                    val copied = output != null && VaultFiles.copyFileToStream(expectedFile, output)
+                    copied && TrashFiles.streamMatchesFile(context.contentResolver.openInputStream(targetUri), expectedFile)
+                }
+
+                if (!written) {
+                    EditorOverwriteRecovery.rollback(context, recovery)
+                    return@synchronized false
+                }
+
+                if (image.id > 0) {
+                    val nowSec = System.currentTimeMillis() / 1000L
+                    val updateValues = ContentValues().apply {
+                        put(MediaStore.Images.Media.DATE_MODIFIED, nowSec)
+                        put(MediaStore.Images.Media.SIZE, expectedFile.length())
+                        put(MediaStore.Images.Media.MIME_TYPE, format.mimeType)
+                    }
+                    runCatching { context.contentResolver.update(targetUri, updateValues, null, null) }
+                }
+
+                if (image.path.isNotBlank()) {
+                    MediaScannerConnection.scanFile(
+                        context.applicationContext,
+                        arrayOf(image.path),
+                        arrayOf(format.mimeType),
+                        null
+                    )
+                }
+
+                runCatching {
+                    coil3.SingletonImageLoader.get(context).memoryCache?.clear()
+                    coil3.SingletonImageLoader.get(context).diskCache?.clear()
+                }
+                EditorOverwriteRecovery.commit(recovery)
+                true
+            } catch (error: Exception) {
+                EditorOverwriteRecovery.rollback(context, recovery)
+                false
+            }
+        } catch (_: Exception) {
+            false
+        } finally {
+            expectedFile.delete()
         }
     }
+}
 
-    if (image.id > 0) {
-        val targetUri = canonicalMediaUri(context, image)
-        val nowSec = System.currentTimeMillis() / 1000L
-        val updateValues = ContentValues().apply {
-            put(MediaStore.Images.Media.DATE_MODIFIED, nowSec)
-            put(MediaStore.Images.Media.SIZE, bytes.size.toLong())
-            put(MediaStore.Images.Media.MIME_TYPE, format.mimeType)
-        }
-        runCatching {
-            context.contentResolver.update(targetUri, updateValues, null, null)
-        }
+/** Writes a verified sibling first, then atomically swaps it into place. */
+private fun replaceEditorFileAtomically(target: File, expectedFile: File): Boolean {
+    val parent = target.parentFile ?: return false
+    if (!parent.exists() && !parent.mkdirs()) return false
+    val temp = File(parent, target.name + ".editor-new-" + System.nanoTime())
+    val old = File(parent, target.name + ".editor-old")
+    runCatching { temp.delete() }
+    runCatching { old.delete() }
+    if (!TrashFiles.copyVerified(expectedFile, temp)) return false
+    if (target.exists() && !target.renameTo(old)) { temp.delete(); return false }
+    if (!temp.renameTo(target)) {
+        if (old.exists()) old.renameTo(target)
+        temp.delete()
+        return false
     }
-
-    if (image.path.isNotBlank()) {
-        MediaScannerConnection.scanFile(
-            context.applicationContext,
-            arrayOf(image.path),
-            arrayOf(format.mimeType),
-            null
-        )
+    if (!TrashFiles.streamMatchesFile(target.inputStream(), expectedFile)) {
+        target.delete()
+        if (old.exists()) old.renameTo(target)
+        return false
     }
-
-    runCatching {
-        coil3.SingletonImageLoader.get(context).memoryCache?.clear()
-        coil3.SingletonImageLoader.get(context).diskCache?.clear()
-    }
-
-    true
+    old.delete()
+    return true
 }
 
 private fun renderBrushes(target: Bitmap, strokes: List<BrushStroke>, crop: RectF) {
