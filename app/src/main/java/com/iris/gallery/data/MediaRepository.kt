@@ -594,13 +594,6 @@ class MediaRepository(private val context: Context) {
         sorted
     }
 
-    private fun looksSyntheticDate(img: MediaImage): Boolean {
-        val t = img.dateTaken / 1000L
-        return t <= 0L ||
-            (img.dateAdded > 0L && t == img.dateAdded / 1000L) ||
-            (img.dateModified > 0L && t == img.dateModified / 1000L)
-    }
-
     /** Files that could not be opened this session; retried next launch, not on every refresh. */
     private val unreadableThisSession = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 

@@ -4934,6 +4934,11 @@ private fun PhotoGrid(
 
             val thumbColor = MaterialTheme.colorScheme.primary
             val trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f)
+            val handleScale by animateFloatAsState(
+                targetValue = if (scrubberDragging) 1.22f else 1f,
+                animationSpec = spring(dampingRatio = 0.52f, stiffness = 420f),
+                label = "timelineHandleBubble"
+            )
             val scrollHaptic = androidx.compose.ui.platform.LocalHapticFeedback.current
             val scrollSlop = androidx.compose.ui.platform.LocalViewConfiguration.current.touchSlop
 
@@ -5055,7 +5060,7 @@ private fun PhotoGrid(
                     // The circular thumb stays aligned to the real content scroll fraction.
                     val centerX = size.width - 17.dp.toPx()
                     val centerY = thumbTop + thumbHeight / 2f
-                    val radius = (if (scrubberDragging) 17.dp else 15.dp).toPx()
+                    val radius = 15.dp.toPx() * handleScale
                     drawCircle(
                         color = Color.Black.copy(alpha = if (scrubberDragging) 0.22f else 0.14f),
                         radius = radius + 2.dp.toPx(),

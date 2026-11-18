@@ -15,11 +15,14 @@ import java.time.ZoneOffset
  * old files collapsed onto one date (for this library: 5 Dec 2024).
  *
  * Priority used here (the first valid one wins):
- *  1. MediaStore DATE_TAKEN, when it is not just the scan time / modified time;
- *  2. a date read from the file itself (EXIF for photos, container creation time for videos);
+ *  1. validated file-level metadata (EXIF DateTimeOriginal / video container creation time);
+ *  2. MediaStore DATE_TAKEN, when it is not just the scan time / modified time;
  *  3. a date written in the file name (IMG_20200315_101500.jpg, VID-2020-03-15, epoch millis...);
  *  4. MediaStore DATE_TAKEN even if it equals modified time (it may be genuine);
  *  5. DATE_MODIFIED, then DATE_ADDED.
+ *
+ * Timeline ordering is resolved separately by DateSortMode: DATE_ADDED intentionally uses
+ * MediaStore DATE_ADDED, while DATE_TAKEN uses this capture-date resolver.
  * Nothing here ever writes a timestamp anywhere: it only chooses which existing value to display.
  */
 object MediaDates {
