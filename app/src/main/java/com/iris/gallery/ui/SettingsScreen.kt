@@ -1471,38 +1471,16 @@ fun SettingsScreen(
                         )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             FilterChip(
                                 modifier = Modifier.weight(1f),
-                                selected = settings.deleteMode == DeleteMode.TRASH,
-                                onClick = { preferences.setDeleteMode(DeleteMode.TRASH) },
-                                label = { Text(stringResource(R.string.settings_delete_mode_trash), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                            )
-                            FilterChip(
-                                modifier = Modifier.weight(1f),
-                                selected = settings.deleteMode == DeleteMode.PERMANENT,
+                                selected = true,
                                 onClick = { preferences.setDeleteMode(DeleteMode.PERMANENT) },
                                 label = { Text(stringResource(R.string.settings_delete_mode_permanent), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                             )
-                            FilterChip(
-                                modifier = Modifier.weight(1f),
-                                selected = settings.deleteMode == DeleteMode.ALWAYS_ASK,
-                                onClick = { preferences.setDeleteMode(DeleteMode.ALWAYS_ASK) },
-                                label = { Text(stringResource(R.string.settings_delete_mode_always_ask), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                            )
                         }
-                    }
-
-                    if (Build.VERSION.SDK_INT >= 30) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-                        SettingsSwitchRow(
-                            title = stringResource(R.string.settings_system_trash_title),
-                            subtitle = stringResource(R.string.settings_system_trash_desc),
-                            checked = settings.useSystemTrash,
-                            onCheckedChange = { preferences.setUseSystemTrash(it) }
-                        )
                     }
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
