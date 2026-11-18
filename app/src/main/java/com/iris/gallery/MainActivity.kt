@@ -110,6 +110,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.LazyColumn
@@ -2868,6 +2870,7 @@ private fun GalleryScaffold(
                   if (displayedPhotos.isNotEmpty()) PhotoGrid(
                     displayedPhotos, if (destination == 0) quickPadding else padding, photoGridState, cellSize = photoCellSize, onCellSizeChange = onCellSizeChange,
                     showTimeline = settings.showTimelineHeaders && fileSearchQuery.isBlank(),
+                    justified = settings.justifiedLayout,
                     timelineDateFormat = settings.timelineDateFormat,
                     customTimelineDateFormat = settings.customTimelineDateFormat,
                     useRelativeDates = settings.useRelativeDates,
@@ -4325,6 +4328,7 @@ private fun PhotoGrid(
     cellSize: androidx.compose.ui.unit.Dp,
     onCellSizeChange: ((androidx.compose.ui.unit.Dp) -> Unit)? = null,
     showTimeline: Boolean = false,
+    justified: Boolean = false,
     showDateBubble: Boolean = showTimeline,
     timelineDateFormat: TimelineDateFormat = TimelineDateFormat.SYSTEM_DEFAULT,
     customTimelineDateFormat: String = "d. MMMM yyyy",
@@ -4431,7 +4435,21 @@ private fun PhotoGrid(
     val photoHeight = estimatedPhotoHeight
     val headerHeight = estimatedHeaderHeight
 
-    val rowLayout = remember(groups, showTimeline, actualColumns, timelineItems.size) {
+    // Justified (masonry-style) rows: every photo keeps its own proportion, rows are filled edge to edge.
+    val justifiedPlan = remember(groups, showTimeline, justified, screenWidthDp, startPadding, endPadding, gridSpacing, cellSize, density) {
+        if (!(justified && showTimeline)) null else with(density) {
+            val widthPx = (screenWidthDp.dp - startPadding - endPadding - (gridSpacing.dp * 2).dp).roundToPx()
+            buildJustifiedPlan(
+                groups = groups.map { it.value },
+                widthPx = widthPx,
+                gapPx = gridSpacing.dp.dp.roundToPx(),
+                targetRowPx = (cellSize.value * 1.35f).dp.roundToPx(),
+                headerPx = 50.dp.roundToPx(),
+            )
+        }
+    }
+    val rowLayout = remember(groups, showTimeline, actualColumns, timelineItems.size, justifiedPlan) {
+        justifiedPlan?.let { return@remember Triple(it.totalRows, it.itemToRow, Pair(it.rowToItem, it.isRowHeader)) }
         val cols = actualColumns.coerceAtLeast(1)
         val totalCount = timelineItems.size
         val itemToRow = IntArray(totalCount)
@@ -4502,21 +4520,21 @@ private fun PhotoGrid(
         }
     }
 
-    val rowOffsets = remember(rowLayout, photoHeight, headerHeight, spacingPx, topPaddingPx) {
+    val rowOffsets = remember(rowLayout, justifiedPlan, photoHeight, headerHeight, spacingPx, topPaddingPx) {
         val offsets = IntArray(totalRows)
         var acc = topPaddingPx
         for (r in 0 until totalRows) {
             offsets[r] = acc
-            val h = if (isRowHeader[r]) headerHeight else photoHeight
+            val h = justifiedPlan?.rowHeights?.getOrNull(r) ?: if (isRowHeader[r]) headerHeight else photoHeight
             acc += h + spacingPx
         }
         offsets
     }
 
-    val totalContentHeight = remember(rowLayout, photoHeight, headerHeight, spacingPx, topPaddingPx, bottomPaddingPx) {
+    val totalContentHeight = remember(rowLayout, justifiedPlan, photoHeight, headerHeight, spacingPx, topPaddingPx, bottomPaddingPx) {
         var acc = topPaddingPx
         for (r in 0 until totalRows) {
-            val h = if (isRowHeader[r]) headerHeight else photoHeight
+            val h = justifiedPlan?.rowHeights?.getOrNull(r) ?: if (isRowHeader[r]) headerHeight else photoHeight
             acc += h + spacingPx
         }
         acc += bottomPaddingPx
@@ -4628,7 +4646,7 @@ private fun PhotoGrid(
             }
     ) {
         val rimAccent = MaterialTheme.colorScheme.primary
-        val targetThumbnailPx = remember(actualColumns) { com.iris.gallery.ui.getThumbnailTargetSizePx(actualColumns) }
+        val targetThumbnailPx = remember(actualColumns, justifiedPlan != null) { if (justifiedPlan != null) 512 else com.iris.gallery.ui.getThumbnailTargetSizePx(actualColumns) }
         // Look-ahead: while scrolling, decode the next ~3 screens of tiles in the scroll direction so they are
         // already in the memory cache when they arrive (fewer empty tiles during a fling).
         val prefetchCtx = LocalContext.current
@@ -4657,7 +4675,7 @@ private fun PhotoGrid(
         }
         LazyVerticalGrid(
             state = gridState,
-            columns = GridCells.Adaptive(cellSize),
+            columns = if (justifiedPlan != null) GridCells.Fixed(com.iris.gallery.ui.JustifiedLayout.SPAN_UNITS) else GridCells.Adaptive(cellSize),
             modifier = Modifier.fillMaxSize().pointerInput(gridState, onSetSelection) {
                 if (currentSetSelection == null) return@pointerInput
                 var selecting = true
@@ -4757,7 +4775,12 @@ private fun PhotoGrid(
             horizontalArrangement = Arrangement.spacedBy(gridSpacing.dp.dp),
             verticalArrangement = Arrangement.spacedBy(gridSpacing.dp.dp),
         ) {
+            var flatIndex = 0 // index into timelineItems (header + photos), used to look up the justified span/height
             groups.forEach { group ->
+              val groupBase = flatIndex + (if (showTimeline) 1 else 0)
+              flatIndex = groupBase + group.value.size
+              val spanFn: (LazyGridItemSpanScope.(Int, MediaImage) -> GridItemSpan)? =
+                  if (justifiedPlan != null) { { i, _ -> GridItemSpan(justifiedPlan.spans[groupBase + i]) } } else null
               if (showTimeline) {
                 item(key = "header:${group.value.firstOrNull()?.stableKey ?: group.key}", span = { GridItemSpan(maxLineSpan) }, contentType = "header") {
                     val ids = remember(group.value) { group.value.map { it.stableKey } }
@@ -4783,6 +4806,19 @@ private fun PhotoGrid(
                     ) {
                         Text(group.key, style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                        if (justifiedPlan != null) {
+                            // "date | city": only when the photos really carry GPS (resolved lazily for visible headers)
+                            val dayKey = group.value.firstOrNull()?.stableKey
+                            val place by produceState<String?>(null, dayKey) {
+                                value = if (dayKey == null) null else com.iris.gallery.data.LocationLabels.forDay(axGridCtx, dayKey, group.value)
+                            }
+                            place?.let {
+                                Text("  |  $it", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f))
+                            }
+                        }
                         androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                         AnimatedVisibility(selectedIds.isNotEmpty()) {
                             Text(if (wholeDateSelected) stringResource(R.string.action_deselect_date) else stringResource(R.string.action_select_date),
@@ -4792,12 +4828,18 @@ private fun PhotoGrid(
                     }
                 }
               }
-              items(group.value, key = { it.stableKey }, contentType = { "photo" }) { image ->
+              itemsIndexed(
+                group.value,
+                key = { _, it -> it.stableKey },
+                span = spanFn,
+                contentType = { _, _ -> "photo" },
+              ) { photoIndex, image ->
                 val selected = image.stableKey in selectedIds
                 val heroCell = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
                 // square tiles with softly rounded corners (never pill/circle): the corner setting is kept but capped
                 val tileRadius = if (cornerStyle.dp == 0) 0.dp else cornerStyle.dp.coerceIn(5, 10).dp
-                Box(Modifier.aspectRatio(1f)
+                val tileHeightDp = if (justifiedPlan != null) with(density) { justifiedPlan.heights[groupBase + photoIndex].toDp() } else 0.dp
+                Box((if (justifiedPlan != null) Modifier.fillMaxWidth().height(tileHeightDp) else Modifier.aspectRatio(1f))
                     .onGloballyPositioned { heroCell[0] = it }
                     .clip(AxRound(tileRadius))
                     // thin glass rim around every tile (glowing accent ring when selected), drawn in this same node
@@ -5119,6 +5161,55 @@ private fun PhotoGrid(
             }
         }
     }
+}
+
+/** Row structure of the justified grid, indexed like `timelineItems` (header entries included). */
+private class JustifiedGridPlan(
+    val spans: IntArray,
+    val heights: IntArray,
+    val rowHeights: IntArray,
+    val rowToItem: IntArray,
+    val isRowHeader: BooleanArray,
+    val itemToRow: IntArray,
+) {
+    val totalRows: Int get() = maxOf(rowHeights.size, 1)
+}
+
+private fun MediaImage.displayAspect(): Float {
+    if (width <= 0 || height <= 0) return 1f
+    val sideways = orientation % 180 != 0
+    return if (sideways) height.toFloat() / width else width.toFloat() / height
+}
+
+private fun buildJustifiedPlan(groups: List<List<MediaImage>>, widthPx: Int, gapPx: Int, targetRowPx: Int, headerPx: Int): JustifiedGridPlan {
+    val total = groups.sumOf { it.size + 1 }
+    val spans = IntArray(total) { com.iris.gallery.ui.JustifiedLayout.SPAN_UNITS }
+    val heights = IntArray(total)
+    val itemToRow = IntArray(total)
+    val rowHeights = ArrayList<Int>()
+    val rowToItem = ArrayList<Int>()
+    val isHeader = ArrayList<Boolean>()
+    var idx = 0
+    for (group in groups) {
+        heights[idx] = headerPx
+        itemToRow[idx] = rowHeights.size
+        rowToItem.add(idx); rowHeights.add(headerPx); isHeader.add(true)
+        idx++
+        val gl = com.iris.gallery.ui.JustifiedLayout.layoutGroup(FloatArray(group.size) { group[it].displayAspect() }, widthPx, gapPx, targetRowPx)
+        val firstRow = rowHeights.size
+        for (r in 0 until gl.rowCount) {
+            rowToItem.add(idx + gl.rowStarts[r]); rowHeights.add(gl.rowHeightsPx[r]); isHeader.add(false)
+        }
+        var r = 0
+        for (k in group.indices) {
+            while (r + 1 < gl.rowCount && gl.rowStarts[r + 1] <= k) r++
+            spans[idx + k] = gl.spans[k]
+            heights[idx + k] = gl.heightsPx[k]
+            itemToRow[idx + k] = firstRow + r
+        }
+        idx += group.size
+    }
+    return JustifiedGridPlan(spans, heights, rowHeights.toIntArray(), rowToItem.toIntArray(), isHeader.toBooleanArray(), itemToRow)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
