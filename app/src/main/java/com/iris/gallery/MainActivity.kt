@@ -4370,21 +4370,27 @@ private fun PhotoGrid(
             val zone = ZoneId.systemDefault()
             val today = LocalDate.now()
             val dayCache = HashMap<LocalDate, String>()
-            images.groupBy { image ->
-                val date = Instant.ofEpochMilli(image.sortDate).atZone(zone).toLocalDate()
-                dayCache.getOrPut(date) {
-                    formatTimelineDate(
-                        date = date,
-                        today = today,
-                        sameYearFormatter = sameYearFormatter,
-                        otherYearFormatter = otherYearFormatter,
-                        useRelativeDates = useRelativeDates,
-                        todayString = todayString,
-                        yesterdayString = yesterdayString,
-                        smartYearHiding = smartYearHiding,
-                    )
+            // Group by the calendar DAY, never by the formatted label: a label without a year ("5 December")
+            // would otherwise merge the same day of different years into one header.
+            images.groupBy { image -> Instant.ofEpochMilli(image.sortDate).atZone(zone).toLocalDate() }
+                .entries.map { (date, list) ->
+                    val label = dayCache.getOrPut(date) {
+                        formatTimelineDate(
+                            date = date,
+                            today = today,
+                            sameYearFormatter = sameYearFormatter,
+                            otherYearFormatter = otherYearFormatter,
+                            useRelativeDates = useRelativeDates,
+                            todayString = todayString,
+                            yesterdayString = yesterdayString,
+                            smartYearHiding = smartYearHiding,
+                        )
+                    }
+                    object : Map.Entry<String, List<MediaImage>> {
+                        override val key = label
+                        override val value = list
+                    }
                 }
-            }.entries.toList()
         } else listOf("" to images).map { object : Map.Entry<String, List<MediaImage>> {
             override val key = it.first
             override val value = it.second
@@ -4745,7 +4751,7 @@ private fun PhotoGrid(
         ) {
             groups.forEach { group ->
               if (showTimeline) {
-                item(key = "header:${group.key}", span = { GridItemSpan(maxLineSpan) }, contentType = "header") {
+                item(key = "header:${group.value.firstOrNull()?.stableKey ?: group.key}", span = { GridItemSpan(maxLineSpan) }, contentType = "header") {
                     val ids = remember(group.value) { group.value.map { it.stableKey } }
                     val wholeDateSelected = ids.isNotEmpty() && ids.all { it in selectedIds }
                     val headerClickModifier = if (onSetDateSelection != null) {

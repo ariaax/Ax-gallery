@@ -47,7 +47,7 @@ class MediaRepository(private val context: Context) {
     fun loadSnapshot(): List<MediaImage> = synchronized(snapshotLock) { runCatching {
         DataInputStream(snapshot.openRead().buffered()).use { input ->
             val version = input.readInt()
-            if (version !in 3..4) return@use emptyList()
+            if (version != 5) return@use emptyList() // v3/v4 snapshots hold dates from the old resolver; rebuild once
             val list = List(input.readInt().coerceIn(0, 100_000)) {
                 val id = input.readLong(); val isVideo = input.readBoolean()
                 val savedVolume = if (version >= 4) input.readUTF() else ""
@@ -119,34 +119,6 @@ class MediaRepository(private val context: Context) {
             android.media.MediaScannerConnection.scanFile(context, arrayOf(image.path), null, null)
         }
         runCatching { context.contentResolver.delete(image.uri.buildUpon().clearQuery().build(), null, null) }
-    }
-
-    private fun resolveDateTaken(
-        cursorDateTaken: Long,
-        cursorDateModified: Long,
-        cursorDateAdded: Long,
-        diskLastModified: Long = 0L,
-        existingDateTaken: Long = 0L,
-        existingDateModified: Long = 0L
-    ): Long {
-        val effectiveModified = if (diskLastModified > 0L) diskLastModified else cursorDateModified
-        if (cursorDateTaken <= 0L) {
-            return if (effectiveModified > 0L) effectiveModified else cursorDateAdded
-        }
-        val takenSec = cursorDateTaken / 1000L
-        val addedSec = cursorDateAdded / 1000L
-        val modSec = cursorDateModified / 1000L
-        val existingTakenSec = existingDateTaken / 1000L
-        val existingModSec = existingDateModified / 1000L
-
-        val isSyntheticDateTaken = (takenSec == addedSec && addedSec > 0L) ||
-                (takenSec == modSec && modSec > 0L) ||
-                (existingTakenSec > 0L && existingTakenSec == existingModSec && effectiveModified != existingDateModified)
-
-        if (isSyntheticDateTaken && effectiveModified > 0L) {
-            return effectiveModified
-        }
-        return cursorDateTaken
     }
 
     suspend fun rescanStorage(): Int = withContext(Dispatchers.IO) {
@@ -547,34 +519,19 @@ class MediaRepository(private val context: Context) {
                             }
                         }
 
-                        var takenTime = cursorDateTaken
-                        val takenSec = cursorDateTaken / 1000L
-                        val addedSec = cursorDateAdded / 1000L
-                        val modSec = effectiveModified / 1000L
-
-                        val isSyntheticDateTaken = (takenSec == addedSec && addedSec > 0L) ||
-                                (takenSec == modSec && modSec > 0L)
-
-                        if (ENABLE_EXIF_ON_LOAD && !isVid && (cursorDateTaken <= 0L || isSyntheticDateTaken)) {
-                            val exifTaken = extractExifDateTaken(context, mediaUri, filePath)
-                            if (exifTaken != null && exifTaken > 0L) {
-                                takenTime = exifTaken
-                            }
+                        // File-level date: remembered background read (photos AND videos); never touches the file here.
+                        var fileMetadataMs: Long? = if (trashed) null else ExifDateStore.get(identityKey)
+                        if (fileMetadataMs == null && ENABLE_EXIF_ON_LOAD && !isVid) {
+                            fileMetadataMs = extractExifDateTaken(context, mediaUri, filePath)?.takeIf { it > 0L }
                         }
-
-                        if (!isVid && takenTime == cursorDateTaken && (cursorDateTaken <= 0L || isSyntheticDateTaken)) {
-                            val storedExif = ExifDateStore.get(identityKey)
-                            if (storedExif != null) takenTime = storedExif
-                        }
-
-                        if (takenTime <= 0L || (isSyntheticDateTaken && takenTime == cursorDateTaken)) {
-                            takenTime = resolveDateTaken(
-                                cursorDateTaken = cursorDateTaken,
-                                cursorDateModified = effectiveModified,
-                                cursorDateAdded = cursorDateAdded,
-                                diskLastModified = diskModifiedMs
-                            )
-                        }
+                        val takenTime = MediaDates.resolve(
+                            rawTaken = cursorDateTaken,
+                            addedMs = cursorDateAdded,
+                            modifiedMs = effectiveModified,
+                            fileMetadataMs = fileMetadataMs,
+                            fileName = displayName,
+                            nowMs = now,
+                        )
 
                         val itemBucketId = if (trashed) -2L else cursor.getLong(bucketId)
                         val itemBucketName = if (trashed) "Trash" else cursor.getString(bucketName).orEmpty().ifBlank { "Other" }
@@ -629,24 +586,36 @@ class MediaRepository(private val context: Context) {
             (img.dateModified > 0L && t == img.dateModified / 1000L)
     }
 
+    /** Files that could not be opened this session; retried next launch, not on every refresh. */
+    private val unreadableThisSession = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
     /**
-     * Reads the real EXIF date of photos whose MediaStore date looks fake (equal to the added/modified time),
-     * one file at a time in the background, and remembers it. Returns how many photos got a new date.
+     * Reads the real capture date (EXIF for photos, container creation time for videos) of items whose
+     * MediaStore date looks fake (equal to the added/modified time), one file at a time in the background,
+     * and remembers it. A file that could not be opened is NOT remembered as "has no date": that mistake
+     * (common on SD cards) used to freeze the wrong date forever. Returns how many items got a new date.
      */
     suspend fun enrichExifDates(images: List<MediaImage>): Int = withContext(Dispatchers.IO) {
         ExifDateStore.ensureLoaded(context)
         if (!ExifDateStore.enabled) return@withContext 0
         val candidates = images.filter {
-            !it.isVideo && it.id > 0L && it.path.isNotBlank() &&
-                !ExifDateStore.isChecked(it.stableKey) && looksSyntheticDate(it)
+            it.id > 0L && (it.path.isNotBlank() || it.uri.scheme == "content") &&
+                !ExifDateStore.isChecked(it.stableKey) && it.stableKey !in unreadableThisSession &&
+                looksSyntheticDate(it)
         }
         if (candidates.isEmpty()) return@withContext 0
         val updates = HashMap<String, Long>()
         for ((index, img) in candidates.withIndex()) {
-            val exif = runCatching { extractExifDateTaken(context, img.uri, img.path) }.getOrNull()
-            ExifDateStore.put(img.stableKey, exif ?: 0L)
-            if (exif != null && exif > 0L && Math.abs(exif - img.dateTaken) > 1_000L) {
-                updates[img.stableKey] = exif
+            val probe = runCatching {
+                if (img.isVideo) probeVideoDate(context, img.uri, img.path) else probePhotoDate(context, img.uri, img.path)
+            }.getOrDefault(DateProbe.Unreadable)
+            when (probe) {
+                is DateProbe.Found -> {
+                    ExifDateStore.put(img.stableKey, probe.ms)
+                    if (Math.abs(probe.ms - img.dateTaken) > 1_000L) updates[img.stableKey] = probe.ms
+                }
+                DateProbe.Absent -> ExifDateStore.put(img.stableKey, 0L)
+                DateProbe.Unreadable -> unreadableThisSession.add(img.stableKey)
             }
             if (index % 100 == 99) ExifDateStore.save()
             kotlinx.coroutines.yield()
@@ -795,7 +764,7 @@ class MediaRepository(private val context: Context) {
         runCatching {
             stream = snapshot.startWrite()
             val output = DataOutputStream(stream!!.buffered())
-            output.writeInt(4); output.writeInt(media.size)
+            output.writeInt(5); output.writeInt(media.size)
             media.forEach { item ->
                 output.writeLong(item.id); output.writeBoolean(item.isVideo)
                 output.writeUTF(item.volumeName.ifBlank { volumeNameFromPath(item.path) }.take(256))
