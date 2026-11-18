@@ -4504,21 +4504,15 @@ private fun PhotoGrid(
     val itemToRow = rowLayout.second
     val rowToItem = rowLayout.third.first
     val isRowHeader = rowLayout.third.second
+    // Build markers from the active sort date (Date added when that mode is selected).
+    // Keep every distinct year, even if a refresh briefly interleaves day groups.
     val yearNavigation = remember(groups, showTimeline) {
-        buildList<Pair<Int, Int>> {
-            var itemIndex = 0
-            var previousYear: Int? = null
-            groups.forEach { group ->
-                val firstMedia = group.value.firstOrNull()
-                if (firstMedia != null) {
-                    val year = Instant.ofEpochMilli(firstMedia.sortDate)
-                        .atZone(ZoneId.systemDefault()).year
-                    if (year != previousYear) add(year to itemIndex)
-                    previousYear = year
-                }
-                itemIndex += (if (showTimeline) 1 else 0) + group.value.size
-            }
-        }
+        com.iris.gallery.ui.buildTimelineYearMarkers(
+            groupFirstDates = groups.map { it.value.firstOrNull()?.sortDate ?: 0L },
+            groupSizes = groups.map { it.value.size },
+            showHeaders = showTimeline,
+            yearOf = { millis -> Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).year },
+        )
     }
 
     val rowOffsets = remember(rowLayout, justifiedPlan, photoHeight, headerHeight, spacingPx, topPaddingPx) {
@@ -4924,6 +4918,11 @@ private fun PhotoGrid(
 
             val thumbColor = MaterialTheme.colorScheme.primary
             val trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f)
+            val thumbSpringScale by animateFloatAsState(
+                targetValue = if (scrubberDragging) 1.22f else 1f,
+                animationSpec = spring(dampingRatio = 0.52f, stiffness = 460f),
+                label = "timelineThumbBubbleScale",
+            )
             val scrollHaptic = androidx.compose.ui.platform.LocalHapticFeedback.current
             val scrollSlop = androidx.compose.ui.platform.LocalViewConfiguration.current.touchSlop
 
@@ -5037,86 +5036,111 @@ private fun PhotoGrid(
                         }
                 ) {
                     val inset = 16.dp.toPx()
-                    val thumbHeight = 48.dp.toPx()
-                    val maxTravel = (size.height - inset * 2 - thumbHeight).coerceAtLeast(0f)
-                    val thumbTop = inset + scrollFraction.coerceIn(0f, 1f) * maxTravel
+                    val hitThumbHeight = 48.dp.toPx() // keep gesture math stable while the visual thumb breathes
+                    val maxTravel = (size.height - inset * 2 - hitThumbHeight).coerceAtLeast(0f)
+                    val thumbCenterY = inset + hitThumbHeight / 2f + scrollFraction.coerceIn(0f, 1f) * maxTravel
 
-                    // A persistent, softly rounded rail is easier to discover and grab than the
-                    // previous almost-invisible 5dp line. Keep drawing lightweight (one track + thumb).
-                    val trackWidth = if (scrubberDragging) 5.dp.toPx() else 3.dp.toPx()
-                    val trackLeft = size.width - trackWidth - 5.dp.toPx()
+                    // Frosted track + a soft halo and springy liquid thumb.
+                    val trackWidth = if (scrubberDragging) 4.5.dp.toPx() else 2.5.dp.toPx()
+                    val trackLeft = size.width - trackWidth - 6.dp.toPx()
                     drawRoundRect(
-                        color = trackColor.copy(alpha = if (scrubberDragging) 0.72f else 0.42f),
+                        color = trackColor.copy(alpha = if (scrubberDragging) 0.78f else 0.46f),
                         topLeft = Offset(trackLeft, inset),
                         size = Size(trackWidth, size.height - inset * 2),
                         cornerRadius = CornerRadius(trackWidth / 2f, trackWidth / 2f)
                     )
-
-                    val activeThumbWidth = if (scrubberDragging) 11.dp.toPx() else 8.dp.toPx()
-                    val activeThumbLeft = size.width - activeThumbWidth - 2.dp.toPx()
+                    val thumbWidth = (if (scrubberDragging) 13.dp else 7.dp).toPx() * thumbSpringScale
+                    val thumbHeight = (if (scrubberDragging) 54.dp else 42.dp).toPx() * thumbSpringScale
+                    val thumbLeft = size.width - thumbWidth - 2.dp.toPx()
+                    val thumbTop = thumbCenterY - thumbHeight / 2f
                     drawRoundRect(
-                        color = thumbColor.copy(alpha = if (scrubberDragging) 1f else 0.88f),
-                        topLeft = Offset(activeThumbLeft, thumbTop),
-                        size = Size(activeThumbWidth, thumbHeight),
-                        cornerRadius = CornerRadius(activeThumbWidth / 2f, activeThumbWidth / 2f)
+                        color = thumbColor.copy(alpha = if (scrubberDragging) 0.20f else 0.10f),
+                        topLeft = Offset(thumbLeft - 5.dp.toPx(), thumbTop - 5.dp.toPx()),
+                        size = Size(thumbWidth + 10.dp.toPx(), thumbHeight + 10.dp.toPx()),
+                        cornerRadius = CornerRadius((thumbWidth + 10.dp.toPx()) / 2f, (thumbWidth + 10.dp.toPx()) / 2f)
+                    )
+                    drawRoundRect(
+                        color = thumbColor.copy(alpha = if (scrubberDragging) 1f else 0.90f),
+                        topLeft = Offset(thumbLeft, thumbTop),
+                        size = Size(thumbWidth, thumbHeight),
+                        cornerRadius = CornerRadius(thumbWidth / 2f, thumbWidth / 2f)
                     )
                 }
             }
 
-            if (yearNavigation.size > 1 && scrollerAlpha > 0f) {
-                // Slim glass rail: a few year labels placed where that year really starts (same scale as the scroll thumb),
-                // labels that would collide are left out, the current year gets a small accent capsule.
-                val currentYear = visibleDate?.let { Instant.ofEpochMilli(it.sortDate).atZone(ZoneId.systemDefault()).year }
-                val railAccent = MaterialTheme.colorScheme.primary
-                BoxWithConstraints(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .fillMaxHeight()
-                        .padding(top = topPadding, bottom = bottomPadding, end = 14.dp)
-                        .width(34.dp)
-                        .graphicsLayer { alpha = scrollerAlpha }
-                ) {
+            val activeTimelineYear = visibleDate?.let {
+                Instant.ofEpochMilli(it.sortDate).atZone(ZoneId.systemDefault()).year
+            }
+            AnimatedVisibility(
+                visible = yearNavigation.size > 1 && scrollerAlpha > 0f,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .padding(top = topPadding, bottom = bottomPadding, end = 8.dp),
+                enter = fadeIn(tween(130)) + slideInHorizontally(tween(210, easing = FastOutSlowInEasing)) { it / 2 },
+                exit = fadeOut(tween(110)) + slideOutHorizontally(tween(170, easing = FastOutSlowInEasing)) { it / 3 },
+            ) {
+                BoxWithConstraints(Modifier.width(48.dp)) {
                     val inset = 16.dp
-                    val thumbH = 48.dp
-                    val labelH = 24.dp
-                    val minGap = labelH + 6.dp
-                    val maxTravel = (maxHeight - inset * 2 - thumbH).coerceAtLeast(1.dp)
+                    val thumbHeight = 48.dp
+                    val travel = (maxHeight - inset * 2 - thumbHeight).coerceAtLeast(1.dp)
+                    val centers = yearFractions.map { inset + thumbHeight / 2f + travel * it }
+                    // Always reserve a slot for the active year; other labels are collision-aware.
+                    val visibleYearIndices = remember(yearNavigation, yearFractions, activeTimelineYear, maxHeight) {
+                        val chosen = mutableListOf<Int>()
+                        val activeIndex = yearNavigation.indexOfFirst { it.first == activeTimelineYear }
+                        fun centerAt(index: Int): Float = (inset + thumbHeight / 2f + travel * yearFractions[index]).value
+                        fun canFit(index: Int): Boolean = chosen.all { kotlin.math.abs(centerAt(it) - centerAt(index)) >= 31f }
+                        fun addIfFits(index: Int) {
+                            if (index in yearNavigation.indices && index !in chosen && canFit(index)) chosen += index
+                        }
+                        if (activeIndex >= 0) chosen += activeIndex
+                        addIfFits(0)
+                        addIfFits(yearNavigation.lastIndex)
+                        yearNavigation.indices.sortedBy { if (activeIndex >= 0) kotlin.math.abs(it - activeIndex) else it }
+                            .forEach(::addIfFits)
+                        chosen.sorted()
+                    }
                     Box(
-                        Modifier
-                            .align(Alignment.Center)
-                            .fillMaxHeight()
-                            .width(30.dp)
-                            .background(Color.Black.copy(alpha = 0.30f), AxRound(15.dp))
+                        Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(34.dp)
+                            .background(Color.Black.copy(alpha = 0.22f), AxRound(17.dp))
                     )
-                    var lastShown = (-1000).dp
-                    for (i in yearNavigation.indices) {
-                        val entry = yearNavigation[i]
-                        val center = inset + thumbH / 2 + maxTravel * yearFractions[i]
-                        if (center - lastShown < minGap) continue // too close to the previous label
-                        lastShown = center
-                        val isActive = entry.first == currentYear
+                    visibleYearIndices.forEach { index ->
+                        val entry = yearNavigation[index]
+                        val isActive = entry.first == activeTimelineYear
+                        val markerScale by animateFloatAsState(
+                            targetValue = if (isActive) 1.18f else 0.94f,
+                            animationSpec = spring(dampingRatio = 0.58f, stiffness = 500f),
+                            label = "yearMarker-${entry.first}",
+                        )
+                        val markerAlpha by animateFloatAsState(
+                            targetValue = if (isActive) 1f else 0.76f,
+                            animationSpec = tween(160),
+                            label = "yearMarkerAlpha-${entry.first}",
+                        )
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
-                                .offset(y = center - labelH / 2)
-                                .height(labelH)
-                                .widthIn(min = 30.dp)
+                                .offset(y = centers[index] - 12.dp)
+                                .width(46.dp)
+                                .height(24.dp)
+                                .graphicsLayer { scaleX = markerScale; scaleY = markerScale; alpha = markerAlpha }
                                 .clip(AxRound(12.dp))
-                                .background(if (isActive) railAccent else Color.Transparent)
+                                .background(if (isActive) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.46f))
                                 .clickable {
                                     scrubberScope.launch {
                                         gridState.animateScrollToItem(entry.second.coerceIn(0, timelineItems.lastIndex))
                                     }
-                                }
-                                .padding(horizontal = 4.dp),
-                            contentAlignment = Alignment.Center
+                                },
+                            contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = entry.first.toString(),
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isActive) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.82f),
+                                fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Medium,
+                                color = if (isActive) MaterialTheme.colorScheme.onPrimary else Color.White,
                                 maxLines = 1,
+                                softWrap = false,
                             )
                         }
                     }
@@ -5142,8 +5166,11 @@ private fun PhotoGrid(
                             placeable.placeRelative(0, targetY)
                         }
                     },
-                enter = fadeIn(tween(120)) + scaleIn(tween(180), initialScale = .88f),
-                exit = fadeOut(tween(120)) + scaleOut(tween(140), targetScale = .9f)
+                enter = fadeIn(tween(110)) +
+                    scaleIn(spring(dampingRatio = 0.52f, stiffness = 480f), initialScale = 0.68f) +
+                    slideInHorizontally(tween(210, easing = FastOutSlowInEasing)) { it / 3 },
+                exit = fadeOut(tween(100)) + scaleOut(tween(170), targetScale = 0.82f) +
+                    slideOutHorizontally(tween(160, easing = FastOutSlowInEasing)) { it / 4 }
             ) {
                 val activeYear = visibleDate?.let {
                     Instant.ofEpochMilli(it.sortDate).atZone(ZoneId.systemDefault()).year.toString()
@@ -5175,12 +5202,22 @@ private fun PhotoGrid(
                                 fontWeight = FontWeight.ExtraBold
                             )
                         }
-                        Text(
-                            text = visibleDate?.let { formatTimelineLabel(it.sortDate) } ?: "",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        AnimatedContent(
+                            targetState = visibleDate?.let { formatTimelineLabel(it.sortDate) }.orEmpty(),
+                            transitionSpec = {
+                                (slideInVertically(tween(150, easing = FastOutSlowInEasing)) { it / 2 } + fadeIn(tween(120))) togetherWith
+                                    (slideOutVertically(tween(110, easing = FastOutSlowInEasing)) { -it / 2 } + fadeOut(tween(90)))
+                            },
+                            label = "timelineDateBubbleText",
+                        ) { label ->
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                            )
+                        }
                     }
                 }
             }
