@@ -903,6 +903,15 @@ fun SettingsScreen(
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
                             SettingsSwitchRow(
+                                title = "Justified photo layout",
+                                subtitle = "Photos keep their own proportions in rows of different sizes, with the city next to the date. Off = equal squares.",
+                                checked = settings.justifiedLayout,
+                                onCheckedChange = { preferences.setJustifiedLayout(it) }
+                            )
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                            SettingsSwitchRow(
                                 title = stringResource(R.string.settings_show_day_of_week_title),
                                 subtitle = stringResource(R.string.settings_show_day_of_week_desc),
                                 checked = settings.showDayOfWeek,

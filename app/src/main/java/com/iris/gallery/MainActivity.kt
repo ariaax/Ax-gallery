@@ -109,6 +109,11 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.LazyColumn
@@ -4333,6 +4338,7 @@ private fun PhotoGrid(
     cellSize: androidx.compose.ui.unit.Dp,
     onCellSizeChange: ((androidx.compose.ui.unit.Dp) -> Unit)? = null,
     showTimeline: Boolean = false,
+    justified: Boolean = false,
     showDateBubble: Boolean = showTimeline,
     timelineDateFormat: TimelineDateFormat = TimelineDateFormat.SYSTEM_DEFAULT,
     customTimelineDateFormat: String = "d. MMMM yyyy",
@@ -4439,7 +4445,21 @@ private fun PhotoGrid(
     val photoHeight = estimatedPhotoHeight
     val headerHeight = estimatedHeaderHeight
 
-    val rowLayout = remember(groups, showTimeline, actualColumns, timelineItems.size) {
+    // Justified (masonry-style) rows: every photo keeps its own proportion, rows are filled edge to edge.
+    val justifiedPlan = remember(groups, showTimeline, justified, screenWidthDp, startPadding, endPadding, gridSpacing, cellSize, density) {
+        if (!(justified && showTimeline)) null else with(density) {
+            val widthPx = (screenWidthDp.dp - startPadding - endPadding - (gridSpacing.dp * 2).dp).roundToPx()
+            buildJustifiedPlan(
+                groups = groups.map { it.value },
+                widthPx = widthPx,
+                gapPx = gridSpacing.dp.dp.roundToPx(),
+                targetRowPx = (cellSize.value * 1.35f).dp.roundToPx(),
+                headerPx = 50.dp.roundToPx(),
+            )
+        }
+    }
+    val rowLayout = remember(groups, showTimeline, actualColumns, timelineItems.size, justifiedPlan) {
+        justifiedPlan?.let { return@remember Triple(it.totalRows, it.itemToRow, Pair(it.rowToItem, it.isRowHeader)) }
         val cols = actualColumns.coerceAtLeast(1)
         val totalCount = timelineItems.size
         val itemToRow = IntArray(totalCount)
@@ -4494,25 +4514,47 @@ private fun PhotoGrid(
     val rowToItem = rowLayout.third.first
     val isRowHeader = rowLayout.third.second
 
-    val rowOffsets = remember(rowLayout, photoHeight, headerHeight, spacingPx, topPaddingPx) {
+    val rowOffsets = remember(rowLayout, justifiedPlan, photoHeight, headerHeight, spacingPx, topPaddingPx) {
         val offsets = IntArray(totalRows)
         var acc = topPaddingPx
         for (r in 0 until totalRows) {
             offsets[r] = acc
-            val h = if (isRowHeader[r]) headerHeight else photoHeight
+            val h = justifiedPlan?.rowHeights?.getOrNull(r) ?: if (isRowHeader[r]) headerHeight else photoHeight
             acc += h + spacingPx
         }
         offsets
     }
 
-    val totalContentHeight = remember(rowLayout, photoHeight, headerHeight, spacingPx, topPaddingPx, bottomPaddingPx) {
+    val totalContentHeight = remember(rowLayout, justifiedPlan, photoHeight, headerHeight, spacingPx, topPaddingPx, bottomPaddingPx) {
         var acc = topPaddingPx
         for (r in 0 until totalRows) {
-            val h = if (isRowHeader[r]) headerHeight else photoHeight
+            val h = justifiedPlan?.rowHeights?.getOrNull(r) ?: if (isRowHeader[r]) headerHeight else photoHeight
             acc += h + spacingPx
         }
         acc += bottomPaddingPx
         maxOf(acc, 1)
+    }
+
+    // one mark per year (first item of that year, newest first) for the year-navigation bar
+    val yearMarks = remember(timelineItems, itemToRow) {
+        val zone = ZoneId.systemDefault()
+        val marks = ArrayList<YearMark>()
+        var lastYear = Int.MIN_VALUE
+        for (i in timelineItems.indices) {
+            val img = timelineItems[i] ?: continue
+            val year = Instant.ofEpochMilli(img.sortDate).atZone(zone).year
+            if (year != lastYear) {
+                lastYear = year
+                val at = if (i > 0 && timelineItems[i - 1] == null) i - 1 else i // land on the day header
+                marks.add(YearMark(year, at, itemToRow.getOrElse(at) { 0 }))
+            }
+        }
+        marks
+    }
+    val viewportHeightPx by remember(gridState) { derivedStateOf { gridState.layoutInfo.viewportSize.height } }
+    val yearFractions = remember(yearMarks, rowOffsets, totalContentHeight, viewportHeightPx, topPaddingPx) {
+        val maxScroll = (totalContentHeight - viewportHeightPx).coerceAtLeast(1).toFloat()
+        FloatArray(yearMarks.size) { ((rowOffsets.getOrElse(yearMarks[it].row) { 0 } - topPaddingPx).coerceAtLeast(0) / maxScroll).coerceIn(0f, 1f) }
     }
 
     var scrubberDragging by remember { mutableStateOf(false) }
@@ -4620,7 +4662,7 @@ private fun PhotoGrid(
             }
     ) {
         val rimAccent = MaterialTheme.colorScheme.primary
-        val targetThumbnailPx = remember(actualColumns) { com.iris.gallery.ui.getThumbnailTargetSizePx(actualColumns) }
+        val targetThumbnailPx = remember(actualColumns, justifiedPlan != null) { if (justifiedPlan != null) 512 else com.iris.gallery.ui.getThumbnailTargetSizePx(actualColumns) }
         // Look-ahead: while scrolling, decode the next ~3 screens of tiles in the scroll direction so they are
         // already in the memory cache when they arrive (fewer empty tiles during a fling).
         val prefetchCtx = LocalContext.current
@@ -4649,7 +4691,7 @@ private fun PhotoGrid(
         }
         LazyVerticalGrid(
             state = gridState,
-            columns = GridCells.Adaptive(cellSize),
+            columns = if (justifiedPlan != null) GridCells.Fixed(com.iris.gallery.ui.JustifiedLayout.SPAN_UNITS) else GridCells.Adaptive(cellSize),
             modifier = Modifier.fillMaxSize().pointerInput(gridState, onSetSelection) {
                 if (currentSetSelection == null) return@pointerInput
                 var selecting = true
@@ -4749,7 +4791,12 @@ private fun PhotoGrid(
             horizontalArrangement = Arrangement.spacedBy(gridSpacing.dp.dp),
             verticalArrangement = Arrangement.spacedBy(gridSpacing.dp.dp),
         ) {
+            var flatIndex = 0 // index into timelineItems (header + photos), used to look up the justified span/height
             groups.forEach { group ->
+              val groupBase = flatIndex + (if (showTimeline) 1 else 0)
+              flatIndex = groupBase + group.value.size
+              val spanFn: (LazyGridItemSpanScope.(Int, MediaImage) -> GridItemSpan)? =
+                  if (justifiedPlan != null) { { i, _ -> GridItemSpan(justifiedPlan.spans[groupBase + i]) } } else null
               if (showTimeline) {
                 item(key = "header:${group.value.firstOrNull()?.stableKey ?: group.key}", span = { GridItemSpan(maxLineSpan) }, contentType = "header") {
                     val ids = remember(group.value) { group.value.map { it.stableKey } }
@@ -4775,6 +4822,19 @@ private fun PhotoGrid(
                     ) {
                         Text(group.key, style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                        if (justifiedPlan != null) {
+                            // "date | city": only when the photos really carry GPS (resolved lazily for visible headers)
+                            val dayKey = group.value.firstOrNull()?.stableKey
+                            val place by produceState<String?>(null, dayKey) {
+                                value = if (dayKey == null) null else com.iris.gallery.data.LocationLabels.forDay(axGridCtx, dayKey, group.value)
+                            }
+                            place?.let {
+                                Text("  |  $it", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f))
+                            }
+                        }
                         androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                         AnimatedVisibility(selectedIds.isNotEmpty()) {
                             Text(if (wholeDateSelected) stringResource(R.string.action_deselect_date) else stringResource(R.string.action_select_date),
@@ -4784,12 +4844,18 @@ private fun PhotoGrid(
                     }
                 }
               }
-              items(group.value, key = { it.stableKey }, contentType = { "photo" }) { image ->
+              itemsIndexed(
+                group.value,
+                key = { _, it -> it.stableKey },
+                span = spanFn,
+                contentType = { _, _ -> "photo" },
+              ) { photoIndex, image ->
                 val selected = image.stableKey in selectedIds
                 val heroCell = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
                 // square tiles with softly rounded corners (never pill/circle): the corner setting is kept but capped
                 val tileRadius = if (cornerStyle.dp == 0) 0.dp else cornerStyle.dp.coerceIn(5, 10).dp
-                Box(Modifier.aspectRatio(1f)
+                val tileHeightDp = if (justifiedPlan != null) with(density) { justifiedPlan.heights[groupBase + photoIndex].toDp() } else 0.dp
+                Box((if (justifiedPlan != null) Modifier.fillMaxWidth().height(tileHeightDp) else Modifier.aspectRatio(1f))
                     .onGloballyPositioned { heroCell[0] = it }
                     .clip(AxRound(tileRadius))
                     // thin glass rim around every tile (glowing accent ring when selected), drawn in this same node
@@ -4866,15 +4932,30 @@ private fun PhotoGrid(
             val scrollHaptic = androidx.compose.ui.platform.LocalHapticFeedback.current
             val scrollSlop = androidx.compose.ui.platform.LocalViewConfiguration.current.touchSlop
 
+            val currentYear = visibleDate?.let { Instant.ofEpochMilli(it.sortDate).atZone(ZoneId.systemDefault()).year }
             if (scrollerAlpha > 0f) {
+              // start below the top bar: otherwise this strip covers (and steals touches from) the bar's right-most button
+              Box(
+                Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .padding(top = topPadding, bottom = bottomPadding)
+                    .graphicsLayer { alpha = scrollerAlpha }
+              ) {
+                if (yearMarks.size > 1) {
+                    YearPills(
+                        marks = yearMarks,
+                        fractions = yearFractions,
+                        currentYear = currentYear,
+                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 22.dp).fillMaxHeight().width(64.dp),
+                        onJump = { mark -> scrubberScope.launch { gridState.animateScrollToItem(mark.itemIndex) } },
+                    )
+                }
                 Canvas(
                     Modifier
                         .align(Alignment.CenterEnd)
                         .fillMaxHeight()
-                        // start below the top bar: otherwise this strip covers (and steals touches from) the bar's right-most button
-                        .padding(top = topPadding, bottom = bottomPadding)
                         .width(40.dp)
-                        .graphicsLayer { alpha = scrollerAlpha }
                         .pointerInput(timelineItems.size, totalRows, totalContentHeight) {
                             awaitEachGesture {
                                 // Deliberate grab only: a touch on the thumb, or a finger held still for 350 ms here.
@@ -4978,6 +5059,15 @@ private fun PhotoGrid(
                     val thumbTop = inset + scrollFraction.coerceIn(0f, 1f) * maxTravel
                     val thumbLeft = size.width - thumbWidth - 4.dp.toPx()
 
+                    if (yearMarks.size > 1) {
+                        // slim track with one dot per year; the thumb slides along it
+                        val dotX = size.width - 6.5.dp.toPx()
+                        drawLine(trackColor, Offset(dotX, inset), Offset(dotX, size.height - inset), strokeWidth = 1.dp.toPx())
+                        for (f in yearFractions) {
+                            drawCircle(thumbColor.copy(alpha = 0.75f), radius = 2.2.dp.toPx(), center = Offset(dotX, inset + thumbHeight / 2f + f * maxTravel))
+                        }
+                    }
+
                     if (scrubberDragging) {
                         val trackWidth = 3.dp.toPx()
                         val trackLeft = size.width - trackWidth - 5.dp.toPx()
@@ -4996,13 +5086,14 @@ private fun PhotoGrid(
                         cornerRadius = CornerRadius(thumbWidth / 2f, thumbWidth / 2f)
                     )
                 }
+              }
             }
 
             AnimatedVisibility(
-                visible = scrubberDragging && showDateBubble && visibleDate != null,
+                visible = (scrubberDragging || gridState.isScrollInProgress) && showDateBubble && visibleDate != null,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(end = 42.dp, bottom = bottomPadding)
+                    .padding(end = if (yearMarks.size > 1) 92.dp else 42.dp, bottom = bottomPadding)
                     .layout { measurable, constraints ->
                         val placeable = measurable.measure(constraints)
                         val insetPx = 16.dp.toPx()
@@ -5025,7 +5116,22 @@ private fun PhotoGrid(
                     tonalElevation = 8.dp,
                     color = MaterialTheme.colorScheme.primaryContainer
                 ) {
-                    Text(
+                    val labelDate = visibleDate?.let { Instant.ofEpochMilli(it.sortDate).atZone(ZoneId.systemDefault()) }
+                    if (yearMarks.size > 1 && labelDate != null) {
+                        Column(Modifier.padding(horizontal = 18.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = labelDate.year.toString(),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = labelDate.month.getDisplayName(java.time.format.TextStyle.SHORT, currentLocale),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+                            )
+                        }
+                    } else Text(
                         text = visibleDate?.let { formatTimelineLabel(it.sortDate) } ?: "",
                         modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
                         style = MaterialTheme.typography.titleMedium,
@@ -5034,6 +5140,98 @@ private fun PhotoGrid(
                     )
                 }
             }
+        }
+    }
+}
+
+private class YearMark(val year: Int, val itemIndex: Int, val row: Int)
+
+/** Row structure of the justified grid, indexed like `timelineItems` (header entries included). */
+private class JustifiedGridPlan(
+    val spans: IntArray,
+    val heights: IntArray,
+    val rowHeights: IntArray,
+    val rowToItem: IntArray,
+    val isRowHeader: BooleanArray,
+    val itemToRow: IntArray,
+) {
+    val totalRows: Int get() = maxOf(rowHeights.size, 1)
+}
+
+private fun MediaImage.displayAspect(): Float {
+    if (width <= 0 || height <= 0) return 1f
+    val sideways = orientation % 180 != 0
+    return if (sideways) height.toFloat() / width else width.toFloat() / height
+}
+
+private fun buildJustifiedPlan(groups: List<List<MediaImage>>, widthPx: Int, gapPx: Int, targetRowPx: Int, headerPx: Int): JustifiedGridPlan {
+    val total = groups.sumOf { it.size + 1 }
+    val spans = IntArray(total) { com.iris.gallery.ui.JustifiedLayout.SPAN_UNITS }
+    val heights = IntArray(total)
+    val itemToRow = IntArray(total)
+    val rowHeights = ArrayList<Int>()
+    val rowToItem = ArrayList<Int>()
+    val isHeader = ArrayList<Boolean>()
+    var idx = 0
+    for (group in groups) {
+        heights[idx] = headerPx
+        itemToRow[idx] = rowHeights.size
+        rowToItem.add(idx); rowHeights.add(headerPx); isHeader.add(true)
+        idx++
+        val gl = com.iris.gallery.ui.JustifiedLayout.layoutGroup(FloatArray(group.size) { group[it].displayAspect() }, widthPx, gapPx, targetRowPx)
+        val firstRow = rowHeights.size
+        for (r in 0 until gl.rowCount) {
+            rowToItem.add(idx + gl.rowStarts[r]); rowHeights.add(gl.rowHeightsPx[r]); isHeader.add(false)
+        }
+        var r = 0
+        for (k in group.indices) {
+            while (r + 1 < gl.rowCount && gl.rowStarts[r + 1] <= k) r++
+            spans[idx + k] = gl.spans[k]
+            heights[idx + k] = gl.heightsPx[k]
+            itemToRow[idx + k] = firstRow + r
+        }
+        idx += group.size
+    }
+    return JustifiedGridPlan(spans, heights, rowHeights.toIntArray(), rowToItem.toIntArray(), isHeader.toBooleanArray(), itemToRow)
+}
+
+/** Year labels of the right-hand navigation bar. Tapping one scrolls to the first day of that year. */
+@Composable
+private fun YearPills(
+    marks: List<YearMark>,
+    fractions: FloatArray,
+    currentYear: Int?,
+    modifier: Modifier = Modifier,
+    onJump: (YearMark) -> Unit,
+) {
+    BoxWithConstraints(modifier) {
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val inset = 16.dp
+        val thumbH = 48.dp
+        val pillH = 26.dp
+        val maxTravel = (maxHeight - inset * 2 - thumbH).coerceAtLeast(1.dp)
+        var lastShown = (-1000).dp
+        val accent = MaterialTheme.colorScheme.primary
+        for (i in marks.indices) {
+            val center = inset + thumbH / 2 + maxTravel * fractions[i]
+            if (center - lastShown < pillH + 4.dp) continue // not enough room: the dot stays, the label is skipped
+            lastShown = center
+            val mark = marks[i]
+            val current = mark.year == currentYear
+            Text(
+                text = mark.year.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = if (current) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.92f),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset { IntOffset(0, with(density) { (center - pillH / 2).roundToPx() }) }
+                    .height(pillH)
+                    .background(if (current) accent else Color(0xD9262A33), AxRound(13.dp))
+                    .clickable { onJump(mark) }
+                    .padding(horizontal = 10.dp)
+                    .wrapContentHeight(Alignment.CenterVertically),
+            )
         }
     }
 }

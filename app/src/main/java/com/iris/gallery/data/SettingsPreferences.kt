@@ -137,6 +137,8 @@ data class SettingsState(
     val customTimelineDateFormat: String = "d. MMMM yyyy",
     val useRelativeDates: Boolean = true,
     val showDayOfWeek: Boolean = false,
+    /** Justified rows with the photos' own proportions (Xiaomi-style) instead of square tiles. */
+    val justifiedLayout: Boolean = true,
     val abbreviateDayOfWeek: Boolean = false,
     val smartYearHiding: Boolean = true,
     val showVideoDurationBadge: Boolean = true,
@@ -253,6 +255,7 @@ class SettingsPreferences(context: Context) {
     }
     fun setUseRelativeDates(use: Boolean) = update { copy(useRelativeDates = use) }
     fun setShowDayOfWeek(show: Boolean) = update { copy(showDayOfWeek = show) }
+    fun setJustifiedLayout(on: Boolean) = update { copy(justifiedLayout = on) }
     fun setAbbreviateDayOfWeek(abbreviate: Boolean) = update { copy(abbreviateDayOfWeek = abbreviate) }
     fun setSmartYearHiding(smart: Boolean) = update { copy(smartYearHiding = smart) }
     fun setShowVideoDurationBadge(show: Boolean) = update { copy(showVideoDurationBadge = show) }
@@ -386,6 +389,7 @@ class SettingsPreferences(context: Context) {
             }.getOrDefault("d. MMMM yyyy"),
             useRelativeDates = prefs.getBoolean("use_relative_dates", true),
             showDayOfWeek = prefs.getBoolean("show_day_of_week", false),
+            justifiedLayout = prefs.getBoolean("ax_justified_layout", true),
             abbreviateDayOfWeek = prefs.getBoolean("abbreviate_day_of_week", false),
             smartYearHiding = prefs.getBoolean("smart_year_hiding", true),
             showVideoDurationBadge = prefs.getBoolean("show_video_duration_badge", true),
@@ -454,6 +458,7 @@ class SettingsPreferences(context: Context) {
             .putString("custom_timeline_date_format", state.customTimelineDateFormat)
             .putBoolean("use_relative_dates", state.useRelativeDates)
             .putBoolean("show_day_of_week", state.showDayOfWeek)
+            .putBoolean("ax_justified_layout", state.justifiedLayout)
             .putBoolean("abbreviate_day_of_week", state.abbreviateDayOfWeek)
             .putBoolean("smart_year_hiding", state.smartYearHiding)
             .putBoolean("show_video_duration_badge", state.showVideoDurationBadge)
