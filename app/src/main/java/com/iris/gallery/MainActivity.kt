@@ -98,6 +98,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -4541,6 +4542,16 @@ private fun PhotoGrid(
         maxOf(acc, 1)
     }
 
+    val viewportHeightPx by remember(gridState) { derivedStateOf { gridState.layoutInfo.viewportSize.height } }
+    // where each year starts on the SAME 0..1 scale as the scroll thumb (true content offsets, not even spacing)
+    val yearFractions = remember(yearNavigation, itemToRow, rowOffsets, totalContentHeight, viewportHeightPx, topPaddingPx) {
+        val maxScroll = (totalContentHeight - viewportHeightPx).coerceAtLeast(1).toFloat()
+        FloatArray(yearNavigation.size) {
+            val row = itemToRow.getOrElse(yearNavigation[it].second) { 0 }
+            ((rowOffsets.getOrElse(row) { 0 } - topPaddingPx).coerceAtLeast(0) / maxScroll).coerceIn(0f, 1f)
+        }
+    }
+
     var scrubberDragging by remember { mutableStateOf(false) }
     var scrubFraction by remember { mutableFloatStateOf(0f) }
     var scrubTargetIndex by remember(timelineItems) { mutableIntStateOf(0) }
@@ -5052,46 +5063,60 @@ private fun PhotoGrid(
                 }
             }
 
-            if (yearNavigation.size > 1) {
+            if (yearNavigation.size > 1 && scrollerAlpha > 0f) {
+                // Slim glass rail: a few year labels placed where that year really starts (same scale as the scroll thumb),
+                // labels that would collide are left out, the current year gets a small accent capsule.
+                val currentYear = visibleDate?.let { Instant.ofEpochMilli(it.sortDate).atZone(ZoneId.systemDefault()).year }
+                val railAccent = MaterialTheme.colorScheme.primary
                 BoxWithConstraints(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .fillMaxHeight()
-                        .padding(top = topPadding + 16.dp, bottom = bottomPadding + 16.dp)
-                        .width(48.dp)
+                        .padding(top = topPadding, bottom = bottomPadding, end = 14.dp)
+                        .width(34.dp)
+                        .graphicsLayer { alpha = scrollerAlpha }
                 ) {
-                    val travel = (maxHeight - 30.dp).coerceAtLeast(0.dp)
-                    yearNavigation.forEachIndexed { index, entry ->
-                        val fraction = index.toFloat() / (yearNavigation.lastIndex).coerceAtLeast(1)
-                        val isActiveYear = visibleDate?.let {
-                            Instant.ofEpochMilli(it.sortDate).atZone(ZoneId.systemDefault()).year
-                        } == entry.first
-                        Surface(
+                    val inset = 16.dp
+                    val thumbH = 48.dp
+                    val labelH = 24.dp
+                    val minGap = labelH + 6.dp
+                    val maxTravel = (maxHeight - inset * 2 - thumbH).coerceAtLeast(1.dp)
+                    Box(
+                        Modifier
+                            .align(Alignment.Center)
+                            .fillMaxHeight()
+                            .width(30.dp)
+                            .background(Color.Black.copy(alpha = 0.30f), AxRound(15.dp))
+                    )
+                    var lastShown = (-1000).dp
+                    for (i in yearNavigation.indices) {
+                        val entry = yearNavigation[i]
+                        val center = inset + thumbH / 2 + maxTravel * yearFractions[i]
+                        if (center - lastShown < minGap) continue // too close to the previous label
+                        lastShown = center
+                        val isActive = entry.first == currentYear
+                        Box(
                             modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(top = travel * fraction)
+                                .align(Alignment.TopCenter)
+                                .offset(y = center - labelH / 2)
+                                .height(labelH)
+                                .widthIn(min = 30.dp)
+                                .clip(AxRound(12.dp))
+                                .background(if (isActive) railAccent else Color.Transparent)
                                 .clickable {
                                     scrubberScope.launch {
                                         gridState.animateScrollToItem(entry.second.coerceIn(0, timelineItems.lastIndex))
                                     }
-                                },
-                            shape = AxRound(13.dp),
-                            color = if (isActiveYear) MaterialTheme.colorScheme.primaryContainer
-                                else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
-                            contentColor = if (isActiveYear) MaterialTheme.colorScheme.onPrimaryContainer
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                if (isActiveYear) MaterialTheme.colorScheme.primary.copy(alpha = 0.48f)
-                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
-                            ),
-                            shadowElevation = if (isActiveYear) 4.dp else 1.dp
+                                }
+                                .padding(horizontal = 4.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = entry.first.toString(),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (isActiveYear) FontWeight.ExtraBold else FontWeight.SemiBold
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isActive) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.82f),
+                                maxLines = 1,
                             )
                         }
                     }
