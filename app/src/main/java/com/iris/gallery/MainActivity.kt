@@ -5050,33 +5050,38 @@ private fun PhotoGrid(
                     val maxTravel = (size.height - inset * 2 - thumbHeight).coerceAtLeast(0f)
                     val thumbTop = inset + scrollFraction.coerceIn(0f, 1f) * maxTravel
 
-                    // A persistent, softly rounded rail is easier to discover and grab than the
-                    // previous almost-invisible 5dp line. Keep drawing lightweight (one track + thumb).
-                    val trackWidth = if (scrubberDragging) 5.dp.toPx() else 3.dp.toPx()
-                    val trackLeft = size.width - trackWidth - 5.dp.toPx()
-                    drawRoundRect(
-                        color = trackColor.copy(alpha = if (scrubberDragging) 0.72f else 0.42f),
-                        topLeft = Offset(trackLeft, inset),
-                        size = Size(trackWidth, size.height - inset * 2),
-                        cornerRadius = CornerRadius(trackWidth / 2f, trackWidth / 2f)
+                    // Google-Photos-inspired floating scrub handle: no permanent scrollbar track.
+                    // The circular thumb stays aligned to the real content scroll fraction.
+                    val centerX = size.width - 17.dp.toPx()
+                    val centerY = thumbTop + thumbHeight / 2f
+                    val radius = (if (scrubberDragging) 17.dp else 15.dp).toPx()
+                    drawCircle(
+                        color = Color.Black.copy(alpha = if (scrubberDragging) 0.22f else 0.14f),
+                        radius = radius + 2.dp.toPx(),
+                        center = Offset(centerX, centerY + 1.dp.toPx())
                     )
-
-                    val activeThumbWidth = if (scrubberDragging) 11.dp.toPx() else 8.dp.toPx()
-                    val activeThumbLeft = size.width - activeThumbWidth - 2.dp.toPx()
-                    drawRoundRect(
-                        color = thumbColor.copy(alpha = if (scrubberDragging) 1f else 0.88f),
-                        topLeft = Offset(activeThumbLeft, thumbTop),
-                        size = Size(activeThumbWidth, thumbHeight),
-                        cornerRadius = CornerRadius(activeThumbWidth / 2f, activeThumbWidth / 2f)
+                    drawCircle(
+                        color = Color.White.copy(alpha = if (scrubberDragging) 1f else 0.94f),
+                        radius = radius,
+                        center = Offset(centerX, centerY)
                     )
+                    val arrowColor = Color(0xFF59616D)
+                    val arrowHalf = 3.4.dp.toPx()
+                    val arrowGap = 2.4.dp.toPx()
+                    val stroke = 1.8.dp.toPx()
+                    // Up chevron
+                    drawLine(arrowColor, Offset(centerX - arrowHalf, centerY - arrowGap), Offset(centerX, centerY - arrowGap - arrowHalf), stroke)
+                    drawLine(arrowColor, Offset(centerX, centerY - arrowGap - arrowHalf), Offset(centerX + arrowHalf, centerY - arrowGap), stroke)
+                    // Down chevron
+                    drawLine(arrowColor, Offset(centerX - arrowHalf, centerY + arrowGap), Offset(centerX, centerY + arrowGap + arrowHalf), stroke)
+                    drawLine(arrowColor, Offset(centerX, centerY + arrowGap + arrowHalf), Offset(centerX + arrowHalf, centerY + arrowGap), stroke)
                 }
             }
 
             if (yearNavigation.size > 1 && scrollerAlpha > 0f) {
-                // Slim glass rail: a few year labels placed where that year really starts (same scale as the scroll thumb),
-                // labels that would collide are left out, the current year gets a small accent capsule.
+                // Floating year pills inspired by Google Photos, with AX's own soft-glass finish.
+                // Every pill is anchored to that year's real first row, not evenly spaced by year.
                 val currentYear = visibleDate?.let { Instant.ofEpochMilli(it.sortDate).atZone(ZoneId.systemDefault()).year }
-                val railAccent = MaterialTheme.colorScheme.primary
                 BoxWithConstraints(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
@@ -5087,19 +5092,10 @@ private fun PhotoGrid(
                 ) {
                     val inset = 16.dp
                     val thumbH = 48.dp
-                    val labelH = 24.dp
-                    val minGap = labelH + 6.dp
+                    val labelH = 23.dp
+                    val minGap = labelH + 5.dp
                     val maxTravel = (maxHeight - inset * 2 - thumbH).coerceAtLeast(1.dp)
-                    Box(
-                        Modifier
-                            .align(Alignment.Center)
-                            .fillMaxHeight()
-                            .width(30.dp)
-                            .background(Color.Black.copy(alpha = 0.30f), AxRound(15.dp))
-                    )
-                    // Keep the active year visible first, then add other labels only where
-                    // they have enough room. The previous greedy top-to-bottom pass could
-                    // discard 2025 simply because 2026 was close to it.
+                    // Prioritize the active year, then distribute the remaining labels without collisions.
                     val visibleYearIndices = remember(yearNavigation, yearFractions, currentYear, maxHeight) {
                         val selected = linkedSetOf<Int>()
                         val activeIndex = yearNavigation.indexOfFirst { it.first == currentYear }
@@ -5107,44 +5103,63 @@ private fun PhotoGrid(
                             (inset + thumbH / 2 + maxTravel * yearFractions[index]).value
                         fun addIfSpace(index: Int) {
                             if (index !in yearNavigation.indices || index in selected) return
-                            if (selected.all { kotlin.math.abs(centerValue(it) - centerValue(index)) >= minGap.value }) {
-                                selected += index
-                            }
+                            if (selected.all { kotlin.math.abs(centerValue(it) - centerValue(index)) >= minGap.value }) selected += index
                         }
                         if (activeIndex >= 0) selected += activeIndex
                         addIfSpace(0)
                         addIfSpace(yearNavigation.lastIndex)
-                        val anchor = if (activeIndex >= 0) yearFractions[activeIndex] else 0f
-                        yearNavigation.indices
-                            .sortedBy { kotlin.math.abs(yearFractions[it] - anchor) }
-                            .forEach(::addIfSpace)
+                        val anchor = if (activeIndex >= 0) yearFractions[activeIndex] else scrollFraction
+                        yearNavigation.indices.sortedBy { kotlin.math.abs(yearFractions[it] - anchor) }.forEach(::addIfSpace)
                         selected.sortedBy { yearFractions[it] }
                     }
                     visibleYearIndices.forEach { i ->
                         val entry = yearNavigation[i]
                         val center = inset + thumbH / 2 + maxTravel * yearFractions[i]
                         val isActive = entry.first == currentYear
+                        val pillScale by animateFloatAsState(
+                            targetValue = if (isActive) 1.16f else 1f,
+                            animationSpec = spring(dampingRatio = 0.58f, stiffness = 520f),
+                            label = "yearPillScale"
+                        )
+                        val pillWidth by animateFloatAsState(
+                            targetValue = if (isActive) 1.18f else 1f,
+                            animationSpec = spring(dampingRatio = 0.62f, stiffness = 480f),
+                            label = "yearPillWidth"
+                        )
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
                                 .offset(y = center - labelH / 2)
                                 .height(labelH)
-                                .widthIn(min = 30.dp)
-                                .clip(AxRound(12.dp))
-                                .background(if (isActive) railAccent else Color.Transparent)
+                                .widthIn(min = if (isActive) 39.dp else 34.dp)
+                                .graphicsLayer {
+                                    scaleX = pillWidth
+                                    scaleY = pillScale
+                                }
+                                .clip(AxRound(14.dp))
+                                .background(
+                                    if (isActive) Color.White else Color.White.copy(alpha = 0.91f),
+                                    AxRound(14.dp)
+                                )
+                                .border(
+                                    width = if (isActive) 1.dp else 0.5.dp,
+                                    color = if (isActive) Color(0xFF6D9EFF) else Color.White.copy(alpha = 0.55f),
+                                    shape = AxRound(14.dp)
+                                )
                                 .clickable {
+                                    scrollHaptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                                     scrubberScope.launch {
                                         gridState.animateScrollToItem(entry.second.coerceIn(0, timelineItems.lastIndex))
                                     }
                                 }
-                                .padding(horizontal = 4.dp),
+                                .padding(horizontal = 5.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = entry.first.toString(),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isActive) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.82f),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = if (isActive) 12.sp else 11.sp),
+                                fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                color = Color(0xFF28313D),
                                 maxLines = 1,
                             )
                         }
