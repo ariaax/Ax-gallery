@@ -169,7 +169,7 @@ data class SettingsState(
     val appLockPinSalt: String = "",
     val appLockBiometricsEnabled: Boolean = true,
     val confirmDelete: Boolean = false,
-    val deleteMode: DeleteMode = DeleteMode.TRASH,
+    val deleteMode: DeleteMode = DeleteMode.PERMANENT,
     val useSystemTrash: Boolean = false,
     val videoMuted: Boolean = false,
     val preferredEditor: PreferredEditor = PreferredEditor.ALWAYS_ASK,
@@ -418,8 +418,9 @@ class SettingsPreferences(context: Context) {
             appLockPinSalt = prefs.getString("app_lock_pin_salt", "").orEmpty(),
             appLockBiometricsEnabled = prefs.getBoolean("app_lock_biometrics_enabled", true),
             confirmDelete = prefs.getBoolean("confirm_delete", false),
-            deleteMode = runCatching { DeleteMode.valueOf(prefs.getString("delete_mode", null).orEmpty()) }.getOrDefault(DeleteMode.TRASH),
-            useSystemTrash = prefs.getBoolean("use_system_trash", false),
+            // AX Gallery now uses direct deletion; legacy TRASH preferences are intentionally migrated.
+            deleteMode = DeleteMode.PERMANENT,
+            useSystemTrash = false, // platform trash disabled; deletion is permanent after confirmation
             videoMuted = prefs.getBoolean("video_muted", false),
             preferredEditor = runCatching { PreferredEditor.valueOf(prefs.getString("preferred_editor", null).orEmpty()) }.getOrDefault(PreferredEditor.ALWAYS_ASK),
             editorOverwriteOriginal = prefs.getBoolean("editor_overwrite_original", false),
