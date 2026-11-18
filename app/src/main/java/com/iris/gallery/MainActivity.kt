@@ -4362,32 +4362,39 @@ private fun PhotoGrid(
         getTimelineFormatter(timelineDateFormat, isSameYear = false, showDayOfWeek = showDayOfWeek, locale = currentLocale, customPattern = customTimelineDateFormat, abbreviateDayOfWeek = abbreviateDayOfWeek, smartYearHiding = smartYearHiding)
     }
 
-    val groups = remember(images, showTimeline, timelineDateFormat, customTimelineDateFormat, useRelativeDates, showDayOfWeek, abbreviateDayOfWeek, smartYearHiding, currentLocale, todayString, yesterdayString, sameYearFormatter, otherYearFormatter) {
+    // Adapted from Iris Gallery's PhotoGrid timeline grouping (Apache-2.0).
+    // AX's selected sort policy is deliberately used instead of Iris's fixed dateTaken:
+    // Date added must group by MediaStore DATE_ADDED, not by EXIF/capture time.
+    val groups = remember(
+        images, showTimeline, TimelineSort.mode, TimelineSort.recentWindowDays, TimelineSort.nowMs,
+        timelineDateFormat, customTimelineDateFormat, useRelativeDates, showDayOfWeek,
+        abbreviateDayOfWeek, smartYearHiding, currentLocale, todayString, yesterdayString,
+        sameYearFormatter, otherYearFormatter
+    ) {
         if (showTimeline) {
             val zone = ZoneId.systemDefault()
             val today = LocalDate.now()
             val dayCache = HashMap<LocalDate, String>()
-            // Group by the calendar DAY, never by the formatted label: a label without a year ("5 December")
-            // would otherwise merge the same day of different years into one header.
-            images.groupBy { image -> Instant.ofEpochMilli(image.sortDate).atZone(zone).toLocalDate() }
-                .entries.map { (date, list) ->
-                    val label = dayCache.getOrPut(date) {
-                        formatTimelineDate(
-                            date = date,
-                            today = today,
-                            sameYearFormatter = sameYearFormatter,
-                            otherYearFormatter = otherYearFormatter,
-                            useRelativeDates = useRelativeDates,
-                            todayString = todayString,
-                            yesterdayString = yesterdayString,
-                            smartYearHiding = smartYearHiding,
-                        )
-                    }
-                    object : Map.Entry<String, List<MediaImage>> {
-                        override val key = label
-                        override val value = list
-                    }
+            images.groupBy { image ->
+                Instant.ofEpochMilli(image.sortDate).atZone(zone).toLocalDate()
+            }.entries.map { (date, dayImages) ->
+                val label = dayCache.getOrPut(date) {
+                    formatTimelineDate(
+                        date = date,
+                        today = today,
+                        sameYearFormatter = sameYearFormatter,
+                        otherYearFormatter = otherYearFormatter,
+                        useRelativeDates = useRelativeDates,
+                        todayString = todayString,
+                        yesterdayString = yesterdayString,
+                        smartYearHiding = smartYearHiding,
+                    )
                 }
+                object : Map.Entry<String, List<MediaImage>> {
+                    override val key = label
+                    override val value = dayImages
+                }
+            }
         } else listOf("" to images).map { object : Map.Entry<String, List<MediaImage>> {
             override val key = it.first
             override val value = it.second
@@ -4504,17 +4511,18 @@ private fun PhotoGrid(
     val itemToRow = rowLayout.second
     val rowToItem = rowLayout.third.first
     val isRowHeader = rowLayout.third.second
-    val yearNavigation = remember(groups, showTimeline) {
+    // One marker per distinct year in the actual timeline order. Do not rely only on
+    // adjacent-year changes: interleaved/stale cached rows must not duplicate or hide a year.
+    val yearNavigation = remember(groups, showTimeline, TimelineSort.mode, TimelineSort.recentWindowDays) {
         buildList<Pair<Int, Int>> {
+            val seenYears = HashSet<Int>()
             var itemIndex = 0
-            var previousYear: Int? = null
             groups.forEach { group ->
                 val firstMedia = group.value.firstOrNull()
                 if (firstMedia != null) {
                     val year = Instant.ofEpochMilli(firstMedia.sortDate)
                         .atZone(ZoneId.systemDefault()).year
-                    if (year != previousYear) add(year to itemIndex)
-                    previousYear = year
+                    if (seenYears.add(year)) add(year to itemIndex)
                 }
                 itemIndex += (if (showTimeline) 1 else 0) + group.value.size
             }
@@ -5088,12 +5096,32 @@ private fun PhotoGrid(
                             .width(30.dp)
                             .background(Color.Black.copy(alpha = 0.30f), AxRound(15.dp))
                     )
-                    var lastShown = (-1000).dp
-                    for (i in yearNavigation.indices) {
+                    // Keep the active year visible first, then add other labels only where
+                    // they have enough room. The previous greedy top-to-bottom pass could
+                    // discard 2025 simply because 2026 was close to it.
+                    val visibleYearIndices = remember(yearNavigation, yearFractions, currentYear, maxHeight) {
+                        val selected = linkedSetOf<Int>()
+                        val activeIndex = yearNavigation.indexOfFirst { it.first == currentYear }
+                        fun centerValue(index: Int): Float =
+                            (inset + thumbH / 2 + maxTravel * yearFractions[index]).value
+                        fun addIfSpace(index: Int) {
+                            if (index !in yearNavigation.indices || index in selected) return
+                            if (selected.all { kotlin.math.abs(centerValue(it) - centerValue(index)) >= minGap.value }) {
+                                selected += index
+                            }
+                        }
+                        if (activeIndex >= 0) selected += activeIndex
+                        addIfSpace(0)
+                        addIfSpace(yearNavigation.lastIndex)
+                        val anchor = if (activeIndex >= 0) yearFractions[activeIndex] else 0f
+                        yearNavigation.indices
+                            .sortedBy { kotlin.math.abs(yearFractions[it] - anchor) }
+                            .forEach(::addIfSpace)
+                        selected.sortedBy { yearFractions[it] }
+                    }
+                    visibleYearIndices.forEach { i ->
                         val entry = yearNavigation[i]
                         val center = inset + thumbH / 2 + maxTravel * yearFractions[i]
-                        if (center - lastShown < minGap) continue // too close to the previous label
-                        lastShown = center
                         val isActive = entry.first == currentYear
                         Box(
                             modifier = Modifier

@@ -460,6 +460,9 @@ class MediaRepository(private val context: Context) {
                             existing.name == displayName &&
                             existing.path == filePath &&
                             existing.dateModified == cursorDateModified &&
+                            // Match Iris Gallery's cache invalidation: DATE_ADDED is part of
+                            // the cache identity because it controls Date added timeline groups.
+                            existing.dateAdded == cursorDateAdded &&
                             existing.sizeBytes == itemSize &&
                             existing.orientation == itemOrientation &&
                             existing.width == itemWidth &&

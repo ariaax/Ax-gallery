@@ -46,7 +46,7 @@ enum class DateSortMode {
 }
 
 object TimelineSort {
-    @Volatile var mode: DateSortMode = DateSortMode.HYBRID
+    @Volatile var mode: DateSortMode = DateSortMode.DATE_ADDED
     @Volatile var recentWindowDays: Int = 7
 
     /** "Now", frozen per load, so sorting never sees a photo cross the recent-window edge mid-sort. */
@@ -55,19 +55,33 @@ object TimelineSort {
 }
 
 /** The date used for ordering and for the timeline day headers. */
-val MediaImage.sortDate: Long
-    get() = when (TimelineSort.mode) {
-        DateSortMode.DATE_TAKEN -> dateTaken
-        DateSortMode.DATE_ADDED -> if (dateAdded > 0L) dateAdded else dateTaken
-        DateSortMode.HYBRID -> {
-            if (dateAdded <= 0L) dateTaken
-            else {
-                val age = TimelineSort.nowMs - dateAdded
-                val windowMs = TimelineSort.recentWindowDays * 86_400_000L
-                if (age in 0L..windowMs) maxOf(dateAdded, dateTaken) else dateTaken
-            }
+internal fun resolveTimelineSortDate(
+    dateTaken: Long,
+    dateAdded: Long,
+    mode: DateSortMode,
+    nowMs: Long,
+    recentWindowDays: Int,
+): Long = when (mode) {
+    DateSortMode.DATE_TAKEN -> dateTaken
+    DateSortMode.DATE_ADDED -> if (dateAdded > 0L) dateAdded else dateTaken
+    DateSortMode.HYBRID -> {
+        if (dateAdded <= 0L) dateTaken
+        else {
+            val age = nowMs - dateAdded
+            val windowMs = recentWindowDays.coerceIn(1, 90) * 86_400_000L
+            if (age in 0L..windowMs) maxOf(dateAdded, dateTaken) else dateTaken
         }
     }
+}
+
+val MediaImage.sortDate: Long
+    get() = resolveTimelineSortDate(
+        dateTaken = dateTaken,
+        dateAdded = dateAdded,
+        mode = TimelineSort.mode,
+        nowMs = TimelineSort.nowMs,
+        recentWindowDays = TimelineSort.recentWindowDays,
+    )
 
 val MediaImage.isScreenshot: Boolean
     get() = bucketName.contains("screenshot", ignoreCase = true) ||
