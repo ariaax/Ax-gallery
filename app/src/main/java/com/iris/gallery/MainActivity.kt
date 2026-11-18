@@ -138,6 +138,7 @@ import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.filled.PushPin
 import com.iris.gallery.data.MediaSort
+import com.iris.gallery.data.TimelineSort
 import com.iris.gallery.data.sortDate
 import com.iris.gallery.data.NaturalOrderComparator
 import androidx.compose.material.icons.outlined.Edit
