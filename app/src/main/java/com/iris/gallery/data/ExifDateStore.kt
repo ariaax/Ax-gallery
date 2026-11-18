@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
  * ambiguous legacy ID-only records are ignored and recomputed safely.
  */
 object ExifDateStore {
+    private const val FORMAT_HEADER = "#v2"
     @Volatile var enabled: Boolean = true
     private val map = ConcurrentHashMap<String, Long>()
     @Volatile private var loaded = false
@@ -25,13 +26,18 @@ object ExifDateStore {
         atomicFile = atomic
         runCatching {
             atomic.openRead().bufferedReader().useLines { lines ->
+                // Files written before FORMAT_HEADER recorded "no date" for files that were merely unreadable
+                // (SD cards). Those zero entries are dropped once so those files get read again.
+                var versioned = false
+                var first = true
                 lines.forEach { line ->
+                    if (first) { first = false; if (line == FORMAT_HEADER) { versioned = true; return@forEach } }
                     val i = line.indexOf(',')
                     if (i > 0) {
                         val keyText = line.substring(0, i)
                         val isLegacyId = keyText.toLongOrNull() != null
                         val ms = line.substring(i + 1).toLongOrNull()
-                        if (!isLegacyId && keyText.isNotBlank() && ms != null) map[keyText] = ms
+                        if (!isLegacyId && keyText.isNotBlank() && ms != null && (versioned || ms > 0L)) map[keyText] = ms
                     }
                 }
             }
@@ -54,6 +60,8 @@ object ExifDateStore {
             val output = atomic.startWrite()
             stream = output
             val writer = output.bufferedWriter(Charsets.UTF_8)
+            writer.write(FORMAT_HEADER)
+            writer.newLine()
             for ((key, value) in map) {
                 writer.write("$key,$value")
                 writer.newLine()
