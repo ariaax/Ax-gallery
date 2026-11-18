@@ -62,6 +62,11 @@ jobs:
           VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "0.1.0")
           echo "APP_VERSION=$VERSION_NAME" >> $GITHUB_ENV
 
+      - name: Package complete source ZIP
+        run: |
+          mkdir -p build-artifacts
+          git archive --format=zip --output "build-artifacts/Ax-Gallery-v${{ env.APP_VERSION }}-source.zip" HEAD
+
       - name: Sign Release APK
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -95,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Ax-Gallery-v${{ env.APP_VERSION }}-CI
-          path: build-artifacts/*.apk
+          path: build-artifacts/*
           retention-days: 14
 
       - name: Create GitHub Release

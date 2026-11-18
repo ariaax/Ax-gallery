@@ -46,7 +46,7 @@ enum class DateSortMode {
 }
 
 object TimelineSort {
-    @Volatile var mode: DateSortMode = DateSortMode.HYBRID
+    @Volatile var mode: DateSortMode = DateSortMode.DATE_ADDED
     @Volatile var recentWindowDays: Int = 7
 
     /** "Now", frozen per load, so sorting never sees a photo cross the recent-window edge mid-sort. */
@@ -55,19 +55,37 @@ object TimelineSort {
 }
 
 /** The date used for ordering and for the timeline day headers. */
-val MediaImage.sortDate: Long
-    get() = when (TimelineSort.mode) {
-        DateSortMode.DATE_TAKEN -> dateTaken
-        DateSortMode.DATE_ADDED -> if (dateAdded > 0L) dateAdded else dateTaken
+internal fun resolveTimelineSortDate(
+    dateTaken: Long,
+    dateAdded: Long,
+    mode: DateSortMode,
+    nowMs: Long,
+    recentWindowDays: Int,
+): Long {
+    val taken = MediaDates.normalizeMillis(dateTaken, nowMs).takeIf { it > 0L } ?: 0L
+    val added = MediaDates.normalizeMillis(dateAdded, nowMs).takeIf { it > 0L } ?: 0L
+    return when (mode) {
+        DateSortMode.DATE_TAKEN -> taken.takeIf { it > 0L } ?: added
+        DateSortMode.DATE_ADDED -> added.takeIf { it > 0L } ?: taken
         DateSortMode.HYBRID -> {
-            if (dateAdded <= 0L) dateTaken
+            if (added <= 0L) taken
             else {
-                val age = TimelineSort.nowMs - dateAdded
-                val windowMs = TimelineSort.recentWindowDays * 86_400_000L
-                if (age in 0L..windowMs) maxOf(dateAdded, dateTaken) else dateTaken
+                val age = nowMs - added
+                val windowMs = recentWindowDays.coerceIn(1, 90) * 86_400_000L
+                if (age in 0L..windowMs) maxOf(added, taken) else taken.takeIf { it > 0L } ?: added
             }
         }
     }
+}
+
+val MediaImage.sortDate: Long
+    get() = resolveTimelineSortDate(
+        dateTaken = dateTaken,
+        dateAdded = dateAdded,
+        mode = TimelineSort.mode,
+        nowMs = TimelineSort.nowMs,
+        recentWindowDays = TimelineSort.recentWindowDays,
+    )
 
 val MediaImage.isScreenshot: Boolean
     get() = bucketName.contains("screenshot", ignoreCase = true) ||

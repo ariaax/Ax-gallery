@@ -15,11 +15,14 @@ import java.time.ZoneOffset
  * old files collapsed onto one date (for this library: 5 Dec 2024).
  *
  * Priority used here (the first valid one wins):
- *  1. MediaStore DATE_TAKEN, when it is not just the scan time / modified time;
- *  2. a date read from the file itself (EXIF for photos, container creation time for videos);
+ *  1. validated file-level metadata (EXIF DateTimeOriginal / video container creation time);
+ *  2. MediaStore DATE_TAKEN, when it is not just the scan time / modified time;
  *  3. a date written in the file name (IMG_20200315_101500.jpg, VID-2020-03-15, epoch millis...);
  *  4. MediaStore DATE_TAKEN even if it equals modified time (it may be genuine);
  *  5. DATE_MODIFIED, then DATE_ADDED.
+ *
+ * Timeline ordering is resolved separately by DateSortMode: DATE_ADDED intentionally uses
+ * MediaStore DATE_ADDED, while DATE_TAKEN uses this capture-date resolver.
  * Nothing here ever writes a timestamp anywhere: it only chooses which existing value to display.
  */
 object MediaDates {
@@ -141,18 +144,20 @@ object MediaDates {
         nowMs: Long = System.currentTimeMillis(),
         zone: ZoneId = ZoneId.systemDefault(),
     ): Long {
+        val metadata = fileMetadataMs?.let { normalizeMillis(it, nowMs) }?.takeIf { it > 0L }
         val taken = normalizeMillis(rawTaken, nowMs)
         val stampedByScanner = taken > 0L && looksScannerStamped(taken, addedMs, modifiedMs)
 
-        // 1. a DATE_TAKEN that is clearly not just a scan/copy time
+        // 1. Valid file-level metadata is the strongest source: EXIF DateTimeOriginal or
+        // the video's container creation time. MediaStore's cached DATE_TAKEN can be stale.
+        if (metadata != null) return metadata
+        // 2. Trust a MediaStore DATE_TAKEN only when it is not merely a scan/copy timestamp.
         if (taken > 0L && !stampedByScanner) return taken
-        // 2. the file's own metadata
-        if (fileMetadataMs != null && fileMetadataMs > 0L) return fileMetadataMs
-        // 3. a date in the file name
+        // 3. Camera/app filenames can preserve a date when metadata was stripped.
         parseFromFileName(fileName, nowMs, zone)?.let { return it }
-        // 4. DATE_TAKEN that matches modified/added time: may well be real, keep it
+        // 4. A DATE_TAKEN matching scan/modified time may still be genuine; retain it as fallback.
         if (taken > 0L) return taken
-        // 5. last resort
+        // 5. Last-resort filesystem/MediaStore timestamps.
         val modified = normalizeMillis(modifiedMs, nowMs)
         if (modified > 0L) return modified
         return normalizeMillis(addedMs, nowMs)
