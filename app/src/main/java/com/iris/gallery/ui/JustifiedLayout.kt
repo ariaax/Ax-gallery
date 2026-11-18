@@ -14,8 +14,8 @@ import kotlin.math.roundToInt
  */
 object JustifiedLayout {
     const val SPAN_UNITS = 60
-    private const val MIN_AR = 0.56f
-    private const val MAX_AR = 2.4f
+    private const val MIN_AR = 0.8f
+    private const val MAX_AR = 1.3f
     private const val MIN_SPAN = 6
 
     /** Layout of one group of photos (one day). Arrays are indexed by the photo's index inside the group. */

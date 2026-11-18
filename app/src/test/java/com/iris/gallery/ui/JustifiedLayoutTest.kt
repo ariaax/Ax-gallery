@@ -49,7 +49,7 @@ class JustifiedLayoutTest {
             for (k in l.rowStarts[row] until l.rowStarts[row + 1]) {
                 val w = JustifiedLayout.widthOfSpan(l.spans[k], width, gap)
                 val shown = w / l.heightsPx[k]
-                val real = aspects[k]
+                val real = aspects[k].coerceIn(0.8f, 1.3f) // the layout deliberately limits extreme shapes
                 worst = maxOf(worst, abs(shown - real) / real)
             }
         }
