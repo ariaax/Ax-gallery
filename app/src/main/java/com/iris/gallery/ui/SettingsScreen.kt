@@ -226,7 +226,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     AxSegmented(
-                        options = listOf("Hybrid" to DateSortMode.HYBRID, "Date added" to DateSortMode.DATE_ADDED, "Date taken" to DateSortMode.DATE_TAKEN),
+                        options = listOf("Date added" to DateSortMode.DATE_ADDED, "Date taken" to DateSortMode.DATE_TAKEN, "Hybrid" to DateSortMode.HYBRID),
                         selected = settings.dateSortMode,
                         onSelect = { preferences.setDateSortMode(it) },
                     )
