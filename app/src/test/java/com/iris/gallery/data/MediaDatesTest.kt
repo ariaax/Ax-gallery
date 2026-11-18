@@ -117,11 +117,19 @@ class MediaDatesTest {
         assertEquals(exif, t)
     }
 
-    @Test fun genuineMediaStoreDateIsNeverReplaced() {
-        val real = ms(2020, 6, 1, 12)
-        // modified/added are the copy day; DATE_TAKEN is a real EXIF date -> kept even if name disagrees
-        val t = MediaDates.resolve(real, dec5, dec5, null, "IMG_20240101_000000.jpg", now, zone)
-        assertEquals(real, t)
+    @Test fun fileLevelCaptureMetadataOverridesStaleMediaStoreDateTaken() {
+        val exif = ms(2020, 6, 1, 12)
+        val staleMediaStoreDate = ms(2021, 6, 1, 12)
+        val t = MediaDates.resolve(
+            rawTaken = staleMediaStoreDate,
+            addedMs = ms(2026, 7, 9),
+            modifiedMs = ms(2026, 5, 14),
+            fileMetadataMs = exif,
+            fileName = "1000058967.jpeg",
+            nowMs = now,
+            zone = zone,
+        )
+        assertEquals(exif, t)
     }
 
     @Test fun secondsInDateTakenColumnAreHandled() {

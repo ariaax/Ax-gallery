@@ -21,6 +21,15 @@ class TimelineSortTest {
         )
     }
 
+    @Test fun invalidFutureAddedTimestampFallsBackToValidCaptureDate() {
+        val taken2021 = 1_640_995_200_000L
+        val farFutureAdded = 2_200_000_000_000L
+        assertEquals(
+            taken2021,
+            resolveTimelineSortDate(taken2021, farFutureAdded, DateSortMode.DATE_ADDED, 1_800_000_000_000L, 7),
+        )
+    }
+
     @Test fun dateTakenModeIgnoresAddedTimestamp() {
         val taken2001 = 999_000_000_000L
         val added2026 = 1_783_584_000_000L

@@ -61,15 +61,19 @@ internal fun resolveTimelineSortDate(
     mode: DateSortMode,
     nowMs: Long,
     recentWindowDays: Int,
-): Long = when (mode) {
-    DateSortMode.DATE_TAKEN -> dateTaken
-    DateSortMode.DATE_ADDED -> if (dateAdded > 0L) dateAdded else dateTaken
-    DateSortMode.HYBRID -> {
-        if (dateAdded <= 0L) dateTaken
-        else {
-            val age = nowMs - dateAdded
-            val windowMs = recentWindowDays.coerceIn(1, 90) * 86_400_000L
-            if (age in 0L..windowMs) maxOf(dateAdded, dateTaken) else dateTaken
+): Long {
+    val taken = MediaDates.normalizeMillis(dateTaken, nowMs).takeIf { it > 0L } ?: 0L
+    val added = MediaDates.normalizeMillis(dateAdded, nowMs).takeIf { it > 0L } ?: 0L
+    return when (mode) {
+        DateSortMode.DATE_TAKEN -> taken.takeIf { it > 0L } ?: added
+        DateSortMode.DATE_ADDED -> added.takeIf { it > 0L } ?: taken
+        DateSortMode.HYBRID -> {
+            if (added <= 0L) taken
+            else {
+                val age = nowMs - added
+                val windowMs = recentWindowDays.coerceIn(1, 90) * 86_400_000L
+                if (age in 0L..windowMs) maxOf(added, taken) else taken.takeIf { it > 0L } ?: added
+            }
         }
     }
 }

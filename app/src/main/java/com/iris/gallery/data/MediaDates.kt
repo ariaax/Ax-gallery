@@ -141,18 +141,20 @@ object MediaDates {
         nowMs: Long = System.currentTimeMillis(),
         zone: ZoneId = ZoneId.systemDefault(),
     ): Long {
+        val metadata = fileMetadataMs?.let { normalizeMillis(it, nowMs) }?.takeIf { it > 0L }
         val taken = normalizeMillis(rawTaken, nowMs)
         val stampedByScanner = taken > 0L && looksScannerStamped(taken, addedMs, modifiedMs)
 
-        // 1. a DATE_TAKEN that is clearly not just a scan/copy time
+        // 1. Valid file-level metadata is the strongest source: EXIF DateTimeOriginal or
+        // the video's container creation time. MediaStore's cached DATE_TAKEN can be stale.
+        if (metadata != null) return metadata
+        // 2. Trust a MediaStore DATE_TAKEN only when it is not merely a scan/copy timestamp.
         if (taken > 0L && !stampedByScanner) return taken
-        // 2. the file's own metadata
-        if (fileMetadataMs != null && fileMetadataMs > 0L) return fileMetadataMs
-        // 3. a date in the file name
+        // 3. Camera/app filenames can preserve a date when metadata was stripped.
         parseFromFileName(fileName, nowMs, zone)?.let { return it }
-        // 4. DATE_TAKEN that matches modified/added time: may well be real, keep it
+        // 4. A DATE_TAKEN matching scan/modified time may still be genuine; retain it as fallback.
         if (taken > 0L) return taken
-        // 5. last resort
+        // 5. Last-resort filesystem/MediaStore timestamps.
         val modified = normalizeMillis(modifiedMs, nowMs)
         if (modified > 0L) return modified
         return normalizeMillis(addedMs, nowMs)

@@ -455,8 +455,20 @@ class MediaRepository(private val context: Context) {
                             }
                         }
 
+                        // Recompute the inexpensive canonical date before taking the cache fast path.
+                        // The old shortcut ignored DATE_TAKEN changes and could keep a stale year forever.
+                        val cachedFileMetadataMs = if (trashed) null else ExifDateStore.get(identityKey)
+                        val cachedResolvedDateTaken = MediaDates.resolve(
+                            rawTaken = cursorDateTaken,
+                            addedMs = cursorDateAdded,
+                            modifiedMs = cursorDateModified,
+                            fileMetadataMs = cachedFileMetadataMs,
+                            fileName = displayName,
+                            nowMs = now,
+                        )
                         val existing = inMemoryCache[identityKey]
                         if (!trashed && existing != null &&
+                            existing.dateTaken == cachedResolvedDateTaken &&
                             existing.name == displayName &&
                             existing.path == filePath &&
                             existing.dateModified == cursorDateModified &&
@@ -523,7 +535,7 @@ class MediaRepository(private val context: Context) {
                         }
 
                         // File-level date: remembered background read (photos AND videos); never touches the file here.
-                        var fileMetadataMs: Long? = if (trashed) null else ExifDateStore.get(identityKey)
+                        var fileMetadataMs: Long? = cachedFileMetadataMs
                         if (fileMetadataMs == null && ENABLE_EXIF_ON_LOAD && !isVid) {
                             fileMetadataMs = extractExifDateTaken(context, mediaUri, filePath)?.takeIf { it > 0L }
                         }
@@ -593,18 +605,17 @@ class MediaRepository(private val context: Context) {
     private val unreadableThisSession = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     /**
-     * Reads the real capture date (EXIF for photos, container creation time for videos) of items whose
-     * MediaStore date looks fake (equal to the added/modified time), one file at a time in the background,
-     * and remembers it. A file that could not be opened is NOT remembered as "has no date": that mistake
-     * (common on SD cards) used to freeze the wrong date forever. Returns how many items got a new date.
+     * Verifies every media item's file-level capture date (EXIF for photos, container creation time for videos)
+     * once in the background. MediaStore DATE_TAKEN can be stale or internally inconsistent even when it does
+     * not equal DATE_ADDED/DATE_MODIFIED, so checking only synthetic-looking rows misses real date corruption.
+     * Unreadable files are retried next launch and are never cached as "no date".
      */
     suspend fun enrichExifDates(images: List<MediaImage>): Int = withContext(Dispatchers.IO) {
         ExifDateStore.ensureLoaded(context)
         if (!ExifDateStore.enabled) return@withContext 0
         val candidates = images.filter {
             it.id > 0L && (it.path.isNotBlank() || it.uri.scheme == "content") &&
-                !ExifDateStore.isChecked(it.stableKey) && it.stableKey !in unreadableThisSession &&
-                looksSyntheticDate(it)
+                !ExifDateStore.isChecked(it.stableKey) && it.stableKey !in unreadableThisSession
         }
         if (candidates.isEmpty()) return@withContext 0
         val updates = HashMap<String, Long>()

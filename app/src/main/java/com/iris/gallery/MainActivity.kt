@@ -4897,8 +4897,8 @@ private fun PhotoGrid(
                     )
                     // zoomed far out: show the day of the month on each small tile (like a calendar)
                     if (currentCellSize < 92.dp && !selected) {
-                        val dayLabel = remember(image.dateTaken) {
-                            Instant.ofEpochMilli(image.dateTaken).atZone(ZoneId.systemDefault()).dayOfMonth.toString()
+                        val dayLabel = remember(image.sortDate) {
+                            Instant.ofEpochMilli(image.sortDate).atZone(ZoneId.systemDefault()).dayOfMonth.toString()
                         }
                         // small dark pill instead of a blurred text shadow: much cheaper to draw on every tile
                         Text(
@@ -4922,11 +4922,12 @@ private fun PhotoGrid(
         }
         if (timelineItems.size > 15) {
             val isScrollerActive = gridState.isScrollInProgress || scrubberDragging
+            // Keep the year rail discoverable while idle; intensify it during interaction.
             val scrollerAlpha by animateFloatAsState(
-                targetValue = if (isScrollerActive) 1f else 0f,
+                targetValue = if (isScrollerActive) 1f else 0.82f,
                 animationSpec = tween(
-                    durationMillis = if (isScrollerActive) 150 else 500,
-                    delayMillis = if (isScrollerActive) 0 else 1200
+                    durationMillis = if (isScrollerActive) 150 else 260,
+                    delayMillis = 0
                 ),
                 label = "scrubberAlpha"
             )
@@ -5086,8 +5087,8 @@ private fun PhotoGrid(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .fillMaxHeight()
-                        .padding(top = topPadding, bottom = bottomPadding, end = 14.dp)
-                        .width(34.dp)
+                        .padding(top = topPadding, bottom = bottomPadding, end = 46.dp)
+                        .width(40.dp)
                         .graphicsLayer { alpha = scrollerAlpha }
                 ) {
                     val inset = 16.dp
@@ -6062,8 +6063,8 @@ private fun PhotoViewer(
           ) {
             IconButton(onClick = { triggerAnimatedDismiss() }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 13.dp)) { Icon(AxIcons.Back, stringResource(R.string.action_back), tint = Color.White) }
             val currentLocale = rememberAppLocale()
-            val headerDate = remember(current.dateTaken, currentLocale, timelineDateFormat, smartYearHiding, customTimelineDateFormat, showViewerTime) {
-                val localDate = Instant.ofEpochMilli(current.dateTaken).atZone(ZoneId.systemDefault()).toLocalDate()
+            val headerDate = remember(current.sortDate, currentLocale, timelineDateFormat, smartYearHiding, customTimelineDateFormat, showViewerTime) {
+                val localDate = Instant.ofEpochMilli(current.sortDate).atZone(ZoneId.systemDefault()).toLocalDate()
                 val isSameYear = localDate.year == LocalDate.now().year
                 val formatter = getTimelineFormatter(
                     format = timelineDateFormat,
@@ -6076,7 +6077,7 @@ private fun PhotoViewer(
                 val dateStr = localDate.format(formatter)
                 if (showViewerTime) {
                     val tf = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT, currentLocale)
-                    val timeStr = tf.format(java.util.Date(current.dateTaken))
+                    val timeStr = tf.format(java.util.Date(current.sortDate))
                     "$dateStr · $timeStr"
                 } else {
                     dateStr
