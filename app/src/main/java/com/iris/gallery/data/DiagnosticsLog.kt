@@ -70,12 +70,12 @@ object DiagnosticsLog {
     fun unsupported(image: MediaImage, reason: String) {
         val ext = image.name.substringAfterLast('.', "").lowercase(Locale.ROOT).ifBlank { "?" }
         val mime = image.mimeType.ifBlank { "?" }
-        val sizeMb = image.sizeBytes / 1_048_576.0
+        val sizeText = if (image.sizeBytes < 1_048_576L) "${image.sizeBytes} B" else "${"%.1f".format(Locale.US, image.sizeBytes / 1_048_576.0)} MB"
         report(
             kind = "UNSUPPORTED",
             key = "$mime .$ext — ${reason.lineSequence().firstOrNull().orEmpty().take(90)}",
             detail = reason.take(600),
-            sample = "${image.name} (${"%.1f".format(Locale.US, sizeMb)} MB, ${image.width}x${image.height})",
+            sample = "${image.name} ($sizeText, ${image.width}x${image.height})",
         )
     }
 
