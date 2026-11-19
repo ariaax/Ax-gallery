@@ -217,8 +217,10 @@ class SettingsPreferences(context: Context) {
 
     /** Pushes settings that live outside Compose state (timeline order, glass, background dates). */
     private fun applyRuntime(s: SettingsState) {
+        val orderChanged = TimelineSort.mode != s.dateSortMode || TimelineSort.recentWindowDays != s.recentWindowDays
         TimelineSort.mode = s.dateSortMode
         TimelineSort.recentWindowDays = s.recentWindowDays
+        if (orderChanged) TimelineSort.bumpRevision()
         com.iris.gallery.ui.AxGlass.enabled = s.glassEnabled
         com.iris.gallery.ui.AxGlass.real = s.realGlass
         ExifDateStore.enabled = s.backgroundExifDates

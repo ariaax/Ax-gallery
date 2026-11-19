@@ -146,10 +146,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                 val merged = com.iris.gallery.data.mergeRestored(state.images, shown, { it.path }, { it.stableKey })
                 if (merged === state.images) state else state.copy(
                     images = merged.sortedWith(
-                        compareByDescending<MediaImage> { it.sortDate }
-                            .thenByDescending { it.dateModified }
-                            .thenByDescending { it.dateAdded }
-                            .thenByDescending { it.id }
+                        com.iris.gallery.data.TimelineOrder
                     )
                 )
             }
@@ -183,10 +180,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
             val currentImages = _uiState.value.images
             val remainingImages = currentImages.filterNot { it.stableKey in movedOldKeys || (it.path.isNotBlank() && it.path in movedOldPaths) }
             val updatedImages = (remainingImages + result.movedMedia).sortedWith(
-                compareByDescending<MediaImage> { it.sortDate }
-                    .thenByDescending { it.dateModified }
-                    .thenByDescending { it.dateAdded }
-                    .thenByDescending { it.id }
+                com.iris.gallery.data.TimelineOrder
             )
             _uiState.value = _uiState.value.copy(images = updatedImages)
         }
@@ -199,10 +193,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
         if (result.successCount > 0) {
             val currentImages = _uiState.value.images
             val updatedImages = (currentImages + result.movedMedia).distinctBy { it.path }.sortedWith(
-                compareByDescending<MediaImage> { it.sortDate }
-                    .thenByDescending { it.dateModified }
-                    .thenByDescending { it.dateAdded }
-                    .thenByDescending { it.id }
+                com.iris.gallery.data.TimelineOrder
             )
             _uiState.value = _uiState.value.copy(images = updatedImages)
         }
@@ -376,12 +367,29 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                     exifWritingUntil = System.currentTimeMillis() + 1500L
                 }
                 if (changed > 0) {
+                    // never swap the whole list under a scrolling finger: wait (bounded) for the user to stop
+                    var waited = 0
+                    while (com.iris.gallery.data.ScrollActivity.recentlyScrolling() && waited < 30) {
+                        kotlinx.coroutines.delay(500); waited++
+                    }
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                         refresh(showLoading = false, light = true)
                     }
                 }
                 next = pendingExifImages
             }
+        }
+    }
+
+    /** Re-orders the list already on screen for the current timeline mode right away (the full reload follows). */
+    fun resortNow() {
+        val current = _uiState.value.images
+        if (current.size < 2) return
+        viewModelScope.launch {
+            val sorted = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                current.sortedWith(com.iris.gallery.data.TimelineOrder)
+            }
+            _uiState.update { st -> if (st.images === current) st.copy(images = sorted) else st }
         }
     }
 
@@ -432,10 +440,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                         }
                         val combined = if (currentPending.isNotEmpty()) {
                             (loaded + currentPending).distinctBy { it.stableKey }.sortedWith(
-                                compareByDescending<MediaImage> { it.sortDate }
-                                    .thenByDescending { it.dateModified }
-                                    .thenByDescending { it.dateAdded }
-                                    .thenByDescending { it.id }
+                                com.iris.gallery.data.TimelineOrder
                             )
                         } else {
                             loaded

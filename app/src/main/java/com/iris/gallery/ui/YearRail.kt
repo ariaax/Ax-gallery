@@ -1,6 +1,19 @@
 package com.iris.gallery.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.border
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -17,10 +30,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.shadow
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -86,8 +99,8 @@ object YearRailMath {
 }
 
 /**
- * Floating year capsules shown next to the scroll handle while scrolling. Fades and slides in/out with [alpha];
- * the active year is enlarged with a springy "bubble". Only the capsules themselves take touches.
+ * Small glass year pills shown next to the handle while it is dragged. They rise in one after another,
+ * the active year swells with a springy overshoot and changes colour smoothly. Only the pills take touches.
  */
 @Composable
 fun YearRailOverlay(
@@ -100,50 +113,62 @@ fun YearRailOverlay(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
-    val capsuleH = 32.dp
+    val pillH = 24.dp
     BoxWithConstraints(
         modifier
             .fillMaxHeight()
             .padding(top = topPadding, bottom = bottomPadding)
-            .width(76.dp)
+            .width(56.dp)
             .graphicsLayer {
                 this.alpha = alpha
-                translationX = (1f - alpha) * 14.dp.toPx()
+                translationX = (1f - alpha) * 10.dp.toPx()
             }
     ) {
         val trackPx = with(density) { maxHeight.toPx() }
         val placed = remember(markers, activeYear, trackPx) {
-            with(density) { YearRailMath.place(markers, activeYear, 16.dp.toPx(), 48.dp.toPx(), trackPx, 38.dp.toPx()) }
+            with(density) { YearRailMath.place(markers, activeYear, 16.dp.toPx(), 48.dp.toPx(), trackPx, 30.dp.toPx()) }
         }
-        val capsuleHPx = with(density) { capsuleH.toPx() }
+        val pillHPx = with(density) { pillH.toPx() }
         val accent = MaterialTheme.colorScheme.primary
         val onAccent = MaterialTheme.colorScheme.onPrimary
-        placed.forEach { p ->
+        val glass = Color(0xE61C212B)
+        placed.forEachIndexed { index, p ->
             key(p.marker.year) {
                 val scale by animateFloatAsState(
-                    targetValue = if (p.active) 1.18f else 1f,
-                    animationSpec = spring(dampingRatio = 0.48f, stiffness = Spring.StiffnessMediumLow),
-                    label = "yearCapsuleScale"
+                    targetValue = if (p.active) 1.2f else 1f,
+                    animationSpec = spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMedium),
+                    label = "yearPillScale"
                 )
+                val fill by animateColorAsState(if (p.active) accent else glass, tween(180), label = "yearPillFill")
+                val ink by animateColorAsState(if (p.active) onAccent else Color(0xFFE8EAF0), tween(180), label = "yearPillInk")
+                val appear = remember { Animatable(0f) }
+                LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay((index * 24L).coerceAtMost(180L))
+                    appear.animateTo(1f, tween(240, easing = FastOutSlowInEasing))
+                }
                 Box(
                     Modifier
                         .align(Alignment.TopEnd)
-                        .offset { IntOffset(0, (p.centerPx - capsuleHPx / 2f).roundToInt()) }
+                        .offset { IntOffset(0, (p.centerPx - pillHPx / 2f).roundToInt()) }
                         .graphicsLayer {
+                            val a = appear.value
+                            this.alpha = a
+                            translationX = (1f - a) * 12.dp.toPx()
                             scaleX = scale; scaleY = scale
                             transformOrigin = TransformOrigin(1f, 0.5f)
                         }
-                        .shadow(if (p.active) 8.dp else 3.dp, CircleShape, clip = false)
-                        .background(if (p.active) accent else Color.White.copy(alpha = 0.96f), CircleShape)
+                        .shadow(if (p.active) 6.dp else 2.dp, CircleShape, clip = false)
+                        .background(fill, CircleShape)
+                        .border(0.5.dp, Color.White.copy(alpha = if (p.active) 0f else 0.14f), CircleShape)
                         .pointerInput(p.marker) { detectTapGestures { onYearClick(p.marker) } }
-                        .padding(horizontal = 13.dp, vertical = 7.dp),
+                        .padding(horizontal = 9.dp, vertical = 3.5.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = p.marker.year.toString(),
-                        fontSize = 13.sp,
+                        fontSize = 11.5.sp,
                         fontWeight = if (p.active) FontWeight.Bold else FontWeight.Medium,
-                        color = if (p.active) onAccent else Color(0xFF1B1F27)
+                        color = ink
                     )
                 }
             }

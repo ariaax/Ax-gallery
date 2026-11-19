@@ -564,10 +564,7 @@ class MediaRepository(private val context: Context) {
             }
         }
         val sorted = result.distinctBy { it.stableKey }.sortedWith(
-            compareByDescending<MediaImage> { it.sortDate }
-                .thenByDescending { it.dateModified }
-                .thenByDescending { it.dateAdded }
-                .thenByDescending { it.id }
+            TimelineOrder
         )
         if (!trashed) {
             verifyCachedRows = false
@@ -604,6 +601,7 @@ class MediaRepository(private val context: Context) {
         }
         if (candidates.isEmpty()) return@withContext 0
         val updates = HashMap<String, Long>()
+        // never compete with thumbnails and scrolling: a short pause after every file
         for ((index, img) in candidates.withIndex()) {
             val probe = runCatching {
                 if (img.isVideo) probeVideoDate(context, img.uri, img.path) else probePhotoDate(context, img.uri, img.path)
@@ -617,7 +615,7 @@ class MediaRepository(private val context: Context) {
                 DateProbe.Unreadable -> unreadableThisSession.add(img.stableKey)
             }
             if (index % 100 == 99) ExifDateStore.save()
-            kotlinx.coroutines.yield()
+            kotlinx.coroutines.delay(if (img.isVideo) 25L else 6L)
         }
         ExifDateStore.save()
         if (updates.isNotEmpty()) applyExifDates(updates)

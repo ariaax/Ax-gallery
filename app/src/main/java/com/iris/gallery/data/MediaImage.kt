@@ -1,6 +1,8 @@
 package com.iris.gallery.data
 
 import android.content.ContentUris
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import android.content.Context
 import android.net.Uri
 import android.os.Build
@@ -49,6 +51,15 @@ object TimelineSort {
     @Volatile var mode: DateSortMode = DateSortMode.HYBRID
     @Volatile var recentWindowDays: Int = 7
 
+    /**
+     * Compose-visible counter bumped whenever the order mode or window changes. `mode` itself is a plain field,
+     * so UI that derives day headers / tile day badges from it (and remembers the result) must key on this,
+     * otherwise tiles that stay on screen keep showing the previous mode's dates.
+     */
+    var revision: Int by androidx.compose.runtime.mutableIntStateOf(0)
+        private set
+    fun bumpRevision() { revision++ }
+
     /** "Now", frozen per load, so sorting never sees a photo cross the recent-window edge mid-sort. */
     @Volatile var nowMs: Long = System.currentTimeMillis()
     fun refreshNow() { nowMs = System.currentTimeMillis() }
@@ -68,6 +79,32 @@ val MediaImage.sortDate: Long
             }
         }
     }
+
+/**
+ * The one order every timeline list uses. In DATE_ADDED mode many files share one saving day (an SD card
+ * indexed in one go, a camera import): inside a day they are ordered by their real capture date instead of
+ * by the arbitrary second the scanner happened to reach them.
+ */
+object TimelineOrder : Comparator<MediaImage> {
+    private const val DAY_MS = 86_400_000L
+    private fun dayKey(ms: Long): Long = Math.floorDiv(ms + java.util.TimeZone.getDefault().getOffset(ms), DAY_MS)
+
+    override fun compare(a: MediaImage, b: MediaImage): Int {
+        val sa = a.sortDate
+        val sb = b.sortDate
+        if (TimelineSort.mode == DateSortMode.DATE_ADDED) {
+            val d = dayKey(sb).compareTo(dayKey(sa))
+            if (d != 0) return d
+            val t = b.dateTaken.compareTo(a.dateTaken)
+            if (t != 0) return t
+        }
+        var c = sb.compareTo(sa)
+        if (c != 0) return c
+        c = b.dateModified.compareTo(a.dateModified); if (c != 0) return c
+        c = b.dateAdded.compareTo(a.dateAdded); if (c != 0) return c
+        return b.id.compareTo(a.id)
+    }
+}
 
 val MediaImage.isScreenshot: Boolean
     get() = bucketName.contains("screenshot", ignoreCase = true) ||
@@ -1280,4 +1317,11 @@ fun resolveMediaUri(context: Context, uri: Uri): MediaImage {
         dateModified = physicalFile?.lastModified()?.takeIf { it > 0L } ?: dateTaken,
         dateAdded = dateTaken,
     )
+}
+/** Lets background work (EXIF enrichment reloads) wait until the user stops scrolling instead of swapping the list mid-fling. */
+object ScrollActivity {
+    @Volatile private var active = false
+    @Volatile private var lastMs = 0L
+    fun set(scrolling: Boolean) { active = scrolling; if (!scrolling) lastMs = android.os.SystemClock.elapsedRealtime() }
+    fun recentlyScrolling(): Boolean = active || android.os.SystemClock.elapsedRealtime() - lastMs < 700L
 }
