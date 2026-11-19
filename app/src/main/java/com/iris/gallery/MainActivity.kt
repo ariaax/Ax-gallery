@@ -4370,21 +4370,27 @@ private fun PhotoGrid(
             val zone = ZoneId.systemDefault()
             val today = LocalDate.now()
             val dayCache = HashMap<LocalDate, String>()
-            images.groupBy { image ->
-                val date = Instant.ofEpochMilli(image.sortDate).atZone(zone).toLocalDate()
-                dayCache.getOrPut(date) {
-                    formatTimelineDate(
-                        date = date,
-                        today = today,
-                        sameYearFormatter = sameYearFormatter,
-                        otherYearFormatter = otherYearFormatter,
-                        useRelativeDates = useRelativeDates,
-                        todayString = todayString,
-                        yesterdayString = yesterdayString,
-                        smartYearHiding = smartYearHiding,
-                    )
+            // Group by the calendar DAY, never by the formatted label: a label without a year ("5 December")
+            // would otherwise merge the same day of different years into one header.
+            images.groupBy { image -> Instant.ofEpochMilli(image.sortDate).atZone(zone).toLocalDate() }
+                .entries.map { (date, list) ->
+                    val label = dayCache.getOrPut(date) {
+                        formatTimelineDate(
+                            date = date,
+                            today = today,
+                            sameYearFormatter = sameYearFormatter,
+                            otherYearFormatter = otherYearFormatter,
+                            useRelativeDates = useRelativeDates,
+                            todayString = todayString,
+                            yesterdayString = yesterdayString,
+                            smartYearHiding = smartYearHiding,
+                        )
+                    }
+                    object : Map.Entry<String, List<MediaImage>> {
+                        override val key = label
+                        override val value = list
+                    }
                 }
-            }.entries.toList()
         } else listOf("" to images).map { object : Map.Entry<String, List<MediaImage>> {
             override val key = it.first
             override val value = it.second
@@ -4397,6 +4403,18 @@ private fun PhotoGrid(
                 addAll(group.value)
             }
         }
+    }
+    // year of every timeline item (a day header shares its day's year); drives the year rail
+    val itemYears = remember(groups, showTimeline, timelineItems.size) {
+        val zone = java.time.ZoneId.systemDefault()
+        val out = IntArray(timelineItems.size)
+        var i = 0
+        groups.forEach { g ->
+            val y = g.value.firstOrNull()?.let { java.time.Instant.ofEpochMilli(it.sortDate).atZone(zone).year } ?: 0
+            if (showTimeline && i < out.size) out[i++] = y
+            for (k in g.value.indices) if (i < out.size) out[i++] = y
+        }
+        out
     }
     val layoutDirection = LocalLayoutDirection.current
     val startPadding = padding.calculateStartPadding(layoutDirection)
@@ -4745,7 +4763,7 @@ private fun PhotoGrid(
         ) {
             groups.forEach { group ->
               if (showTimeline) {
-                item(key = "header:${group.key}", span = { GridItemSpan(maxLineSpan) }, contentType = "header") {
+                item(key = "header:${group.value.firstOrNull()?.stableKey ?: group.key}", span = { GridItemSpan(maxLineSpan) }, contentType = "header") {
                     val ids = remember(group.value) { group.value.map { it.stableKey } }
                     val wholeDateSelected = ids.isNotEmpty() && ids.all { it in selectedIds }
                     val headerClickModifier = if (onSetDateSelection != null) {
@@ -4857,6 +4875,12 @@ private fun PhotoGrid(
 
             val thumbColor = MaterialTheme.colorScheme.primary
             val trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f)
+            val handleIconColor = MaterialTheme.colorScheme.onPrimary
+            val handleRadius by animateFloatAsState(
+                targetValue = if (scrubberDragging) 21f else 17f,
+                animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.55f, stiffness = 500f),
+                label = "handleRadius"
+            )
             val scrollHaptic = androidx.compose.ui.platform.LocalHapticFeedback.current
             val scrollSlop = androidx.compose.ui.platform.LocalViewConfiguration.current.touchSlop
 
@@ -4867,7 +4891,7 @@ private fun PhotoGrid(
                         .fillMaxHeight()
                         // start below the top bar: otherwise this strip covers (and steals touches from) the bar's right-most button
                         .padding(top = topPadding, bottom = bottomPadding)
-                        .width(40.dp)
+                        .width(48.dp)
                         .graphicsLayer { alpha = scrollerAlpha }
                         .pointerInput(timelineItems.size, totalRows, totalContentHeight) {
                             awaitEachGesture {
@@ -4966,37 +4990,80 @@ private fun PhotoGrid(
                         }
                 ) {
                     val inset = 16.dp.toPx()
-                    val thumbWidth = (if (scrubberDragging) 8.dp else 5.dp).toPx()
                     val thumbHeight = 48.dp.toPx()
                     val maxTravel = (size.height - inset * 2 - thumbHeight).coerceAtLeast(0f)
-                    val thumbTop = inset + scrollFraction.coerceIn(0f, 1f) * maxTravel
-                    val thumbLeft = size.width - thumbWidth - 4.dp.toPx()
+                    val centerY = inset + thumbHeight / 2f + scrollFraction.coerceIn(0f, 1f) * maxTravel
+                    val centerX = size.width - 24.dp.toPx()
+                    val radius = handleRadius.dp.toPx()
 
                     if (scrubberDragging) {
                         val trackWidth = 3.dp.toPx()
-                        val trackLeft = size.width - trackWidth - 5.dp.toPx()
                         drawRoundRect(
                             color = trackColor,
-                            topLeft = Offset(trackLeft, inset),
+                            topLeft = Offset(centerX - trackWidth / 2f, inset),
                             size = Size(trackWidth, size.height - inset * 2),
                             cornerRadius = CornerRadius(trackWidth / 2f, trackWidth / 2f)
                         )
                     }
-
-                    drawRoundRect(
-                        color = thumbColor,
-                        topLeft = Offset(thumbLeft, thumbTop),
-                        size = Size(thumbWidth, thumbHeight),
-                        cornerRadius = CornerRadius(thumbWidth / 2f, thumbWidth / 2f)
+                    // soft shadow, round body, up/down chevrons
+                    drawCircle(Color.Black.copy(alpha = 0.22f), radius + 1.5.dp.toPx(), Offset(centerX, centerY + 2.dp.toPx()))
+                    drawCircle(thumbColor, radius, Offset(centerX, centerY))
+                    val arm = 5.dp.toPx()
+                    val gap = 3.dp.toPx()
+                    val chevron = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(centerX - arm, centerY - gap)
+                        lineTo(centerX, centerY - gap - arm)
+                        lineTo(centerX + arm, centerY - gap)
+                        moveTo(centerX - arm, centerY + gap)
+                        lineTo(centerX, centerY + gap + arm)
+                        lineTo(centerX + arm, centerY + gap)
+                    }
+                    drawPath(
+                        chevron, handleIconColor,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = 2.dp.toPx(),
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                            join = androidx.compose.ui.graphics.StrokeJoin.Round
+                        )
                     )
                 }
+            }
+
+            // floating year capsules at their real timeline positions (tap = jump to that year)
+            val viewportH by remember { derivedStateOf { gridState.layoutInfo.viewportSize.height } }
+            val yearMarkers = remember(itemYears, itemToRow, rowOffsets, totalContentHeight, viewportH) {
+                com.iris.gallery.ui.YearRailMath.markers(
+                    itemYears, itemToRow, rowOffsets, (totalContentHeight - viewportH).coerceAtLeast(1).toFloat()
+                )
+            }
+            val showYearRail = yearMarkers.size >= 2
+            val activeYear by remember(itemYears) {
+                derivedStateOf {
+                    val idx = (if (scrubberDragging) scrubThumbIndex else gridState.firstVisibleItemIndex)
+                        .coerceIn(0, (itemYears.size - 1).coerceAtLeast(0))
+                    itemYears.getOrElse(idx) { 0 }
+                }
+            }
+            if (showYearRail && scrollerAlpha > 0f) {
+                com.iris.gallery.ui.YearRailOverlay(
+                    markers = yearMarkers,
+                    activeYear = activeYear,
+                    alpha = scrollerAlpha,
+                    topPadding = topPadding,
+                    bottomPadding = bottomPadding,
+                    onYearClick = { m ->
+                        scrollHaptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                        scrubberScope.launch { gridState.animateScrollToItem(m.itemIndex) }
+                    },
+                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 50.dp)
+                )
             }
 
             AnimatedVisibility(
                 visible = scrubberDragging && showDateBubble && visibleDate != null,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(end = 42.dp, bottom = bottomPadding)
+                    .padding(end = 130.dp, bottom = bottomPadding)
                     .layout { measurable, constraints ->
                         val placeable = measurable.measure(constraints)
                         val insetPx = 16.dp.toPx()

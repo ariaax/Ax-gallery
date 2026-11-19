@@ -677,27 +677,61 @@ fun parseExifDateTime(exif: androidx.exifinterface.media.ExifInterface): Long? {
     }.getOrNull()
 }
 
-fun extractExifDateTaken(context: Context, uri: Uri, filePath: String): Long? {
+/** Result of reading a date from a file: found, genuinely absent, or the file could not be opened at all. */
+sealed interface DateProbe {
+    data class Found(val ms: Long) : DateProbe
+    object Absent : DateProbe
+    object Unreadable : DateProbe
+}
+
+/**
+ * EXIF capture date of a photo. Uses the file path when it is readable and otherwise the content URI,
+ * which is the only way to open files on an SD card under scoped storage.
+ */
+fun probePhotoDate(context: Context, uri: Uri, filePath: String): DateProbe {
     if (filePath.isNotBlank()) {
         val file = File(filePath)
-        if (file.exists() && file.canRead()) {
-            val res = runCatching {
-                val exif = androidx.exifinterface.media.ExifInterface(file)
-                parseExifDateTime(exif)
-            }.getOrNull()
-            if (res != null && res > 0L) return res
+        if (file.canRead()) {
+            val read = runCatching { parseExifDateTime(androidx.exifinterface.media.ExifInterface(file)) }
+            if (read.isSuccess) {
+                val ms = MediaDates.normalizeMillis(read.getOrNull() ?: 0L)
+                return if (ms > 0L) DateProbe.Found(ms) else DateProbe.Absent
+            }
         }
-        // Ax Gallery: a readable path exists but has no EXIF date -> do NOT fall back to
-        // ContentResolver (one slow binder call per file made loading take minutes).
-        return null
     }
-    return runCatching {
-        context.contentResolver.openInputStream(uri)?.use { stream ->
-            val exif = androidx.exifinterface.media.ExifInterface(stream)
-            parseExifDateTime(exif)
+    if (uri.scheme != android.content.ContentResolver.SCHEME_CONTENT) return DateProbe.Unreadable
+    return try {
+        val stream = context.contentResolver.openInputStream(uri) ?: return DateProbe.Unreadable
+        stream.use {
+            val ms = MediaDates.normalizeMillis(parseExifDateTime(androidx.exifinterface.media.ExifInterface(it)) ?: 0L)
+            if (ms > 0L) DateProbe.Found(ms) else DateProbe.Absent
         }
-    }.getOrNull()
+    } catch (_: Exception) {
+        DateProbe.Unreadable
+    }
 }
+
+/** Container creation date of a video (MP4/MOV "creation_time"), read without decoding any frames. */
+fun probeVideoDate(context: Context, uri: Uri, filePath: String): DateProbe {
+    val retriever = android.media.MediaMetadataRetriever()
+    try {
+        var opened = false
+        if (filePath.isNotBlank() && File(filePath).canRead()) {
+            opened = runCatching { retriever.setDataSource(filePath) }.isSuccess
+        }
+        if (!opened && uri.scheme == android.content.ContentResolver.SCHEME_CONTENT) {
+            opened = runCatching { retriever.setDataSource(context, uri) }.isSuccess
+        }
+        if (!opened) return DateProbe.Unreadable
+        val ms = MediaDates.parseContainerDate(retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DATE))
+        return if (ms != null) DateProbe.Found(ms) else DateProbe.Absent
+    } finally {
+        runCatching { retriever.release() }
+    }
+}
+
+fun extractExifDateTaken(context: Context, uri: Uri, filePath: String): Long? =
+    (probePhotoDate(context, uri, filePath) as? DateProbe.Found)?.ms
 
 fun setExifAttributeUnicode(exif: androidx.exifinterface.media.ExifInterface, tag: String, value: String) {
     val applied = runCatching {
