@@ -1,6 +1,13 @@
 package com.iris.gallery.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -20,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -100,50 +106,69 @@ fun YearRailOverlay(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
-    val capsuleH = 32.dp
+    val capsuleH = 22.dp
+    // flips to true on first composition so every capsule can run its staggered entrance
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
     BoxWithConstraints(
         modifier
             .fillMaxHeight()
             .padding(top = topPadding, bottom = bottomPadding)
-            .width(76.dp)
-            .graphicsLayer {
-                this.alpha = alpha
-                translationX = (1f - alpha) * 14.dp.toPx()
-            }
+            .width(54.dp)
+            .graphicsLayer { this.alpha = alpha }
     ) {
         val trackPx = with(density) { maxHeight.toPx() }
         val placed = remember(markers, activeYear, trackPx) {
-            with(density) { YearRailMath.place(markers, activeYear, 16.dp.toPx(), 48.dp.toPx(), trackPx, 38.dp.toPx()) }
+            with(density) { YearRailMath.place(markers, activeYear, 16.dp.toPx(), 48.dp.toPx(), trackPx, 28.dp.toPx()) }
         }
         val capsuleHPx = with(density) { capsuleH.toPx() }
         val accent = MaterialTheme.colorScheme.primary
         val onAccent = MaterialTheme.colorScheme.onPrimary
-        placed.forEach { p ->
+        val idleFill = Color.White.copy(alpha = 0.92f)
+        val idleText = Color(0xFF1B1F27)
+        placed.forEachIndexed { index, p ->
             key(p.marker.year) {
-                val scale by animateFloatAsState(
-                    targetValue = if (p.active) 1.18f else 1f,
-                    animationSpec = spring(dampingRatio = 0.48f, stiffness = Spring.StiffnessMediumLow),
-                    label = "yearCapsuleScale"
+                // entrance: slide in from the right + grow + fade, each capsule a beat after the previous one
+                val enter by animateFloatAsState(
+                    targetValue = if (shown) 1f else 0f,
+                    animationSpec = tween(260, delayMillis = index * 28, easing = FastOutSlowInEasing),
+                    label = "yearEnter"
                 )
+                // the active year pops with a spring and its colours cross-fade
+                val pop by animateFloatAsState(
+                    targetValue = if (p.active) 1.16f else 1f,
+                    animationSpec = spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow),
+                    label = "yearPop"
+                )
+                val fill by animateColorAsState(if (p.active) accent else idleFill, tween(180), label = "yearFill")
+                val ink by animateColorAsState(if (p.active) onAccent else idleText, tween(180), label = "yearInk")
                 Box(
                     Modifier
                         .align(Alignment.TopEnd)
                         .offset { IntOffset(0, (p.centerPx - capsuleHPx / 2f).roundToInt()) }
                         .graphicsLayer {
-                            scaleX = scale; scaleY = scale
+                            val s = pop * (0.78f + 0.22f * enter)
+                            scaleX = s; scaleY = s
+                            this.alpha = enter
+                            translationX = (1f - enter) * 18.dp.toPx()
                             transformOrigin = TransformOrigin(1f, 0.5f)
+                            // a real shadow only on the active capsule; idle ones stay flat and cheap
+                            shadowElevation = if (p.active) 5.dp.toPx() else 0f
+                            shape = CircleShape
+                            clip = false
                         }
-                        .shadow(if (p.active) 8.dp else 3.dp, CircleShape, clip = false)
-                        .background(if (p.active) accent else Color.White.copy(alpha = 0.96f), CircleShape)
+                        .background(fill, CircleShape)
                         .pointerInput(p.marker) { detectTapGestures { onYearClick(p.marker) } }
-                        .padding(horizontal = 13.dp, vertical = 7.dp),
+                        .height(capsuleH)
+                        .padding(horizontal = 9.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = p.marker.year.toString(),
-                        fontSize = 13.sp,
+                        fontSize = 11.sp,
+                        lineHeight = 11.sp,
                         fontWeight = if (p.active) FontWeight.Bold else FontWeight.Medium,
-                        color = if (p.active) onAccent else Color(0xFF1B1F27)
+                        color = ink
                     )
                 }
             }

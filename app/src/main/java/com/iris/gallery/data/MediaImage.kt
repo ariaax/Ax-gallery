@@ -69,6 +69,32 @@ val MediaImage.sortDate: Long
         }
     }
 
+/**
+ * The one order every timeline list uses. In DATE_ADDED mode many files share one saving day (an SD card
+ * indexed in one go, a camera import): inside a day they are ordered by their real capture date instead of
+ * by the arbitrary second the scanner happened to reach them.
+ */
+object TimelineOrder : Comparator<MediaImage> {
+    private const val DAY_MS = 86_400_000L
+    private fun dayKey(ms: Long): Long = Math.floorDiv(ms + java.util.TimeZone.getDefault().getOffset(ms), DAY_MS)
+
+    override fun compare(a: MediaImage, b: MediaImage): Int {
+        val sa = a.sortDate
+        val sb = b.sortDate
+        if (TimelineSort.mode == DateSortMode.DATE_ADDED) {
+            val d = dayKey(sb).compareTo(dayKey(sa))
+            if (d != 0) return d
+            val t = b.dateTaken.compareTo(a.dateTaken)
+            if (t != 0) return t
+        }
+        var c = sb.compareTo(sa)
+        if (c != 0) return c
+        c = b.dateModified.compareTo(a.dateModified); if (c != 0) return c
+        c = b.dateAdded.compareTo(a.dateAdded); if (c != 0) return c
+        return b.id.compareTo(a.id)
+    }
+}
+
 val MediaImage.isScreenshot: Boolean
     get() = bucketName.contains("screenshot", ignoreCase = true) ||
             path.contains("screenshot", ignoreCase = true) ||

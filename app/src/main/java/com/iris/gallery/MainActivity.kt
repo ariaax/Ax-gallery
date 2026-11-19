@@ -2195,7 +2195,7 @@ private fun GalleryScaffold(
         selectedAlbum?.let { album ->
             val filtered = filterMediaList(album.images, fileSearchQuery)
             when (effectiveAlbumMediaSort) {
-                MediaSort.DATE_DESC -> filtered.sortedWith(compareByDescending<MediaImage> { it.sortDate }.thenByDescending { it.dateModified }.thenByDescending { it.dateAdded }.thenByDescending { it.id })
+                MediaSort.DATE_DESC -> filtered.sortedWith(com.iris.gallery.data.TimelineOrder)
                 MediaSort.DATE_ASC -> filtered.sortedWith(compareBy<MediaImage> { it.sortDate }.thenBy { it.dateModified }.thenBy { it.dateAdded }.thenBy { it.id })
                 MediaSort.NAME_ASC -> filtered.sortedWith { a, b -> NaturalOrderComparator.compare(a.name, b.name) }
                 MediaSort.NAME_DESC -> filtered.sortedWith { a, b -> NaturalOrderComparator.compare(b.name, a.name) }
@@ -4839,8 +4839,8 @@ private fun PhotoGrid(
                     )
                     // zoomed far out: show the day of the month on each small tile (like a calendar)
                     if (currentCellSize < 92.dp && !selected) {
-                        val dayLabel = remember(image.dateTaken) {
-                            Instant.ofEpochMilli(image.dateTaken).atZone(ZoneId.systemDefault()).dayOfMonth.toString()
+                        val dayLabel = remember(image.dateTaken, image.dateAdded, com.iris.gallery.data.TimelineSort.mode) {
+                            Instant.ofEpochMilli(image.sortDate).atZone(ZoneId.systemDefault()).dayOfMonth.toString()
                         }
                         // small dark pill instead of a blurred text shadow: much cheaper to draw on every tile
                         Text(
@@ -5055,7 +5055,7 @@ private fun PhotoGrid(
                         scrollHaptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                         scrubberScope.launch { gridState.animateScrollToItem(m.itemIndex) }
                     },
-                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 50.dp)
+                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 52.dp)
                 )
             }
 
@@ -5063,7 +5063,7 @@ private fun PhotoGrid(
                 visible = scrubberDragging && showDateBubble && visibleDate != null,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(end = 130.dp, bottom = bottomPadding)
+                    .padding(end = 112.dp, bottom = bottomPadding)
                     .layout { measurable, constraints ->
                         val placeable = measurable.measure(constraints)
                         val insetPx = 16.dp.toPx()
