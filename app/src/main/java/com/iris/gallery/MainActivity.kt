@@ -82,7 +82,6 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -98,7 +97,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -111,8 +109,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.LazyColumn
@@ -2300,9 +2296,9 @@ private fun GalleryScaffold(
     }
 
     fun handleTrash(items: List<MediaImage>, onConfirmed: (() -> Unit)? = null) {
-        // Legacy call sites are redirected to the same explicit-confirmation flow.
-        // No new media is moved into the app or Android trash.
-        if (items.isNotEmpty()) pendingDeleteItems = items
+        if (items.isNotEmpty()) {
+            onTrash(items, onConfirmed)
+        }
     }
     fun handleRestore(items: List<MediaImage>) {
         if (items.isNotEmpty()) {
@@ -2476,9 +2472,17 @@ private fun GalleryScaffold(
                         AxBarButton(onClick = {
                             val selected = activeMedia.filter { it.stableKey in selectedIds }
                             if (selected.isNotEmpty()) {
-                                // Permanent deletion is now the only normal-gallery delete mode.
-                                // Always show an explicit confirmation before removing user media.
-                                pendingDeleteItems = selected
+                                if (destination == 3 && (librarySection == "trash" || librarySection == "locked")) {
+                                    pendingDeleteItems = selected
+                                } else if (settings.deleteMode == DeleteMode.ALWAYS_ASK || settings.confirmDelete) {
+                                    pendingDeleteItems = selected
+                                } else if (settings.deleteMode == DeleteMode.PERMANENT) {
+                                    clearSelection()
+                                    handleDeletePermanently(selected)
+                                } else {
+                                    clearSelection()
+                                    handleTrash(selected)
+                                }
                             }
                         }) { Icon(AxIcons.Trash, stringResource(R.string.action_delete)) }
                         Box {
@@ -2871,7 +2875,6 @@ private fun GalleryScaffold(
                   if (displayedPhotos.isNotEmpty()) PhotoGrid(
                     displayedPhotos, if (destination == 0) quickPadding else padding, photoGridState, cellSize = photoCellSize, onCellSizeChange = onCellSizeChange,
                     showTimeline = settings.showTimelineHeaders && fileSearchQuery.isBlank(),
-                    justified = settings.justifiedLayout,
                     timelineDateFormat = settings.timelineDateFormat,
                     customTimelineDateFormat = settings.customTimelineDateFormat,
                     useRelativeDates = settings.useRelativeDates,
@@ -2896,6 +2899,7 @@ private fun GalleryScaffold(
                       fold = quickFold,
                       enabled = selectedIds.isEmpty(),
                       actions = listOf(
+                          QuickAction(AxIcons.QaTrash, "Trash") { openLibrarySection("trash") },
                           QuickAction(AxIcons.QaVideo, "Videos") { openLibrarySection("videos") },
                           QuickAction(AxIcons.QaLock, "Locked") { openLibrarySection("locked") },
                           QuickAction(AxIcons.QaFolder, "Trips") { openLibrarySection("trips") },
@@ -4329,7 +4333,6 @@ private fun PhotoGrid(
     cellSize: androidx.compose.ui.unit.Dp,
     onCellSizeChange: ((androidx.compose.ui.unit.Dp) -> Unit)? = null,
     showTimeline: Boolean = false,
-    justified: Boolean = false,
     showDateBubble: Boolean = showTimeline,
     timelineDateFormat: TimelineDateFormat = TimelineDateFormat.SYSTEM_DEFAULT,
     customTimelineDateFormat: String = "d. MMMM yyyy",
@@ -4401,6 +4404,18 @@ private fun PhotoGrid(
             }
         }
     }
+    // year of every timeline item (a day header shares its day's year); drives the year rail
+    val itemYears = remember(groups, showTimeline, timelineItems.size) {
+        val zone = java.time.ZoneId.systemDefault()
+        val out = IntArray(timelineItems.size)
+        var i = 0
+        groups.forEach { g ->
+            val y = g.value.firstOrNull()?.let { java.time.Instant.ofEpochMilli(it.sortDate).atZone(zone).year } ?: 0
+            if (showTimeline && i < out.size) out[i++] = y
+            for (k in g.value.indices) if (i < out.size) out[i++] = y
+        }
+        out
+    }
     val layoutDirection = LocalLayoutDirection.current
     val startPadding = padding.calculateStartPadding(layoutDirection)
     val endPadding = padding.calculateEndPadding(layoutDirection)
@@ -4436,21 +4451,7 @@ private fun PhotoGrid(
     val photoHeight = estimatedPhotoHeight
     val headerHeight = estimatedHeaderHeight
 
-    // Justified (masonry-style) rows: every photo keeps its own proportion, rows are filled edge to edge.
-    val justifiedPlan = remember(groups, showTimeline, justified, screenWidthDp, startPadding, endPadding, gridSpacing, cellSize, density) {
-        if (!(justified && showTimeline)) null else with(density) {
-            val widthPx = (screenWidthDp.dp - startPadding - endPadding - (gridSpacing.dp * 2).dp).roundToPx()
-            buildJustifiedPlan(
-                groups = groups.map { it.value },
-                widthPx = widthPx,
-                gapPx = gridSpacing.dp.dp.roundToPx(),
-                targetRowPx = (cellSize.value * 1.35f).dp.roundToPx(),
-                headerPx = 50.dp.roundToPx(),
-            )
-        }
-    }
-    val rowLayout = remember(groups, showTimeline, actualColumns, timelineItems.size, justifiedPlan) {
-        justifiedPlan?.let { return@remember Triple(it.totalRows, it.itemToRow, Pair(it.rowToItem, it.isRowHeader)) }
+    val rowLayout = remember(groups, showTimeline, actualColumns, timelineItems.size) {
         val cols = actualColumns.coerceAtLeast(1)
         val totalCount = timelineItems.size
         val itemToRow = IntArray(totalCount)
@@ -4504,52 +4505,26 @@ private fun PhotoGrid(
     val itemToRow = rowLayout.second
     val rowToItem = rowLayout.third.first
     val isRowHeader = rowLayout.third.second
-    val yearNavigation = remember(groups, showTimeline) {
-        buildList<Pair<Int, Int>> {
-            var itemIndex = 0
-            var previousYear: Int? = null
-            groups.forEach { group ->
-                val firstMedia = group.value.firstOrNull()
-                if (firstMedia != null) {
-                    val year = Instant.ofEpochMilli(firstMedia.sortDate)
-                        .atZone(ZoneId.systemDefault()).year
-                    if (year != previousYear) add(year to itemIndex)
-                    previousYear = year
-                }
-                itemIndex += (if (showTimeline) 1 else 0) + group.value.size
-            }
-        }
-    }
 
-    val rowOffsets = remember(rowLayout, justifiedPlan, photoHeight, headerHeight, spacingPx, topPaddingPx) {
+    val rowOffsets = remember(rowLayout, photoHeight, headerHeight, spacingPx, topPaddingPx) {
         val offsets = IntArray(totalRows)
         var acc = topPaddingPx
         for (r in 0 until totalRows) {
             offsets[r] = acc
-            val h = justifiedPlan?.rowHeights?.getOrNull(r) ?: if (isRowHeader[r]) headerHeight else photoHeight
+            val h = if (isRowHeader[r]) headerHeight else photoHeight
             acc += h + spacingPx
         }
         offsets
     }
 
-    val totalContentHeight = remember(rowLayout, justifiedPlan, photoHeight, headerHeight, spacingPx, topPaddingPx, bottomPaddingPx) {
+    val totalContentHeight = remember(rowLayout, photoHeight, headerHeight, spacingPx, topPaddingPx, bottomPaddingPx) {
         var acc = topPaddingPx
         for (r in 0 until totalRows) {
-            val h = justifiedPlan?.rowHeights?.getOrNull(r) ?: if (isRowHeader[r]) headerHeight else photoHeight
+            val h = if (isRowHeader[r]) headerHeight else photoHeight
             acc += h + spacingPx
         }
         acc += bottomPaddingPx
         maxOf(acc, 1)
-    }
-
-    val viewportHeightPx by remember(gridState) { derivedStateOf { gridState.layoutInfo.viewportSize.height } }
-    // where each year starts on the SAME 0..1 scale as the scroll thumb (true content offsets, not even spacing)
-    val yearFractions = remember(yearNavigation, itemToRow, rowOffsets, totalContentHeight, viewportHeightPx, topPaddingPx) {
-        val maxScroll = (totalContentHeight - viewportHeightPx).coerceAtLeast(1).toFloat()
-        FloatArray(yearNavigation.size) {
-            val row = itemToRow.getOrElse(yearNavigation[it].second) { 0 }
-            ((rowOffsets.getOrElse(row) { 0 } - topPaddingPx).coerceAtLeast(0) / maxScroll).coerceIn(0f, 1f)
-        }
     }
 
     var scrubberDragging by remember { mutableStateOf(false) }
@@ -4657,7 +4632,7 @@ private fun PhotoGrid(
             }
     ) {
         val rimAccent = MaterialTheme.colorScheme.primary
-        val targetThumbnailPx = remember(actualColumns, justifiedPlan != null) { if (justifiedPlan != null) 512 else com.iris.gallery.ui.getThumbnailTargetSizePx(actualColumns) }
+        val targetThumbnailPx = remember(actualColumns) { com.iris.gallery.ui.getThumbnailTargetSizePx(actualColumns) }
         // Look-ahead: while scrolling, decode the next ~3 screens of tiles in the scroll direction so they are
         // already in the memory cache when they arrive (fewer empty tiles during a fling).
         val prefetchCtx = LocalContext.current
@@ -4686,7 +4661,7 @@ private fun PhotoGrid(
         }
         LazyVerticalGrid(
             state = gridState,
-            columns = if (justifiedPlan != null) GridCells.Fixed(com.iris.gallery.ui.JustifiedLayout.SPAN_UNITS) else GridCells.Adaptive(cellSize),
+            columns = GridCells.Adaptive(cellSize),
             modifier = Modifier.fillMaxSize().pointerInput(gridState, onSetSelection) {
                 if (currentSetSelection == null) return@pointerInput
                 var selecting = true
@@ -4786,12 +4761,7 @@ private fun PhotoGrid(
             horizontalArrangement = Arrangement.spacedBy(gridSpacing.dp.dp),
             verticalArrangement = Arrangement.spacedBy(gridSpacing.dp.dp),
         ) {
-            var flatIndex = 0 // index into timelineItems (header + photos), used to look up the justified span/height
             groups.forEach { group ->
-              val groupBase = flatIndex + (if (showTimeline) 1 else 0)
-              flatIndex = groupBase + group.value.size
-              val spanFn: (LazyGridItemSpanScope.(Int, MediaImage) -> GridItemSpan)? =
-                  if (justifiedPlan != null) { { i, _ -> GridItemSpan(justifiedPlan.spans[groupBase + i]) } } else null
               if (showTimeline) {
                 item(key = "header:${group.value.firstOrNull()?.stableKey ?: group.key}", span = { GridItemSpan(maxLineSpan) }, contentType = "header") {
                     val ids = remember(group.value) { group.value.map { it.stableKey } }
@@ -4817,19 +4787,6 @@ private fun PhotoGrid(
                     ) {
                         Text(group.key, style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                        if (justifiedPlan != null) {
-                            // "date | city": only when the photos really carry GPS (resolved lazily for visible headers)
-                            val dayKey = group.value.firstOrNull()?.stableKey
-                            val place by produceState<String?>(null, dayKey) {
-                                value = if (dayKey == null) null else com.iris.gallery.data.LocationLabels.forDay(axGridCtx, dayKey, group.value)
-                            }
-                            place?.let {
-                                Text("  |  $it", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f))
-                            }
-                        }
                         androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                         AnimatedVisibility(selectedIds.isNotEmpty()) {
                             Text(if (wholeDateSelected) stringResource(R.string.action_deselect_date) else stringResource(R.string.action_select_date),
@@ -4839,18 +4796,12 @@ private fun PhotoGrid(
                     }
                 }
               }
-              itemsIndexed(
-                group.value,
-                key = { _, it -> it.stableKey },
-                span = spanFn,
-                contentType = { _, _ -> "photo" },
-              ) { photoIndex, image ->
+              items(group.value, key = { it.stableKey }, contentType = { "photo" }) { image ->
                 val selected = image.stableKey in selectedIds
                 val heroCell = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
                 // square tiles with softly rounded corners (never pill/circle): the corner setting is kept but capped
                 val tileRadius = if (cornerStyle.dp == 0) 0.dp else cornerStyle.dp.coerceIn(5, 10).dp
-                val tileHeightDp = if (justifiedPlan != null) with(density) { justifiedPlan.heights[groupBase + photoIndex].toDp() } else 0.dp
-                Box((if (justifiedPlan != null) Modifier.fillMaxWidth().height(tileHeightDp) else Modifier.aspectRatio(1f))
+                Box(Modifier.aspectRatio(1f)
                     .onGloballyPositioned { heroCell[0] = it }
                     .clip(AxRound(tileRadius))
                     // thin glass rim around every tile (glowing accent ring when selected), drawn in this same node
@@ -4924,6 +4875,12 @@ private fun PhotoGrid(
 
             val thumbColor = MaterialTheme.colorScheme.primary
             val trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f)
+            val handleIconColor = MaterialTheme.colorScheme.onPrimary
+            val handleRadius by animateFloatAsState(
+                targetValue = if (scrubberDragging) 21f else 17f,
+                animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.55f, stiffness = 500f),
+                label = "handleRadius"
+            )
             val scrollHaptic = androidx.compose.ui.platform.LocalHapticFeedback.current
             val scrollSlop = androidx.compose.ui.platform.LocalViewConfiguration.current.touchSlop
 
@@ -4978,27 +4935,22 @@ private fun PhotoGrid(
                                     val frac = calculateFraction(y)
                                     scrubFraction = frac
                                     val targetScrollPx = (frac * maxScrollPx).toInt()
-                                    // rowOffsets include the grid's top content padding, while targetScrollPx
-                                    // is a scroll distance from the content origin. Keep both in one coordinate space.
-                                    val targetContentY = (targetScrollPx + topPaddingPx).coerceIn(0, totalContentHeight - 1)
-                                    val targetRow = com.iris.gallery.ui.timelineRowAtContentY(targetContentY, rowOffsets)
-                                        .coerceIn(0, totalRows - 1)
+                                    var targetRow = rowOffsets.binarySearch(targetScrollPx)
+                                    if (targetRow < 0) {
+                                        targetRow = (-targetRow - 2).coerceIn(0, totalRows - 1)
+                                    }
                                     val rowStart = rowOffsets[targetRow]
-                                    val remainder = (targetContentY - rowStart).coerceAtLeast(0)
+                                    val remainder = (targetScrollPx - rowStart).coerceAtLeast(0)
                                     val targetIndex = rowToItem[targetRow]
                                     val offset = remainder
                                     scrubTargetIndex = targetIndex
 
-                                    // The rail Canvas is placed BELOW the grid's top content inset. Convert the
-                                    // finger position back into the same content coordinate system used by
-                                    // rowOffsets; omitting topPaddingPx made the date bubble drift away from
-                                    // the row actually under the thumb (especially on long, multi-year timelines).
-                                    val thumbContentPx = (
-                                        targetScrollPx + topPaddingPx + y.coerceIn(0f, size.height.toFloat())
-                                    ).toInt().coerceIn(0, totalContentHeight - 1)
-                                    val thumbRow = com.iris.gallery.ui.timelineRowAtContentY(thumbContentPx, rowOffsets)
-                                        .coerceIn(0, totalRows - 1)
-                                    scrubThumbIndex = rowToItem[thumbRow].coerceIn(0, timelineItems.lastIndex)
+                                    val thumbContentPx = (targetScrollPx + y.coerceIn(0f, size.height.toFloat())).toInt()
+                                    var thumbRow = rowOffsets.binarySearch(thumbContentPx)
+                                    if (thumbRow < 0) {
+                                        thumbRow = (-thumbRow - 2).coerceIn(0, totalRows - 1)
+                                    }
+                                    scrubThumbIndex = rowToItem[thumbRow]
                                     if (targetIndex != lastTargetIndex || kotlin.math.abs(offset - lastOffset) > 8) {
                                         lastTargetIndex = targetIndex
                                         lastOffset = offset
@@ -5022,11 +4974,12 @@ private fun PhotoGrid(
                                     scrubberDragging = false
                                     scrubScrollJob?.cancel()
                                     val targetScrollPx = (scrubFraction * maxScrollPx).toInt()
-                                    val targetContentY = (targetScrollPx + topPaddingPx).coerceIn(0, totalContentHeight - 1)
-                                    val targetRow = com.iris.gallery.ui.timelineRowAtContentY(targetContentY, rowOffsets)
-                                        .coerceIn(0, totalRows - 1)
+                                    var targetRow = rowOffsets.binarySearch(targetScrollPx)
+                                    if (targetRow < 0) {
+                                        targetRow = (-targetRow - 2).coerceIn(0, totalRows - 1)
+                                    }
                                     val rowStart = rowOffsets[targetRow]
-                                    val remainder = (targetContentY - rowStart).coerceAtLeast(0)
+                                    val remainder = (targetScrollPx - rowStart).coerceAtLeast(0)
                                     val targetIndex = rowToItem[targetRow]
                                     val offset = remainder
                                     scrubberScope.launch {
@@ -5039,95 +4992,78 @@ private fun PhotoGrid(
                     val inset = 16.dp.toPx()
                     val thumbHeight = 48.dp.toPx()
                     val maxTravel = (size.height - inset * 2 - thumbHeight).coerceAtLeast(0f)
-                    val thumbTop = inset + scrollFraction.coerceIn(0f, 1f) * maxTravel
+                    val centerY = inset + thumbHeight / 2f + scrollFraction.coerceIn(0f, 1f) * maxTravel
+                    val centerX = size.width - 24.dp.toPx()
+                    val radius = handleRadius.dp.toPx()
 
-                    // A persistent, softly rounded rail is easier to discover and grab than the
-                    // previous almost-invisible 5dp line. Keep drawing lightweight (one track + thumb).
-                    val trackWidth = if (scrubberDragging) 5.dp.toPx() else 3.dp.toPx()
-                    val trackLeft = size.width - trackWidth - 5.dp.toPx()
-                    drawRoundRect(
-                        color = trackColor.copy(alpha = if (scrubberDragging) 0.72f else 0.42f),
-                        topLeft = Offset(trackLeft, inset),
-                        size = Size(trackWidth, size.height - inset * 2),
-                        cornerRadius = CornerRadius(trackWidth / 2f, trackWidth / 2f)
-                    )
-
-                    val activeThumbWidth = if (scrubberDragging) 11.dp.toPx() else 8.dp.toPx()
-                    val activeThumbLeft = size.width - activeThumbWidth - 2.dp.toPx()
-                    drawRoundRect(
-                        color = thumbColor.copy(alpha = if (scrubberDragging) 1f else 0.88f),
-                        topLeft = Offset(activeThumbLeft, thumbTop),
-                        size = Size(activeThumbWidth, thumbHeight),
-                        cornerRadius = CornerRadius(activeThumbWidth / 2f, activeThumbWidth / 2f)
+                    if (scrubberDragging) {
+                        val trackWidth = 3.dp.toPx()
+                        drawRoundRect(
+                            color = trackColor,
+                            topLeft = Offset(centerX - trackWidth / 2f, inset),
+                            size = Size(trackWidth, size.height - inset * 2),
+                            cornerRadius = CornerRadius(trackWidth / 2f, trackWidth / 2f)
+                        )
+                    }
+                    // soft shadow, round body, up/down chevrons
+                    drawCircle(Color.Black.copy(alpha = 0.22f), radius + 1.5.dp.toPx(), Offset(centerX, centerY + 2.dp.toPx()))
+                    drawCircle(thumbColor, radius, Offset(centerX, centerY))
+                    val arm = 5.dp.toPx()
+                    val gap = 3.dp.toPx()
+                    val chevron = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(centerX - arm, centerY - gap)
+                        lineTo(centerX, centerY - gap - arm)
+                        lineTo(centerX + arm, centerY - gap)
+                        moveTo(centerX - arm, centerY + gap)
+                        lineTo(centerX, centerY + gap + arm)
+                        lineTo(centerX + arm, centerY + gap)
+                    }
+                    drawPath(
+                        chevron, handleIconColor,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = 2.dp.toPx(),
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                            join = androidx.compose.ui.graphics.StrokeJoin.Round
+                        )
                     )
                 }
             }
 
-            if (yearNavigation.size > 1 && scrollerAlpha > 0f) {
-                // Slim glass rail: a few year labels placed where that year really starts (same scale as the scroll thumb),
-                // labels that would collide are left out, the current year gets a small accent capsule.
-                val currentYear = visibleDate?.let { Instant.ofEpochMilli(it.sortDate).atZone(ZoneId.systemDefault()).year }
-                val railAccent = MaterialTheme.colorScheme.primary
-                BoxWithConstraints(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .fillMaxHeight()
-                        .padding(top = topPadding, bottom = bottomPadding, end = 14.dp)
-                        .width(34.dp)
-                        .graphicsLayer { alpha = scrollerAlpha }
-                ) {
-                    val inset = 16.dp
-                    val thumbH = 48.dp
-                    val labelH = 24.dp
-                    val minGap = labelH + 6.dp
-                    val maxTravel = (maxHeight - inset * 2 - thumbH).coerceAtLeast(1.dp)
-                    Box(
-                        Modifier
-                            .align(Alignment.Center)
-                            .fillMaxHeight()
-                            .width(30.dp)
-                            .background(Color.Black.copy(alpha = 0.30f), AxRound(15.dp))
-                    )
-                    var lastShown = (-1000).dp
-                    for (i in yearNavigation.indices) {
-                        val entry = yearNavigation[i]
-                        val center = inset + thumbH / 2 + maxTravel * yearFractions[i]
-                        if (center - lastShown < minGap) continue // too close to the previous label
-                        lastShown = center
-                        val isActive = entry.first == currentYear
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .offset(y = center - labelH / 2)
-                                .height(labelH)
-                                .widthIn(min = 30.dp)
-                                .clip(AxRound(12.dp))
-                                .background(if (isActive) railAccent else Color.Transparent)
-                                .clickable {
-                                    scrubberScope.launch {
-                                        gridState.animateScrollToItem(entry.second.coerceIn(0, timelineItems.lastIndex))
-                                    }
-                                }
-                                .padding(horizontal = 4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = entry.first.toString(),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isActive) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.82f),
-                                maxLines = 1,
-                            )
-                        }
-                    }
+            // floating year capsules at their real timeline positions (tap = jump to that year)
+            val viewportH by remember { derivedStateOf { gridState.layoutInfo.viewportSize.height } }
+            val yearMarkers = remember(itemYears, itemToRow, rowOffsets, totalContentHeight, viewportH) {
+                com.iris.gallery.ui.YearRailMath.markers(
+                    itemYears, itemToRow, rowOffsets, (totalContentHeight - viewportH).coerceAtLeast(1).toFloat()
+                )
+            }
+            val showYearRail = yearMarkers.size >= 2
+            val activeYear by remember(itemYears) {
+                derivedStateOf {
+                    val idx = (if (scrubberDragging) scrubThumbIndex else gridState.firstVisibleItemIndex)
+                        .coerceIn(0, (itemYears.size - 1).coerceAtLeast(0))
+                    itemYears.getOrElse(idx) { 0 }
                 }
+            }
+            if (showYearRail && scrollerAlpha > 0f) {
+                com.iris.gallery.ui.YearRailOverlay(
+                    markers = yearMarkers,
+                    activeYear = activeYear,
+                    alpha = scrollerAlpha,
+                    topPadding = topPadding,
+                    bottomPadding = bottomPadding,
+                    onYearClick = { m ->
+                        scrollHaptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                        scrubberScope.launch { gridState.animateScrollToItem(m.itemIndex) }
+                    },
+                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 50.dp)
+                )
             }
 
             AnimatedVisibility(
                 visible = scrubberDragging && showDateBubble && visibleDate != null,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(end = 42.dp, bottom = bottomPadding)
+                    .padding(end = 130.dp, bottom = bottomPadding)
                     .layout { measurable, constraints ->
                         val placeable = measurable.measure(constraints)
                         val insetPx = 16.dp.toPx()
@@ -5145,96 +5081,22 @@ private fun PhotoGrid(
                 enter = fadeIn(tween(120)) + scaleIn(tween(180), initialScale = .88f),
                 exit = fadeOut(tween(120)) + scaleOut(tween(140), targetScale = .9f)
             ) {
-                val activeYear = visibleDate?.let {
-                    Instant.ofEpochMilli(it.sortDate).atZone(ZoneId.systemDefault()).year.toString()
-                }.orEmpty()
                 Surface(
                     shape = AxRound(20.dp),
-                    tonalElevation = 12.dp,
-                    shadowElevation = 9.dp,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.98f),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.62f)
-                    )
+                    tonalElevation = 8.dp,
+                    color = MaterialTheme.colorScheme.primaryContainer
                 ) {
-                    Row(
-                        modifier = Modifier.padding(start = 8.dp, end = 15.dp, top = 7.dp, bottom = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(9.dp)
-                    ) {
-                        // AX year capsule: a compact navigation cue, not a copy of another gallery's rail.
-                        Surface(
-                            shape = AxRound(12.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ) {
-                            Text(
-                                text = activeYear,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                        Text(
-                            text = visibleDate?.let { formatTimelineLabel(it.sortDate) } ?: "",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+                    Text(
+                        text = visibleDate?.let { formatTimelineLabel(it.sortDate) } ?: "",
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 }
             }
         }
     }
-}
-
-/** Row structure of the justified grid, indexed like `timelineItems` (header entries included). */
-private class JustifiedGridPlan(
-    val spans: IntArray,
-    val heights: IntArray,
-    val rowHeights: IntArray,
-    val rowToItem: IntArray,
-    val isRowHeader: BooleanArray,
-    val itemToRow: IntArray,
-) {
-    val totalRows: Int get() = maxOf(rowHeights.size, 1)
-}
-
-private fun MediaImage.displayAspect(): Float {
-    if (width <= 0 || height <= 0) return 1f
-    val sideways = orientation % 180 != 0
-    return if (sideways) height.toFloat() / width else width.toFloat() / height
-}
-
-private fun buildJustifiedPlan(groups: List<List<MediaImage>>, widthPx: Int, gapPx: Int, targetRowPx: Int, headerPx: Int): JustifiedGridPlan {
-    val total = groups.sumOf { it.size + 1 }
-    val spans = IntArray(total) { com.iris.gallery.ui.JustifiedLayout.SPAN_UNITS }
-    val heights = IntArray(total)
-    val itemToRow = IntArray(total)
-    val rowHeights = ArrayList<Int>()
-    val rowToItem = ArrayList<Int>()
-    val isHeader = ArrayList<Boolean>()
-    var idx = 0
-    for (group in groups) {
-        heights[idx] = headerPx
-        itemToRow[idx] = rowHeights.size
-        rowToItem.add(idx); rowHeights.add(headerPx); isHeader.add(true)
-        idx++
-        val gl = com.iris.gallery.ui.JustifiedLayout.layoutGroup(FloatArray(group.size) { group[it].displayAspect() }, widthPx, gapPx, targetRowPx)
-        val firstRow = rowHeights.size
-        for (r in 0 until gl.rowCount) {
-            rowToItem.add(idx + gl.rowStarts[r]); rowHeights.add(gl.rowHeightsPx[r]); isHeader.add(false)
-        }
-        var r = 0
-        for (k in group.indices) {
-            while (r + 1 < gl.rowCount && gl.rowStarts[r + 1] <= k) r++
-            spans[idx + k] = gl.spans[k]
-            heights[idx + k] = gl.heightsPx[k]
-            itemToRow[idx + k] = firstRow + r
-        }
-        idx += group.size
-    }
-    return JustifiedGridPlan(spans, heights, rowHeights.toIntArray(), rowToItem.toIntArray(), isHeader.toBooleanArray(), itemToRow)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

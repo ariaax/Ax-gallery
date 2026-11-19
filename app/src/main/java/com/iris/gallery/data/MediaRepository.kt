@@ -529,7 +529,6 @@ class MediaRepository(private val context: Context) {
                             addedMs = cursorDateAdded,
                             modifiedMs = effectiveModified,
                             fileMetadataMs = fileMetadataMs,
-                            fileName = displayName,
                             nowMs = now,
                         )
 

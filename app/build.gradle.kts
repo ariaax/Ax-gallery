@@ -11,8 +11,8 @@ android {
         applicationId = "com.ax.gallery"
         minSdk = 26
         targetSdk = 35
-        versionCode = 18
-        versionName = "0.9.5"
+        versionCode = 19
+        versionName = "1.0.0"
         // Default: arm64 only (small APK). -Parm32 builds a separate 32-bit ARM APK for old phones;
         // -PallAbis adds x86_64 so the CI emulator can run the app.
         ndk {

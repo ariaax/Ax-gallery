@@ -137,8 +137,6 @@ data class SettingsState(
     val customTimelineDateFormat: String = "d. MMMM yyyy",
     val useRelativeDates: Boolean = true,
     val showDayOfWeek: Boolean = false,
-    /** Justified rows with the photos' own proportions (Xiaomi-style) instead of square tiles. */
-    val justifiedLayout: Boolean = true,
     val abbreviateDayOfWeek: Boolean = false,
     val smartYearHiding: Boolean = true,
     val showVideoDurationBadge: Boolean = true,
@@ -171,7 +169,7 @@ data class SettingsState(
     val appLockPinSalt: String = "",
     val appLockBiometricsEnabled: Boolean = true,
     val confirmDelete: Boolean = false,
-    val deleteMode: DeleteMode = DeleteMode.PERMANENT,
+    val deleteMode: DeleteMode = DeleteMode.TRASH,
     val useSystemTrash: Boolean = false,
     val videoMuted: Boolean = false,
     val preferredEditor: PreferredEditor = PreferredEditor.ALWAYS_ASK,
@@ -255,7 +253,6 @@ class SettingsPreferences(context: Context) {
     }
     fun setUseRelativeDates(use: Boolean) = update { copy(useRelativeDates = use) }
     fun setShowDayOfWeek(show: Boolean) = update { copy(showDayOfWeek = show) }
-    fun setJustifiedLayout(on: Boolean) = update { copy(justifiedLayout = on) }
     fun setAbbreviateDayOfWeek(abbreviate: Boolean) = update { copy(abbreviateDayOfWeek = abbreviate) }
     fun setSmartYearHiding(smart: Boolean) = update { copy(smartYearHiding = smart) }
     fun setShowVideoDurationBadge(show: Boolean) = update { copy(showVideoDurationBadge = show) }
@@ -389,7 +386,6 @@ class SettingsPreferences(context: Context) {
             }.getOrDefault("d. MMMM yyyy"),
             useRelativeDates = prefs.getBoolean("use_relative_dates", true),
             showDayOfWeek = prefs.getBoolean("show_day_of_week", false),
-            justifiedLayout = prefs.getBoolean("ax_justified_layout", true),
             abbreviateDayOfWeek = prefs.getBoolean("abbreviate_day_of_week", false),
             smartYearHiding = prefs.getBoolean("smart_year_hiding", true),
             showVideoDurationBadge = prefs.getBoolean("show_video_duration_badge", true),
@@ -422,9 +418,8 @@ class SettingsPreferences(context: Context) {
             appLockPinSalt = prefs.getString("app_lock_pin_salt", "").orEmpty(),
             appLockBiometricsEnabled = prefs.getBoolean("app_lock_biometrics_enabled", true),
             confirmDelete = prefs.getBoolean("confirm_delete", false),
-            // AX Gallery now uses direct deletion; legacy TRASH preferences are intentionally migrated.
-            deleteMode = DeleteMode.PERMANENT,
-            useSystemTrash = false, // platform trash disabled; deletion is permanent after confirmation
+            deleteMode = runCatching { DeleteMode.valueOf(prefs.getString("delete_mode", null).orEmpty()) }.getOrDefault(DeleteMode.TRASH),
+            useSystemTrash = prefs.getBoolean("use_system_trash", false),
             videoMuted = prefs.getBoolean("video_muted", false),
             preferredEditor = runCatching { PreferredEditor.valueOf(prefs.getString("preferred_editor", null).orEmpty()) }.getOrDefault(PreferredEditor.ALWAYS_ASK),
             editorOverwriteOriginal = prefs.getBoolean("editor_overwrite_original", false),
@@ -459,7 +454,6 @@ class SettingsPreferences(context: Context) {
             .putString("custom_timeline_date_format", state.customTimelineDateFormat)
             .putBoolean("use_relative_dates", state.useRelativeDates)
             .putBoolean("show_day_of_week", state.showDayOfWeek)
-            .putBoolean("ax_justified_layout", state.justifiedLayout)
             .putBoolean("abbreviate_day_of_week", state.abbreviateDayOfWeek)
             .putBoolean("smart_year_hiding", state.smartYearHiding)
             .putBoolean("show_video_duration_badge", state.showVideoDurationBadge)

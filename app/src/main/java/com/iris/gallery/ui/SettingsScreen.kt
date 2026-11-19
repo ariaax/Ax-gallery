@@ -903,15 +903,6 @@ fun SettingsScreen(
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
                             SettingsSwitchRow(
-                                title = "Justified photo layout",
-                                subtitle = "Photos keep their own proportions in rows of different sizes, with the city next to the date. Off = equal squares.",
-                                checked = settings.justifiedLayout,
-                                onCheckedChange = { preferences.setJustifiedLayout(it) }
-                            )
-
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-                            SettingsSwitchRow(
                                 title = stringResource(R.string.settings_show_day_of_week_title),
                                 subtitle = stringResource(R.string.settings_show_day_of_week_desc),
                                 checked = settings.showDayOfWeek,
@@ -1480,16 +1471,38 @@ fun SettingsScreen(
                         )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             FilterChip(
                                 modifier = Modifier.weight(1f),
-                                selected = true,
+                                selected = settings.deleteMode == DeleteMode.TRASH,
+                                onClick = { preferences.setDeleteMode(DeleteMode.TRASH) },
+                                label = { Text(stringResource(R.string.settings_delete_mode_trash), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                            )
+                            FilterChip(
+                                modifier = Modifier.weight(1f),
+                                selected = settings.deleteMode == DeleteMode.PERMANENT,
                                 onClick = { preferences.setDeleteMode(DeleteMode.PERMANENT) },
                                 label = { Text(stringResource(R.string.settings_delete_mode_permanent), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                             )
+                            FilterChip(
+                                modifier = Modifier.weight(1f),
+                                selected = settings.deleteMode == DeleteMode.ALWAYS_ASK,
+                                onClick = { preferences.setDeleteMode(DeleteMode.ALWAYS_ASK) },
+                                label = { Text(stringResource(R.string.settings_delete_mode_always_ask), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                            )
                         }
+                    }
+
+                    if (Build.VERSION.SDK_INT >= 30) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                        SettingsSwitchRow(
+                            title = stringResource(R.string.settings_system_trash_title),
+                            subtitle = stringResource(R.string.settings_system_trash_desc),
+                            checked = settings.useSystemTrash,
+                            onCheckedChange = { preferences.setUseSystemTrash(it) }
+                        )
                     }
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))

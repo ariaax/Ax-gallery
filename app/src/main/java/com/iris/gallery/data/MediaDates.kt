@@ -1,26 +1,21 @@
 package com.iris.gallery.data
 
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.ZoneOffset
 
 /**
- * Pure (Android-free) date rules for the timeline.
+ * Pure (Android-free) date rules for the timeline: ONE place that decides which timestamp a photo or video
+ * is shown with, so headers, ordering and the year rail can never disagree.
  *
- * Why this exists: MediaStore only has a trustworthy DATE_TAKEN for files whose EXIF/container
- * date it could read. For many files (old videos, files copied to an SD card, photos without EXIF)
- * DATE_TAKEN is missing, or the scanner stamped it with the scan/copy time. The old code then fell
- * back straight to DATE_MODIFIED, which for a bulk-copied folder is the copy day, so thousands of
- * old files collapsed onto one date (for this library: 5 Dec 2024).
- *
- * Priority used here (the first valid one wins):
- *  1. MediaStore DATE_TAKEN, when it is not just the scan time / modified time;
+ * Priority (first valid wins):
+ *  1. MediaStore DATE_TAKEN, when it is more than the scan/copy time (i.e. a real capture date);
  *  2. a date read from the file itself (EXIF for photos, container creation time for videos);
- *  3. a date written in the file name (IMG_20200315_101500.jpg, VID-2020-03-15, epoch millis...);
- *  4. MediaStore DATE_TAKEN even if it equals modified time (it may be genuine);
- *  5. DATE_MODIFIED, then DATE_ADDED.
- * Nothing here ever writes a timestamp anywhere: it only chooses which existing value to display.
+ *  3. MediaStore DATE_TAKEN even when it equals modified/added time (it may well be genuine);
+ *  4. DATE_MODIFIED, then DATE_ADDED.
+ *
+ * File NAMES are deliberately never used: names like IMG_20210724 or random numeric ids on downloaded
+ * files do not say when something was taken and would silently move files into wrong years.
+ * Nothing here writes a timestamp anywhere; it only chooses which existing value to display.
  */
 object MediaDates {
     private const val DAY_MS = 86_400_000L
@@ -46,52 +41,6 @@ object MediaDates {
         if (ms <= DAY_MS) return 0L
         if (ms > nowMs + 2 * DAY_MS) return 0L
         return ms
-    }
-
-    private val dateInName = Regex(
-        """(?<!\d)((?:19[89]\d)|(?:20\d\d))[-_.]?(0[1-9]|1[0-2])[-_.]?(0[1-9]|[12]\d|3[01])(?:[-_ T.]?([01]\d|2[0-3])[-_.:]?([0-5]\d)[-_.:]?([0-5]\d))?(?!\d)"""
-    )
-    private val epochMsInName = Regex("""(?<!\d)(1\d{12})(?!\d)""")
-    private val epochSecInName = Regex("""^(?:[A-Za-z_\-]*)(1\d{9})$""")
-
-    /**
-     * Reads the capture date a camera/app wrote into the file name. [zone] is the zone the name's
-     * clock time is interpreted in (names carry local time). Date-only names resolve to local noon,
-     * so a time-zone shift can never move them onto another day.
-     */
-    fun parseFromFileName(
-        name: String,
-        nowMs: Long = System.currentTimeMillis(),
-        zone: ZoneId = ZoneId.systemDefault(),
-    ): Long? {
-        if (name.isBlank()) return null
-        val stem = name.substringBeforeLast('.', name)
-
-        for (m in dateInName.findAll(stem)) {
-            val year = m.groupValues[1].toInt()
-            val month = m.groupValues[2].toInt()
-            val day = m.groupValues[3].toInt()
-            val date = runCatching { LocalDate.of(year, month, day) }.getOrNull() ?: continue
-            val hasTime = m.groupValues[4].isNotEmpty()
-            val dt = if (hasTime) {
-                LocalDateTime.of(date, java.time.LocalTime.of(m.groupValues[4].toInt(), m.groupValues[5].toInt(), m.groupValues[6].toInt()))
-            } else {
-                date.atTime(12, 0)
-            }
-            val ms = dt.atZone(zone).toInstant().toEpochMilli()
-            val valid = normalizeMillis(ms, nowMs)
-            if (valid > 0L) return valid
-        }
-
-        epochMsInName.find(stem)?.let { m ->
-            val valid = normalizeMillis(m.groupValues[1].toLong(), nowMs)
-            if (valid > 0L) return valid
-        }
-        epochSecInName.find(stem)?.let { m ->
-            val valid = normalizeMillis(m.groupValues[1].toLong(), nowMs)
-            if (valid > 0L) return valid
-        }
-        return null
     }
 
     private val containerDate = Regex(
@@ -126,7 +75,7 @@ object MediaDates {
         sameSecond(takenMs, addedMs) || sameSecond(takenMs, modifiedMs)
 
     /**
-     * The date the timeline should use for one item.
+     * The date the timeline uses for one item.
      *
      * @param rawTaken MediaStore DATE_TAKEN as stored (unit unknown; 0/negative = missing)
      * @param addedMs / [modifiedMs] MediaStore DATE_ADDED / DATE_MODIFIED already in milliseconds
@@ -137,22 +86,14 @@ object MediaDates {
         addedMs: Long,
         modifiedMs: Long,
         fileMetadataMs: Long?,
-        fileName: String,
         nowMs: Long = System.currentTimeMillis(),
-        zone: ZoneId = ZoneId.systemDefault(),
     ): Long {
         val taken = normalizeMillis(rawTaken, nowMs)
         val stampedByScanner = taken > 0L && looksScannerStamped(taken, addedMs, modifiedMs)
 
-        // 1. a DATE_TAKEN that is clearly not just a scan/copy time
         if (taken > 0L && !stampedByScanner) return taken
-        // 2. the file's own metadata
         if (fileMetadataMs != null && fileMetadataMs > 0L) return fileMetadataMs
-        // 3. a date in the file name
-        parseFromFileName(fileName, nowMs, zone)?.let { return it }
-        // 4. DATE_TAKEN that matches modified/added time: may well be real, keep it
         if (taken > 0L) return taken
-        // 5. last resort
         val modified = normalizeMillis(modifiedMs, nowMs)
         if (modified > 0L) return modified
         return normalizeMillis(addedMs, nowMs)
