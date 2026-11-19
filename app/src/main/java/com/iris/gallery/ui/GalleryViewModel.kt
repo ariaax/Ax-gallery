@@ -460,6 +460,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                     } catch (e: Exception) {
                         if (e is kotlinx.coroutines.CancellationException) throw e
                         android.util.Log.e("GalleryViewModel", "refresh loadImages failed", e)
+                        com.iris.gallery.data.DiagnosticsLog.error("refresh loadImages", e)
                         if (_uiState.value.images.isEmpty()) {
                             _uiState.update { state -> state.copy(loading = false, error = e.message ?: "Could not load photos") }
                         } else {

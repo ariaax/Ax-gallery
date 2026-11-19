@@ -7144,6 +7144,12 @@ private fun ZoomablePhoto(
     val painter = rememberAsyncImagePainter(model = if (AxHero.settledState.value) imageRequest else null)
     val painterState by painter.state.collectAsState()
     val fullImageLoaded = painterState is AsyncImagePainter.State.Success
+    LaunchedEffect(painterState) {
+        (painterState as? AsyncImagePainter.State.Error)?.let { err ->
+            val t = err.result.throwable
+            com.iris.gallery.data.DiagnosticsLog.unsupported(image, "viewer: ${t.javaClass.simpleName}: ${(t.message ?: "").take(160)}")
+        }
+    }
 
     // When a depth-blended preview is available, display it instead of the raw image.
     val depthPainter = remember(depthBitmap) {

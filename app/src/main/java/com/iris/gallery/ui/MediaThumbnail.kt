@@ -561,6 +561,9 @@ fun MediaThumbnail(
                 }
                 if (isGhost) {
                     onInvalidMedia?.invoke(image)
+                } else {
+                    // the file is there but no decoder produced a thumbnail: record it for the problem report
+                    com.iris.gallery.data.DiagnosticsLog.unsupported(image, "thumbnail could not be decoded")
                 }
             }
         }

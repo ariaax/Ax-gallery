@@ -250,7 +250,10 @@ fun VideoPage(
             override fun onIsPlayingChanged(value: Boolean) { playing = value }
             override fun onVolumeChanged(volume: Float) { isMuted = volume == 0f }
             override fun onRenderedFirstFrame() { isFirstFrameRendered = true }
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) { playbackError = describePlaybackError(error) }
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                playbackError = describePlaybackError(error)
+                com.iris.gallery.data.DiagnosticsLog.unsupported(media, "video: " + describePlaybackError(error))
+            }
             override fun onPlaybackStateChanged(state: Int) { if (state == Player.STATE_READY) playbackError = null }
         }
         engine.player.playerError?.let { playbackError = describePlaybackError(it) }
