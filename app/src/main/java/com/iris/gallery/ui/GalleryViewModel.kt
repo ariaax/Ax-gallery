@@ -381,6 +381,12 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    init {
+        com.iris.gallery.data.BrokenMedia.onHidden = { gone ->
+            _uiState.update { st -> st.copy(images = st.images.filterNot { it.stableKey == gone.stableKey }) }
+        }
+    }
+
     /** Re-orders the list already on screen for the current timeline mode right away (the full reload follows). */
     fun resortNow() {
         val current = _uiState.value.images

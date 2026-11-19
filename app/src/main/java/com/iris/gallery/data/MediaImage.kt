@@ -1324,4 +1324,5 @@ object ScrollActivity {
     @Volatile private var lastMs = 0L
     fun set(scrolling: Boolean) { active = scrolling; if (!scrolling) lastMs = android.os.SystemClock.elapsedRealtime() }
     fun recentlyScrolling(): Boolean = active || android.os.SystemClock.elapsedRealtime() - lastMs < 700L
+    fun idleFor(ms: Long): Boolean = !active && android.os.SystemClock.elapsedRealtime() - lastMs >= ms
 }
