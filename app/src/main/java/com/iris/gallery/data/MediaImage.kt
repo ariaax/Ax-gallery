@@ -49,6 +49,15 @@ object TimelineSort {
     @Volatile var mode: DateSortMode = DateSortMode.HYBRID
     @Volatile var recentWindowDays: Int = 7
 
+    /**
+     * Compose-visible counter bumped whenever the order mode or window changes. `mode` itself is a plain field,
+     * so UI that derives day headers / tile day badges from it (and remembers the result) must key on this,
+     * otherwise tiles that stay on screen keep showing the previous mode's dates.
+     */
+    var revision: Int by androidx.compose.runtime.mutableIntStateOf(0)
+        private set
+    fun bumpRevision() { revision++ }
+
     /** "Now", frozen per load, so sorting never sees a photo cross the recent-window edge mid-sort. */
     @Volatile var nowMs: Long = System.currentTimeMillis()
     fun refreshNow() { nowMs = System.currentTimeMillis() }
@@ -1306,4 +1315,11 @@ fun resolveMediaUri(context: Context, uri: Uri): MediaImage {
         dateModified = physicalFile?.lastModified()?.takeIf { it > 0L } ?: dateTaken,
         dateAdded = dateTaken,
     )
+}
+/** Lets background work (EXIF enrichment reloads) wait until the user stops scrolling instead of swapping the list mid-fling. */
+object ScrollActivity {
+    @Volatile private var active = false
+    @Volatile private var lastMs = 0L
+    fun set(scrolling: Boolean) { active = scrolling; if (!scrolling) lastMs = android.os.SystemClock.elapsedRealtime() }
+    fun recentlyScrolling(): Boolean = active || android.os.SystemClock.elapsedRealtime() - lastMs < 700L
 }

@@ -367,12 +367,29 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                     exifWritingUntil = System.currentTimeMillis() + 1500L
                 }
                 if (changed > 0) {
+                    // never swap the whole list under a scrolling finger: wait (bounded) for the user to stop
+                    var waited = 0
+                    while (com.iris.gallery.data.ScrollActivity.recentlyScrolling() && waited < 30) {
+                        kotlinx.coroutines.delay(500); waited++
+                    }
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                         refresh(showLoading = false, light = true)
                     }
                 }
                 next = pendingExifImages
             }
+        }
+    }
+
+    /** Re-orders the list already on screen for the current timeline mode right away (the full reload follows). */
+    fun resortNow() {
+        val current = _uiState.value.images
+        if (current.size < 2) return
+        viewModelScope.launch {
+            val sorted = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                current.sortedWith(com.iris.gallery.data.TimelineOrder)
+            }
+            _uiState.update { st -> if (st.images === current) st.copy(images = sorted) else st }
         }
     }
 

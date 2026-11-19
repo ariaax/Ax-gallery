@@ -646,7 +646,10 @@ private fun GalleryApp(
     val context = LocalContext.current
     var dateSortFirstRun by remember { mutableStateOf(true) }
     LaunchedEffect(settings.dateSortMode, settings.recentWindowDays) {
-        if (dateSortFirstRun) dateSortFirstRun = false else viewModel.refresh(showLoading = false)
+        if (dateSortFirstRun) dateSortFirstRun = false else {
+            viewModel.resortNow()
+            viewModel.refresh(showLoading = false)
+        }
     }
     val permissions = remember { requiredPermissions() }
     var permitted by remember {
@@ -4365,7 +4368,8 @@ private fun PhotoGrid(
         getTimelineFormatter(timelineDateFormat, isSameYear = false, showDayOfWeek = showDayOfWeek, locale = currentLocale, customPattern = customTimelineDateFormat, abbreviateDayOfWeek = abbreviateDayOfWeek, smartYearHiding = smartYearHiding)
     }
 
-    val groups = remember(images, showTimeline, timelineDateFormat, customTimelineDateFormat, useRelativeDates, showDayOfWeek, abbreviateDayOfWeek, smartYearHiding, currentLocale, todayString, yesterdayString, sameYearFormatter, otherYearFormatter) {
+    val sortRevision = com.iris.gallery.data.TimelineSort.revision
+    val groups = remember(images, sortRevision, showTimeline, timelineDateFormat, customTimelineDateFormat, useRelativeDates, showDayOfWeek, abbreviateDayOfWeek, smartYearHiding, currentLocale, todayString, yesterdayString, sameYearFormatter, otherYearFormatter) {
         if (showTimeline) {
             val zone = ZoneId.systemDefault()
             val today = LocalDate.now()
@@ -4528,6 +4532,9 @@ private fun PhotoGrid(
     }
 
     var scrubberDragging by remember { mutableStateOf(false) }
+    LaunchedEffect(gridState) {
+        snapshotFlow { gridState.isScrollInProgress || scrubberDragging }.collect { com.iris.gallery.data.ScrollActivity.set(it) }
+    }
     var scrubFraction by remember { mutableFloatStateOf(0f) }
     var scrubTargetIndex by remember(timelineItems) { mutableIntStateOf(0) }
     var scrubThumbIndex by remember(timelineItems) { mutableIntStateOf(0) }
@@ -4839,7 +4846,7 @@ private fun PhotoGrid(
                     )
                     // zoomed far out: show the day of the month on each small tile (like a calendar)
                     if (currentCellSize < 92.dp && !selected) {
-                        val dayLabel = remember(image.dateTaken, image.dateAdded, com.iris.gallery.data.TimelineSort.mode) {
+                        val dayLabel = remember(image.dateTaken, image.dateAdded, sortRevision) {
                             Instant.ofEpochMilli(image.sortDate).atZone(ZoneId.systemDefault()).dayOfMonth.toString()
                         }
                         // small dark pill instead of a blurred text shadow: much cheaper to draw on every tile
@@ -5044,11 +5051,16 @@ private fun PhotoGrid(
                     itemYears.getOrElse(idx) { 0 }
                 }
             }
-            if (showYearRail && scrollerAlpha > 0f) {
+            val railAlpha by animateFloatAsState(
+                targetValue = if (scrubberDragging) 1f else 0f,
+                animationSpec = tween(durationMillis = if (scrubberDragging) 160 else 320, delayMillis = if (scrubberDragging) 0 else 900),
+                label = "yearRailAlpha"
+            )
+            if (showYearRail && railAlpha > 0f) {
                 com.iris.gallery.ui.YearRailOverlay(
                     markers = yearMarkers,
                     activeYear = activeYear,
-                    alpha = scrollerAlpha,
+                    alpha = railAlpha,
                     topPadding = topPadding,
                     bottomPadding = bottomPadding,
                     onYearClick = { m ->

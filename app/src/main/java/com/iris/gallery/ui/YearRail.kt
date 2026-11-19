@@ -1,7 +1,13 @@
 package com.iris.gallery.ui
 
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.border
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.height
@@ -92,8 +98,8 @@ object YearRailMath {
 }
 
 /**
- * Floating year capsules shown next to the scroll handle while scrolling. Fades and slides in/out with [alpha];
- * the active year is enlarged with a springy "bubble". Only the capsules themselves take touches.
+ * Small glass year pills shown next to the handle while it is dragged. They rise in one after another,
+ * the active year swells with a springy overshoot and changes colour smoothly. Only the pills take touches.
  */
 @Composable
 fun YearRailOverlay(
@@ -106,67 +112,60 @@ fun YearRailOverlay(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
-    val capsuleH = 22.dp
-    // flips to true on first composition so every capsule can run its staggered entrance
-    var shown by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { shown = true }
+    val pillH = 24.dp
     BoxWithConstraints(
         modifier
             .fillMaxHeight()
             .padding(top = topPadding, bottom = bottomPadding)
-            .width(54.dp)
-            .graphicsLayer { this.alpha = alpha }
+            .width(56.dp)
+            .graphicsLayer {
+                this.alpha = alpha
+                translationX = (1f - alpha) * 10.dp.toPx()
+            }
     ) {
         val trackPx = with(density) { maxHeight.toPx() }
         val placed = remember(markers, activeYear, trackPx) {
-            with(density) { YearRailMath.place(markers, activeYear, 16.dp.toPx(), 48.dp.toPx(), trackPx, 28.dp.toPx()) }
+            with(density) { YearRailMath.place(markers, activeYear, 16.dp.toPx(), 48.dp.toPx(), trackPx, 30.dp.toPx()) }
         }
-        val capsuleHPx = with(density) { capsuleH.toPx() }
+        val pillHPx = with(density) { pillH.toPx() }
         val accent = MaterialTheme.colorScheme.primary
         val onAccent = MaterialTheme.colorScheme.onPrimary
-        val idleFill = Color.White.copy(alpha = 0.92f)
-        val idleText = Color(0xFF1B1F27)
+        val glass = Color(0xE61C212B)
         placed.forEachIndexed { index, p ->
             key(p.marker.year) {
-                // entrance: slide in from the right + grow + fade, each capsule a beat after the previous one
-                val enter by animateFloatAsState(
-                    targetValue = if (shown) 1f else 0f,
-                    animationSpec = tween(260, delayMillis = index * 28, easing = FastOutSlowInEasing),
-                    label = "yearEnter"
+                val scale by animateFloatAsState(
+                    targetValue = if (p.active) 1.2f else 1f,
+                    animationSpec = spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMedium),
+                    label = "yearPillScale"
                 )
-                // the active year pops with a spring and its colours cross-fade
-                val pop by animateFloatAsState(
-                    targetValue = if (p.active) 1.16f else 1f,
-                    animationSpec = spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow),
-                    label = "yearPop"
-                )
-                val fill by animateColorAsState(if (p.active) accent else idleFill, tween(180), label = "yearFill")
-                val ink by animateColorAsState(if (p.active) onAccent else idleText, tween(180), label = "yearInk")
+                val fill by animateColorAsState(if (p.active) accent else glass, tween(180), label = "yearPillFill")
+                val ink by animateColorAsState(if (p.active) onAccent else Color(0xFFE8EAF0), tween(180), label = "yearPillInk")
+                val appear = remember { Animatable(0f) }
+                LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay((index * 24L).coerceAtMost(180L))
+                    appear.animateTo(1f, tween(240, easing = FastOutSlowInEasing))
+                }
                 Box(
                     Modifier
                         .align(Alignment.TopEnd)
-                        .offset { IntOffset(0, (p.centerPx - capsuleHPx / 2f).roundToInt()) }
+                        .offset { IntOffset(0, (p.centerPx - pillHPx / 2f).roundToInt()) }
                         .graphicsLayer {
-                            val s = pop * (0.78f + 0.22f * enter)
-                            scaleX = s; scaleY = s
-                            this.alpha = enter
-                            translationX = (1f - enter) * 18.dp.toPx()
+                            val a = appear.value
+                            this.alpha = a
+                            translationX = (1f - a) * 12.dp.toPx()
+                            scaleX = scale; scaleY = scale
                             transformOrigin = TransformOrigin(1f, 0.5f)
-                            // a real shadow only on the active capsule; idle ones stay flat and cheap
-                            shadowElevation = if (p.active) 5.dp.toPx() else 0f
-                            shape = CircleShape
-                            clip = false
                         }
+                        .shadow(if (p.active) 6.dp else 2.dp, CircleShape, clip = false)
                         .background(fill, CircleShape)
+                        .border(0.5.dp, Color.White.copy(alpha = if (p.active) 0f else 0.14f), CircleShape)
                         .pointerInput(p.marker) { detectTapGestures { onYearClick(p.marker) } }
-                        .height(capsuleH)
-                        .padding(horizontal = 9.dp),
+                        .padding(horizontal = 9.dp, vertical = 3.5.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = p.marker.year.toString(),
-                        fontSize = 11.sp,
-                        lineHeight = 11.sp,
+                        fontSize = 11.5.sp,
                         fontWeight = if (p.active) FontWeight.Bold else FontWeight.Medium,
                         color = ink
                     )
