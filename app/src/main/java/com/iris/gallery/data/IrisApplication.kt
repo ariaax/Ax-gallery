@@ -22,6 +22,7 @@ import coil3.decode.StaticImageDecoder
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import com.iris.gallery.decoder.AvifCoilDecoder
+import com.iris.gallery.data.DiagnosticsLog
 import com.iris.gallery.data.EditorOverwriteRecovery
 
 class IrisApplication : Application(), SingletonImageLoader.Factory {
