@@ -297,6 +297,13 @@ private fun decodeAvifThumbnail(context: Context, image: MediaImage, targetSizeP
     }
 }
 
+/** Why the last thumbnail attempt of a file failed (for the problem report only); small and bounded. */
+private val thumbFailures = java.util.concurrent.ConcurrentHashMap<String, String>()
+private fun noteThumbFailure(image: MediaImage, e: Throwable) {
+    if (thumbFailures.size > 200) thumbFailures.clear()
+    thumbFailures[image.stableKey] = "${e.javaClass.simpleName}: ${(e.message ?: "").take(120)}"
+}
+
 private fun loadThumbnailRaw(context: Context, image: MediaImage, targetSizePx: Int = 320): Bitmap? {
     val cacheKey = "${image.stableKey}:$targetSizePx"
     ThumbnailCache.get(cacheKey)?.let { return it }
@@ -353,7 +360,8 @@ private fun loadThumbnailRaw(context: Context, image: MediaImage, targetSizePx: 
                 )
             }
         }
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        noteThumbFailure(image, e)
         null
     }
     val finalBitmap = bitmap ?: run {
@@ -430,7 +438,7 @@ private fun loadThumbnailRaw(context: Context, image: MediaImage, targetSizePx: 
                         else mmr.getFrameAtTime(-1L)
                     }
                 }
-            }.getOrNull()
+            }.onFailure { noteThumbFailure(image, it) }.getOrNull()
         }
     }
     finalBitmap?.prepareToDraw()
@@ -562,8 +570,22 @@ fun MediaThumbnail(
                 if (isGhost) {
                     onInvalidMedia?.invoke(image)
                 } else {
-                    // the file is there but no decoder produced a thumbnail: record it for the problem report
-                    com.iris.gallery.data.DiagnosticsLog.unsupported(image, "thumbnail could not be decoded")
+                    // The file exists but nothing produced a thumbnail. Hardware video decoders can be briefly busy
+                    // (viewer, other tiles), so try once more before giving up and recording it.
+                    val dispatcher = if (image.isVideo) videoThumbDispatcher else thumbDispatcher
+                    val retry = if (image.sizeBytes > 0L) {
+                        kotlinx.coroutines.delay(700)
+                        withContext(dispatcher) { loadThumbnail(context, image, targetSizePx) }
+                    } else null
+                    if (retry != null) {
+                        bitmap = retry
+                    } else {
+                        val why = thumbFailures.remove(image.stableKey)
+                        com.iris.gallery.data.DiagnosticsLog.unsupported(
+                            image,
+                            "thumbnail could not be decoded" + (why?.let { "\n$it" } ?: "")
+                        )
+                    }
                 }
             }
         }

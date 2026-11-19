@@ -7147,7 +7147,10 @@ private fun ZoomablePhoto(
     LaunchedEffect(painterState) {
         (painterState as? AsyncImagePainter.State.Error)?.let { err ->
             val t = err.result.throwable
-            com.iris.gallery.data.DiagnosticsLog.unsupported(image, "viewer: ${t.javaClass.simpleName}: ${(t.message ?: "").take(160)}")
+            // the pager shows the image with no request until the open animation settles; that is not a failure
+            if (t !is coil3.request.NullRequestDataException) {
+                com.iris.gallery.data.DiagnosticsLog.unsupported(image, "viewer: ${t.javaClass.simpleName}: ${(t.message ?: "").take(160)}")
+            }
         }
     }
 
