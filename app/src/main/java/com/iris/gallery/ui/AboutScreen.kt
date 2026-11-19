@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import com.iris.gallery.data.DiagnosticsLog
 import com.iris.gallery.ui.AxRound
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -191,6 +192,32 @@ fun AboutScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp)
                 )
+            }
+        }
+
+        item {
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            var problems by remember { mutableIntStateOf(DiagnosticsLog.count()) }
+            OutlinedCard(shape = AxRound(16.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Problem report", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        if (problems == 0) "Nothing recorded. Crashes and files that cannot be shown or played are saved here automatically, even after you close the app."
+                        else "$problems problem(s) saved on this phone. Send them to the developer to get them fixed.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        androidx.compose.material3.FilledTonalButton(
+                            onClick = { DiagnosticsLog.share(ctx) },
+                            enabled = problems > 0
+                        ) { Text("Send report") }
+                        androidx.compose.material3.TextButton(
+                            onClick = { DiagnosticsLog.clear(); problems = 0 },
+                            enabled = problems > 0
+                        ) { Text("Clear") }
+                    }
+                }
             }
         }
 

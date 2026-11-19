@@ -44,6 +44,7 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
             try {
                 val text = "Thread: ${thread.name}\n" + Log.getStackTraceString(error)
                 prefs.edit().putString("crash", text.take(12000)).commit()
+                DiagnosticsLog.crash(thread, error)
             } catch (e: Throwable) {
             }
             previous?.uncaughtException(thread, error)
@@ -62,6 +63,7 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
                         // a native crash never reaches the handler above, so ask Android what killed us
                         val nativeReport = nativeCrashReport(prefs)
                         if (nativeReport != null) {
+                            DiagnosticsLog.report("CRASH_NATIVE", nativeReport.lineSequence().firstOrNull().orEmpty().take(100), nativeReport.take(1500))
                             crashShown = true
                             showReport(activity, "NATIVE CRASH LAST TIME", nativeReport)
                         }
@@ -144,6 +146,7 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        DiagnosticsLog.init(this)
         installDiagnostics()
         Thread {
             runCatching { EditorOverwriteRecovery.recover(this) }
