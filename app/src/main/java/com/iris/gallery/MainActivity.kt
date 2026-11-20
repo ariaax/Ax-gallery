@@ -3585,27 +3585,52 @@ private fun GalleryScaffold(
         ) { index, isSelected ->
             val tab = visibleTabs[index]
             val label = if (tab == GalleryTab.PHOTOS) photoTabLabel else stringResource(tab.labelRes)
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 AnimatedNavigationIcon(tab.icon, isSelected, label)
-                // the name slides open and fades in (instead of popping in), so the tab width grows smoothly
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = isSelected,
-                    enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200, delayMillis = 70)) +
-                        androidx.compose.animation.expandHorizontally(androidx.compose.animation.core.tween(260, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
-                    exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(90)) +
-                        androidx.compose.animation.shrinkHorizontally(androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
-                ) {
-                    Text(
-                        label,
-                        modifier = Modifier.padding(start = 7.dp),
-                        maxLines = 1,
-                        softWrap = false,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = androidx.compose.material3.LocalContentColor.current,
-                    )
-                }
+                Text(
+                    label,
+                    modifier = Modifier.padding(top = 2.dp),
+                    maxLines = 1,
+                    softWrap = false,
+                    fontSize = 11.sp,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    color = androidx.compose.material3.LocalContentColor.current,
+                )
             }
+        }
+    }
+
+    // round "back to the top" button above the bar: shows once the Media grid is scrolled a little
+    val showToTop by remember {
+        androidx.compose.runtime.derivedStateOf {
+            photoGridState.firstVisibleItemIndex > 12
+        }
+    }
+    AnimatedVisibility(
+        visible = showFloatingBar && showToTop && currentVisibleTab == GalleryTab.PHOTOS,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .navigationBarsPadding()
+            .padding(bottom = 88.dp),
+        enter = fadeIn(axTween(120)),
+        exit = fadeOut(axTween(100)),
+    ) {
+        Box(
+            Modifier
+                .size(48.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(Color(0xFF2A2B2E).copy(alpha = 0.97f))
+                .clickable {
+                    tabScope.launch { photoGridState.scrollToItem(0) }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                AxIcons.ArrowUp,
+                contentDescription = "Back to top",
+                tint = Color.White,
+                modifier = Modifier.size(28.dp),
+            )
         }
     }
 
@@ -4764,13 +4789,13 @@ private fun PhotoGrid(
                 )
             },
             contentPadding = PaddingValues(
-                start = gridSpacing.dp.dp,
-                top = (gridSpacing.dp + 3).dp + topPadding,
-                end = gridSpacing.dp.dp,
-                bottom = (gridSpacing.dp + 3).dp + bottomPadding
+                start = 0.dp,
+                top = 3.dp + topPadding,
+                end = 0.dp,
+                bottom = 3.dp + bottomPadding
             ),
-            horizontalArrangement = Arrangement.spacedBy(gridSpacing.dp.dp.coerceAtMost(3.dp)),
-            verticalArrangement = Arrangement.spacedBy(gridSpacing.dp.dp.coerceAtMost(3.dp)),
+            horizontalArrangement = Arrangement.spacedBy(1.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
             groups.forEach { group ->
               if (showTimeline) {
@@ -4811,7 +4836,7 @@ private fun PhotoGrid(
                 val selected = image.stableKey in selectedIds
                 val heroCell = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
                 // square tiles with softly rounded corners (never pill/circle): the corner setting is kept but capped
-                val tileRadius = if (cornerStyle.dp == 0) 0.dp else cornerStyle.dp.coerceIn(2, 4).dp
+                val tileRadius = 0.dp // square tiles
                 Box(Modifier.aspectRatio(1f)
                     .onGloballyPositioned { heroCell[0] = it }
                     .clip(AxRound(tileRadius))

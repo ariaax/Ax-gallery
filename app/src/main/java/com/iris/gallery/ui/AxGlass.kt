@@ -16,6 +16,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
@@ -346,19 +347,16 @@ fun AxGlassNavBar(
 ) {
     val axCtx = androidx.compose.ui.platform.LocalContext.current
     val accent = MaterialTheme.colorScheme.primary
-    val collapsed = AxNavCollapse.collapsed
-    val barH by animateDpAsState(
-        if (collapsed) 44.dp else 54.dp,
-        axSpring(dampingRatio = 0.82f, stiffness = 420f),
-        label = "dock height",
-    )
+    // simple, always-open bar: icon with its name underneath (no shrinking while scrolling)
+    val collapsed = false
+    val barH = 64.dp
     val darkBg = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val tint = if (darkBg) Color(0xFF0B0B0D).copy(alpha = 0.90f) else Color.White.copy(alpha = 0.94f)
+    val tint = if (darkBg) Color(0xFF2A2B2E).copy(alpha = 0.97f) else Color.White.copy(alpha = 0.96f)
     val edge = Brush.linearGradient(
         if (darkBg) listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.14f))
         else listOf(Color.Black.copy(alpha = 0.12f), Color.Black.copy(alpha = 0.04f), Color.Black.copy(alpha = 0.10f))
     )
-    val shape = AxRound(30)
+    val shape = AxRound(32)
 
     // One highlight pill that GLIDES between tabs. It is driven by a single 0..1 progress and the tabs' live bounds, and
     // everything is read only while drawing, so a tab change costs no recomposition (that was the stutter).
@@ -381,8 +379,8 @@ fun AxGlassNavBar(
     }
     val pillPath = remember { androidx.compose.ui.graphics.Path() }
     val innerFill = remember(accent, darkBg) {
-        if (darkBg) accent.copy(alpha = 0.22f).compositeOver(Color(0xFF0B0B0D))
-        else accent.copy(alpha = 0.14f).compositeOver(Color.White)
+        if (darkBg) Color.White.copy(alpha = 0.16f).compositeOver(Color(0xFF2A2B2E))
+        else Color.Black.copy(alpha = 0.08f).compositeOver(Color.White)
     }
 
     Box(
@@ -398,7 +396,6 @@ fun AxGlassNavBar(
                     state.barSize = Size(it.size.width.toFloat(), it.size.height.toFloat())
                     state.cornerRadiusPx = it.size.height / 2f
                 }
-                .shadow(8.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.24f))
                 .clip(shape)
                 .then(
                     if (realGlass != null) Modifier
@@ -413,12 +410,6 @@ fun AxGlassNavBar(
                     else Modifier.background(tint)
                 )
                 .drawBehind {
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            listOf(Color.White.copy(alpha = 0.07f), Color.Transparent),
-                            endY = size.height * 0.5f,
-                        )
-                    )
                     // gliding selection pill with its turning ring
                     boundsTick.intValue // redraw when a tab's bounds change (read in draw only)
                     val liveL = lefts.getOrElse(selectedIndex) { 0f }
@@ -437,7 +428,7 @@ fun AxGlassNavBar(
                     }
                     cur[0] = l; cur[1] = r
                     if (r - l > 8f) {
-                        val pad = 5.dp.toPx()
+                        val pad = 4.dp.toPx()
                         val top = pad
                         val hh = size.height - pad * 2f
                         drawRoundRect(
@@ -449,9 +440,9 @@ fun AxGlassNavBar(
                     }
                 }
                 .border(0.8.dp, edge, shape)
-                .padding(5.dp),
+                .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            horizontalArrangement = Arrangement.spacedBy(0.dp),
         ) {
             for (i in 0 until count) {
                 val sel = i == selectedIndex
@@ -481,11 +472,12 @@ fun AxGlassNavBar(
                                 AxHaptics.tick(axCtx)
                                 if (AxNavCollapse.collapsed) AxNavCollapse.collapsed = false else onSelect(i)
                             }
-                            .padding(horizontal = if (sel) 16.dp else 14.dp),
+                            .widthIn(min = 76.dp)
+                            .padding(horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
                     ) {
-                        val iconColor = (if (darkBg) Color.White else Color(0xFF111114)).copy(alpha = if (sel) 1f else 0.62f)
+                        val iconColor = (if (darkBg) Color.White else Color(0xFF111114)).copy(alpha = if (sel) 1f else 0.70f)
                         CompositionLocalProvider(LocalContentColor provides iconColor) {
                             icon(i, sel)
                         }
