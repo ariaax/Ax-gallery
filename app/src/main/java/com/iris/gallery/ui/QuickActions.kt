@@ -99,14 +99,14 @@ fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, fo
             // press: quick, calm spring (no bounce); release: settles back
             val press = animateFloatAsState(
                 if (pressed) 1f else 0f,
-                spring(dampingRatio = 0.85f, stiffness = 650f),
+                axSpring(dampingRatio = 0.85f, stiffness = 650f),
                 label = "shortcut press",
             )
             // first appearance: each shortcut rises and fades in, 45 ms apart
             val enter = remember { Animatable(0f) }
             LaunchedEffect(Unit) {
                 delay(index * 45L)
-                enter.animateTo(1f, tween(320, easing = FastOutSlowInEasing))
+                enter.animateTo(1f, axTween(320, easing = FastOutSlowInEasing))
             }
             val base = MaterialTheme.colorScheme.surfaceContainerHigh
             val accent = MaterialTheme.colorScheme.primary

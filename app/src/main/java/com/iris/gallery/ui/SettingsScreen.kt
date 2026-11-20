@@ -243,19 +243,9 @@ fun SettingsScreen(
 
                     SettingsSwitchRow(
                         title = "Liquid glass",
-                        subtitle = "Frosted glass bars, panels and icy edges. Turn off for a flat, lighter look.",
+                        subtitle = "Soft glass bars and panels. Turn off for a flat, lighter look.",
                         checked = settings.glassEnabled,
                         onCheckedChange = { preferences.setGlassEnabled(it) }
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-                    SettingsSwitchRow(
-                        title = "Real liquid glass",
-                        badge = "Experimental",
-                        subtitle = "Light bends through the bottom bar like real glass (Android 13+). Turn off if the bar looks wrong or the app feels slower.",
-                        checked = settings.realGlass,
-                        onCheckedChange = { preferences.setRealGlass(it) }
                     )
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))

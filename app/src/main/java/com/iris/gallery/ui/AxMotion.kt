@@ -48,14 +48,7 @@ fun Modifier.axPressScale(source: InteractionSource, pressedScale: Float = 0.95f
 /** Soft entrance: fades in and rises ~16dp once, in 240ms. Only active when liquid glass is on. */
 @Composable
 fun Modifier.axEnter(): Modifier {
-    if (!AxGlass.enabled) return this
-    val p = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { p.animateTo(1f, tween(120, easing = FastOutSlowInEasing)) }
-    return this.graphicsLayer {
-        val v = p.value
-        alpha = v
-        translationY = (1f - v) * 8.dp.toPx()
-    }
+    return this
 }
 
 /** Fast start, long soft landing: close to the curve iOS uses for push and modal transitions. */
@@ -67,16 +60,7 @@ val AxIosEase = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
  */
 @Composable
 fun Modifier.axPushIn(forward: Boolean): Modifier {
-    val p = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { p.animateTo(1f, tween(180, easing = AxIosEase)) }
-    return this.graphicsLayer {
-        // no off-screen buffer for the fade: much lighter on the GPU for a full-screen grid
-        compositingStrategy = CompositingStrategy.ModulateAlpha
-        val v = p.value
-        val dir = if (forward) 1f else -1f
-        translationX = (1f - v) * size.width * (if (forward) 0.22f else 0.08f) * dir
-        alpha = (v * 1.6f).coerceAtMost(1f)
-    }
+    return this
 }
 
 /** Remembers which grid cell was tapped, so the viewer can grow out of it and shrink back into it. */
@@ -130,3 +114,17 @@ fun tgCascade(t: Float, pos: Int, count: Int, waveLength: Float = 4f): Float {
     val waveOffset = pos.toFloat() / count * (1f - waveDuration)
     return ((t - waveOffset) / waveDuration).coerceIn(0f, 1f)
 }
+
+/** House motion: every transition is short and critically damped (no bounce), so the UI stays light and calm. */
+fun <T> axTween(
+    durationMillis: Int = 120,
+    delayMillis: Int = 0,
+    easing: androidx.compose.animation.core.Easing = FastOutSlowInEasing,
+): androidx.compose.animation.core.TweenSpec<T> = tween(minOf(durationMillis, 160), delayMillis, easing)
+
+fun <T> axSpring(
+    dampingRatio: Float = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+    stiffness: Float = androidx.compose.animation.core.Spring.StiffnessMedium,
+    visibilityThreshold: T? = null,
+): androidx.compose.animation.core.SpringSpec<T> =
+    spring(androidx.compose.animation.core.Spring.DampingRatioNoBouncy, maxOf(stiffness, androidx.compose.animation.core.Spring.StiffnessMedium), visibilityThreshold)

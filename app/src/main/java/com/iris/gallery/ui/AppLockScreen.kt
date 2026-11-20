@@ -254,7 +254,7 @@ fun AppLockScreen(
                 // Botanical App Icon with Pulsing Halo on Unlock
                 val logoScale by animateFloatAsState(
                     targetValue = if (isUnlockedSuccess) 1.08f else 1f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                    animationSpec = axSpring(dampingRatio = Spring.DampingRatioMediumBouncy),
                     label = "logoScale"
                 )
 
@@ -358,12 +358,12 @@ fun PinDotsIndicator(
                     isFilled -> MaterialTheme.colorScheme.primary
                     else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
                 },
-                animationSpec = tween(180),
+                animationSpec = axTween(180),
                 label = "dotColor"
             )
             val dotScale by animateFloatAsState(
                 targetValue = if (isSuccess) 1.25f else if (isFilled) 1.15f else 1.0f,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                animationSpec = axSpring(dampingRatio = Spring.DampingRatioMediumBouncy),
                 label = "dotScale"
             )
             Box(

@@ -83,7 +83,7 @@ fun AxSkeletonGrid(padding: PaddingValues, columns: Int = 3) {
         val t = rememberInfiniteTransition(label = "skeleton")
         val v by t.animateFloat(
             0f, 1f,
-            infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Reverse),
+            infiniteRepeatable(axTween(1300, easing = LinearEasing), RepeatMode.Reverse),
             label = "skeleton phase",
         )
         v
