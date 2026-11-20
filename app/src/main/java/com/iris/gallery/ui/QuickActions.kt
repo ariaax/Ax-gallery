@@ -1,168 +1,63 @@
 package com.iris.gallery.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import com.iris.gallery.ui.AxRound
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.runtime.LaunchedEffect
-import kotlinx.coroutines.delay
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** One shortcut above the photo grid: a cut-corner chrome-rimmed icon with a short label. */
-// NOTE: the shortcut chips sit INSIDE the glass source (the pager), so they must not use real glass:
-// a glass node that samples the layer it lives in crashes hwui (RenderNode prepareTree SIGSEGV).
+/** One shortcut above the photo grid. */
 class QuickAction(val icon: ImageVector, val label: String, val onClick: () -> Unit)
 
 /**
- * Evenly spaced row: every cell has the same width, so icons and labels line up and the labels
- * are centred under their icons. Same glass look as the rest of the app (dark tint + thin light rim).
+ * Quiet shortcut chips: one slim row, icon + word, flat fill, no rim and no entrance animation. It simply fades out
+ * (and takes no space, see the caller) once the grid is scrolled.
  */
 @Composable
 fun QuickActionRow(actions: List<QuickAction>, modifier: Modifier = Modifier, fold: Float = 0f, enabled: Boolean = true) {
-    if (fold > 0.998f) return
-    val ink = Color(0xFF0A0E18)
-    val rim = Color(0xFFBFD3FF)
-    Box(
+    if (fold > 0.98f) return
+    val fill = MaterialTheme.colorScheme.surfaceContainerHigh
+    val ink = MaterialTheme.colorScheme.onSurface
+    Row(
         modifier
             .fillMaxWidth()
-            .drawBehind {
-                // the drop: swells while the row is being drawn in, is gone again when fully folded
-                val k = kotlin.math.sin(Math.PI.toFloat() * fold.coerceIn(0f, 1f))
-                if (k > 0.02f) {
-                    val r = 11.dp.toPx() * k
-                    val cx = size.width / 2f
-                    val y0 = 2.dp.toPx()
-                    val path = Path().apply {
-                        moveTo(cx, y0)
-                        cubicTo(cx + r * 0.12f, y0 + r * 0.9f, cx + r, y0 + r * 1.1f, cx + r, y0 + r * 2.0f)
-                        arcTo(androidx.compose.ui.geometry.Rect(cx - r, y0 + r, cx + r, y0 + r * 3f), 0f, 180f, false)
-                        cubicTo(cx - r, y0 + r * 1.1f, cx - r * 0.12f, y0 + r * 0.9f, cx, y0)
-                        close()
-                    }
-                    drawPath(path, ink)
-                    drawPath(path, rim.copy(alpha = 0.7f * k), style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
-                }
-            },
+            .graphicsLayer { alpha = (1f - fold * 1.4f).coerceIn(0f, 1f) * (if (enabled) 1f else 0.35f) }
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .graphicsLayer {
-                transformOrigin = TransformOrigin(0.5f, 0f)
-                val sc = 1f - 0.94f * fold
-                scaleX = sc
-                scaleY = sc
-                translationY = -size.height * 0.10f * fold
-                alpha = (1f - (fold - 0.35f).coerceAtLeast(0f) / 0.5f).coerceIn(0f, 1f) * (if (enabled) 1f else 0.35f)
-            },
-        horizontalArrangement = Arrangement.SpaceEvenly,
-    ) {
-        actions.forEachIndexed { index, action ->
-            val source = remember { MutableInteractionSource() }
-            val pressed by source.collectIsPressedAsState()
-            // press: quick, calm spring (no bounce); release: settles back
-            val press = animateFloatAsState(
-                if (pressed) 1f else 0f,
-                axSpring(dampingRatio = 0.85f, stiffness = 650f),
-                label = "shortcut press",
-            )
-            // first appearance: each shortcut rises and fades in, 45 ms apart
-            val enter = remember { Animatable(0f) }
-            LaunchedEffect(Unit) {
-                delay(index * 45L)
-                enter.animateTo(1f, axTween(320, easing = FastOutSlowInEasing))
-            }
-            val base = MaterialTheme.colorScheme.surfaceContainerHigh
-            val accent = MaterialTheme.colorScheme.primary
-            val rimColor = MaterialTheme.colorScheme.outlineVariant
-            val iconTint = MaterialTheme.colorScheme.onSurface
-            val tile = com.iris.gallery.ui.AxRound(19.dp)
-            Column(
+        actions.forEach { action ->
+            Row(
                 Modifier
-                    .graphicsLayer {
-                        val e = enter.value
-                        alpha = e
-                        translationY = (1f - e) * 10.dp.toPx()
-                        val sc = 1f - 0.07f * press.value
-                        scaleX = sc
-                        scaleY = sc
-                    }
-                    .clip(com.iris.gallery.ui.AxRound(20.dp))
-                    .clickable(
-                        interactionSource = source,
-                        indication = null,
-                        role = androidx.compose.ui.semantics.Role.Button,
-                        onClick = { if (enabled && fold < 0.5f) action.onClick() },
-                    )
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .clip(AxRound(14.dp))
+                    .background(fill)
+                    .clickable(enabled = enabled && fold < 0.5f, onClick = action.onClick)
+                    .padding(start = 12.dp, end = 14.dp, top = 9.dp, bottom = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    Modifier
-                        .size(52.dp)
-                        .clip(tile)
-                        .drawBehind {
-                            val p = press.value
-                            drawRect(base.copy(alpha = 0.78f))
-                            // soft light from the top edge
-                            drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.07f), Color.Transparent), endY = size.height * 0.6f))
-                            // press tint
-                            if (p > 0.01f) drawRect(accent.copy(alpha = 0.16f * p))
-                        }
-                        .border(1.dp, rimColor.copy(alpha = 0.55f), tile),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(action.icon, action.label, tint = iconTint, modifier = Modifier.size(25.dp))
-                }
-                Text(
-                    action.label,
-                    fontSize = 11.sp,
-                    letterSpacing = 0.2.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 6.dp).size(width = 64.dp, height = 16.dp),
-                )
+                Icon(action.icon, null, tint = ink.copy(alpha = 0.85f), modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(7.dp))
+                Text(action.label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = ink, maxLines = 1)
             }
         }
-    }
     }
 }

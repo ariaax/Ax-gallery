@@ -513,14 +513,7 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
     // One look for every viewer panel (top buttons, filmstrip, info, action bar): translucent frosted glass in the style of
     // Telegram. The tint is light enough that the picture's own colours (the ambient gradient) glow through it; a white
     // wash + a bright top-lit rim give the frosted edge. It stays the same with or without live blur, so all panels match.
-    val tint = Color(0xFF0B0D12).copy(alpha = 0.42f)
-    val edge = Brush.linearGradient(
-        listOf(
-            Color.White.copy(alpha = 0.42f),
-            Color.White.copy(alpha = 0.06f),
-            Color.White.copy(alpha = 0.26f),
-        )
-    )
+    val tint = Color(0xFF0B0D12).copy(alpha = 0.50f)
     return this
         .onGloballyPositioned {
             region.origin = it.positionInRoot()
@@ -529,17 +522,7 @@ fun Modifier.axGlassPanel(state: AxGlassState, corner: Dp): Modifier {
         }
         .clip(shape)
         .background(tint)
-        .drawBehind {
-            // frosted wash + light falling from the top
-            drawRect(Color.White.copy(alpha = 0.07f))
-            drawRect(
-                brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.14f), Color.Transparent),
-                    endY = size.height * 0.60f,
-                )
-            )
-        }
-        .border(1.dp, edge, shape)
+        .border(0.5.dp, Color.White.copy(alpha = 0.10f), shape)
 }
 
 /** Container look for pop-up menus over a picture: dark enough to read over any photo, still glassy. */

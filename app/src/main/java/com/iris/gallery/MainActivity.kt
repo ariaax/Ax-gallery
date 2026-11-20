@@ -2870,12 +2870,12 @@ private fun GalleryScaffold(
                   // 0 = icon row shown, 1 = folded away: the space it took is given back to the photos
                   val quickFold by androidx.compose.animation.core.animateFloatAsState(
                       targetValue = if (quickCollapsed) 1f else 0f,
-                      animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 260f),
+                      animationSpec = axTween(120),
                       label = "quickFold",
                   )
                   val quickPadding = PaddingValues(
                       start = padding.calculateStartPadding(LocalLayoutDirection.current),
-                      top = padding.calculateTopPadding() + if (destination == 0 && fileSearchQuery.isBlank() && !isFileSearching) (92.dp * (1f - quickFold)) else 0.dp, // NOT tied to selection: a padding jump would slide the tiles under the finger
+                      top = padding.calculateTopPadding() + if (destination == 0 && fileSearchQuery.isBlank() && !isFileSearching) (52.dp * (1f - quickFold)) else 0.dp, // NOT tied to selection: a padding jump would slide the tiles under the finger
                       end = padding.calculateEndPadding(LocalLayoutDirection.current),
                       bottom = padding.calculateBottomPadding(),
                   )
@@ -2911,7 +2911,7 @@ private fun GalleryScaffold(
                           QuickAction(AxIcons.QaLock, "Locked") { openLibrarySection("locked") },
                           QuickAction(AxIcons.QaFolder, "Trips") { openLibrarySection("trips") },
                       ),
-                      modifier = Modifier.padding(top = padding.calculateTopPadding() + 8.dp),
+                      modifier = Modifier.padding(top = padding.calculateTopPadding() + 6.dp),
                   )
                 }
               }
@@ -4769,8 +4769,8 @@ private fun PhotoGrid(
                 end = gridSpacing.dp.dp,
                 bottom = (gridSpacing.dp + 3).dp + bottomPadding
             ),
-            horizontalArrangement = Arrangement.spacedBy(gridSpacing.dp.dp),
-            verticalArrangement = Arrangement.spacedBy(gridSpacing.dp.dp),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing.dp.dp.coerceAtMost(3.dp)),
+            verticalArrangement = Arrangement.spacedBy(gridSpacing.dp.dp.coerceAtMost(3.dp)),
         ) {
             groups.forEach { group ->
               if (showTimeline) {
@@ -4793,11 +4793,11 @@ private fun PhotoGrid(
                             .animateItem(fadeInSpec = null)
                             .fillMaxWidth()
                             .then(headerClickModifier)
-                            .padding(start = 14.dp, end = 12.dp, top = 18.dp, bottom = 8.dp),
+                            .padding(start = 14.dp, end = 12.dp, top = 14.dp, bottom = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(group.key, style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                        Text(group.key, fontSize = 14.sp, letterSpacing = 0.2.sp,
+                            fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.78f))
                         androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                         AnimatedVisibility(selectedIds.isNotEmpty()) {
                             Text(if (wholeDateSelected) stringResource(R.string.action_deselect_date) else stringResource(R.string.action_select_date),
@@ -4811,7 +4811,7 @@ private fun PhotoGrid(
                 val selected = image.stableKey in selectedIds
                 val heroCell = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
                 // square tiles with softly rounded corners (never pill/circle): the corner setting is kept but capped
-                val tileRadius = if (cornerStyle.dp == 0) 0.dp else cornerStyle.dp.coerceIn(3, 6).dp
+                val tileRadius = if (cornerStyle.dp == 0) 0.dp else cornerStyle.dp.coerceIn(2, 4).dp
                 Box(Modifier.aspectRatio(1f)
                     .onGloballyPositioned { heroCell[0] = it }
                     .clip(AxRound(tileRadius))
@@ -4850,7 +4850,7 @@ private fun PhotoGrid(
                         onInvalidMedia = onInvalidMedia,
                     )
                     // zoomed far out: show the day of the month on each small tile (like a calendar)
-                    if (currentCellSize < 92.dp && !selected) {
+                    if (currentCellSize < 56.dp && !selected) {
                         val dayLabel = remember(image.dateTaken, image.dateAdded, sortRevision) {
                             Instant.ofEpochMilli(image.sortDate).atZone(ZoneId.systemDefault()).dayOfMonth.toString()
                         }
