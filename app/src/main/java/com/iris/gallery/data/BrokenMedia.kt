@@ -1,7 +1,6 @@
 package com.iris.gallery.data
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import android.util.AtomicFile
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -37,7 +36,8 @@ object BrokenMedia {
                 val p = line.split('\t')
                 if (p.size >= 4) {
                     val size = p[1].toLongOrNull(); val mod = p[2].toLongOrNull()
-                    if (size != null && mod != null) marks[p[0]] = Mark(size, mod, p[3])
+                    // earlier versions also hid non-empty files whose thumbnail failed once; a real photo must never vanish for that
+                    if (size != null && mod != null && size <= 0L) marks[p[0]] = Mark(size, mod, p[3])
                 }
             }
         }
@@ -66,12 +66,9 @@ object BrokenMedia {
         if (path.isBlank()) return false
         val file = File(path)
         if (!file.exists()) return false
-        if (file.length() <= 0L) return true
-        if (image.isVideo) return false
-        val mime = image.mimeType.lowercase()
-        if (mime != "image/jpeg" && mime != "image/png" && mime != "image/webp" && mime != "image/bmp") return false
-        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        return runCatching { BitmapFactory.decodeFile(path, opts); opts.outWidth <= 0 || opts.outHeight <= 0 }.getOrDefault(false)
+        // only a 0-byte file is certainly not a picture; a non-empty file that fails to decode stays visible (other
+        // galleries show it too, and a decoder hiccup must never make a real photo disappear)
+        return file.length() <= 0L
     }
 
     /** Remember and hide a damaged file (called after thumbnail decoding failed twice). */

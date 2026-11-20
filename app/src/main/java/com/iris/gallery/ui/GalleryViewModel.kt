@@ -67,6 +67,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
         // Snapshot disk I/O is deliberately off Main; publish it only if a live refresh has not won the race.
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val snapshot = repository.loadSnapshot()
+            repository.seedCache(snapshot)
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 if (_uiState.value.images.isEmpty() && snapshot.isNotEmpty()) {
                     _uiState.update { it.copy(images = snapshot) }
@@ -400,6 +401,34 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private var firstContentLogged = false
+    private var initialScanStarted = false
+
+    /**
+     * Once per install: register every picture/video file of the phone in MediaStore (MediaScanner on all folders), so
+     * files no one indexed yet (copied over USB, downloaded by apps, SD card) show up. After it finishes the flag is
+     * saved and later opens only read the list; new files arrive through the MediaStore observer. If the app is
+     * closed half way the flag stays unset and the scan simply runs again (already known files are skipped fast).
+     */
+    private fun maybeInitialScan() {
+        if (initialScanStarted || !repository.needsInitialScan()) return
+        initialScanStarted = true
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            android.widget.Toast.makeText(app, com.iris.gallery.R.string.toast_rescan_started, android.widget.Toast.LENGTH_SHORT).show()
+            val count = try {
+                repository.rescanStorage()
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                com.iris.gallery.data.DiagnosticsLog.error("initial scan", e)
+                initialScanStarted = false
+                return@launch
+            }
+            repository.markInitialScanDone()
+            com.iris.gallery.data.DiagnosticsLog.report("INITIAL_SCAN", "first full scan finished", "files registered or refreshed: $count")
+            refresh(showLoading = false)
+            android.widget.Toast.makeText(app, com.iris.gallery.R.string.toast_rescan_completed, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     fun refresh(showLoading: Boolean = true, forceClearCache: Boolean = false, light: Boolean = false) {
         val current = refreshJob
@@ -461,6 +490,7 @@ class GalleryViewModel(application: Application) : AndroidViewModel(application)
                             val newest = combined.maxOfOrNull { it.dateAdded } ?: 0L
                             com.iris.gallery.data.LatencyLog.add("2 on screen: " + combined.size + " items, newest MediaStore dateAdded=" + com.iris.gallery.data.LatencyLog.time(newest * 1000L))
                         }
+                        if (combined.isNotEmpty()) maybeInitialScan()
                         startExifEnrichment(combined)
                         if (_duplicateState.value.hasScanned) _duplicateState.value = DuplicateScanState()
                     } catch (e: Exception) {
