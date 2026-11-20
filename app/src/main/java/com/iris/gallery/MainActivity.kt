@@ -5297,7 +5297,7 @@ private fun PhotoViewer(
         value = withContext(Dispatchers.Default) {
             val bmp = com.iris.gallery.ui.ThumbnailCache.findForImage(current.stableKey)
                 ?: com.iris.gallery.ui.loadThumbnailSync(context, current, 256)
-            bmp?.let { com.iris.gallery.ui.axAmbientGradient(it) }
+            null // per-photo ambient glow retired: the viewer background is plain black
         }
     }
     val ambientTopState = androidx.compose.animation.animateColorAsState(ambient?.first ?: viewerBg, axTween(150), label = "ambient top")
@@ -5696,16 +5696,7 @@ private fun PhotoViewer(
             .fillMaxSize()
             .onSizeChanged { if (it.height > 0) viewerHeightPx = it.height.toFloat() }
             .drawBehind {
-                drawRect(
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(
-                            ambientTopState.value,
-                            androidx.compose.ui.graphics.lerp(ambientTopState.value, ambientBottomState.value, 0.55f),
-                            ambientBottomState.value,
-                        )
-                    ),
-                    alpha = bgAlphaNow(),
-                )
+                drawRect(Color.Black, alpha = bgAlphaNow())
             },
         color = Color.Transparent
     ) {
@@ -5895,7 +5886,7 @@ private fun PhotoViewer(
             modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
           ) {
-            IconButton(onClick = { triggerAnimatedDismiss() }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 13.dp)) { Icon(AxIcons.Back, stringResource(R.string.action_back), tint = Color.White) }
+            IconButton(onClick = { triggerAnimatedDismiss() }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(AxIcons.Back, stringResource(R.string.action_back), tint = Color.White) }
             val currentLocale = rememberAppLocale()
             val headerDate = remember(current.dateTaken, currentLocale, timelineDateFormat, smartYearHiding, customTimelineDateFormat, showViewerTime) {
                 val localDate = Instant.ofEpochMilli(current.dateTaken).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -5958,10 +5949,10 @@ private fun PhotoViewer(
                         style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            IconButton(onClick = { showInfo = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 13.dp)) { Icon(AxIcons.Info, stringResource(R.string.details_title), tint = Color.White) }
+            IconButton(onClick = { showInfo = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) { Icon(AxIcons.Info, stringResource(R.string.details_title), tint = Color.White) }
             if (!isLocked && !isInTrash && current.id > 0) {
                 Box {
-                    IconButton(onClick = { viewerMenuExpanded = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 13.dp)) {
+                    IconButton(onClick = { viewerMenuExpanded = true }, modifier = Modifier.padding(horizontal = 3.dp).axGlassPanel(viewerGlass, 24.dp)) {
                         Icon(AxIcons.Flower, stringResource(R.string.action_more), tint = Color.White)
                     }
                     val menuEntries = buildList {
@@ -6354,7 +6345,7 @@ private fun PhotoViewer(
                 Surface(
                     color = Color.Transparent,
                     shape = AxRound(14.dp),
-                    modifier = Modifier.height(48.dp).axGlassPanel(viewerGlass, 14.dp),
+                    modifier = Modifier.height(48.dp),
                 ) {
                     LazyRow(
                         state = filmstripListState,
@@ -6425,10 +6416,10 @@ private fun PhotoViewer(
             }
 
             if (!isLandscapeViewer) Surface(
-                modifier = Modifier.fillMaxWidth().axGlassPanel(viewerGlass, 14.dp),
+                modifier = Modifier.fillMaxWidth().axGlassPanel(viewerGlass, 30.dp),
                 color = Color.Transparent,
                 contentColor = Color.White,
-                shape = AxRound(14.dp),
+                shape = AxRound(30.dp),
                 tonalElevation = 0.dp,
             ) {
               // reel-style: the whole button row rolls up/down whenever you move to another photo or video
