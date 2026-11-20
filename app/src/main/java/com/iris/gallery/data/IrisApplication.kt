@@ -148,6 +148,7 @@ class IrisApplication : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         instance = this
         DiagnosticsLog.init(this)
+        com.iris.gallery.data.BrokenMedia.init(this)
         installDiagnostics()
         Thread {
             runCatching { EditorOverwriteRecovery.recover(this) }

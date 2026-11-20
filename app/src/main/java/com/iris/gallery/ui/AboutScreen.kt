@@ -207,6 +207,17 @@ fun AboutScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    var hidden by remember { mutableIntStateOf(com.iris.gallery.data.BrokenMedia.count()) }
+                    if (hidden > 0) {
+                        Text(
+                            "$hidden damaged picture(s) are hidden from the gallery (empty or unreadable files). Nothing was deleted.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        androidx.compose.material3.TextButton(onClick = { com.iris.gallery.data.BrokenMedia.clear(); hidden = 0 }) {
+                            Text("Show them again (after restart)")
+                        }
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.material3.FilledTonalButton(
                             onClick = { DiagnosticsLog.share(ctx) },

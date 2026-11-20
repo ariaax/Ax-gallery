@@ -440,6 +440,11 @@ class MediaRepository(private val context: Context) {
                         val itemDuration = cursor.getLong(duration)
                         val itemSize = cursor.getLong(size)
                         val itemOrientation = cursor.getInt(orientation)
+                        // hidden/system files (".trashed-…", ".pending-…", ".thumbnails", app-private Android/data) are not the
+                        // user's pictures: other galleries do not list them either
+                        if (!trashed && (displayName.startsWith(".") || filePath.contains("/.thumbnails/") || filePath.contains("/Android/data/"))) continue
+                        // an empty file (0 bytes on disk) is not a photo or video: leave it out, as other galleries do
+                        if (!trashed && itemSize <= 0L && filePath.isNotBlank() && File(filePath).length() <= 0L) continue
                         val itemTitle = libraryPreferences.getCustomTitle(mediaId) ?: cursor.getString(title).orEmpty()
 
                         // Ghost rows (file already gone, MediaStore row not cleaned yet) must be dropped BEFORE the
@@ -563,7 +568,7 @@ class MediaRepository(private val context: Context) {
                 }
             }
         }
-        val sorted = result.distinctBy { it.stableKey }.sortedWith(
+        val sorted = result.distinctBy { it.stableKey }.filterNot { !trashed && BrokenMedia.hides(it) }.sortedWith(
             TimelineOrder
         )
         if (!trashed) {

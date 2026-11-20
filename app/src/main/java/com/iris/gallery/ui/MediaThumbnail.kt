@@ -70,7 +70,7 @@ private val thumbDispatcher = backgroundPool("ax-thumb", 2)
  */
 private val videoThumbDispatcher = backgroundPool("ax-thumb-video", 2)
 private val videoPrefetchDispatcher = backgroundPool("ax-prefetch-video", 1)
-private val videoPreviewDispatcher = backgroundPool("ax-preview-video", 1)
+private val videoPreviewDispatcher = backgroundPool("ax-preview-video", 2)
 
 /** Badge detection (HDR/depth) is low priority: a single background lane so it never competes with thumbnails. */
 private val detectDispatcher = backgroundPool("ax-detect", 1)
@@ -210,6 +210,43 @@ private object ThumbDiskCache {
             }
             if (!tmp.renameTo(f)) tmp.delete()
             if (writes.incrementAndGet() % 300 == 0) trim(context)
+        }
+    }
+
+    /** Preview strip: the frames of one video side by side in one small WebP; the count is part of the name. */
+    private fun stripFile(context: Context, key: String, n: Int): java.io.File =
+        java.io.File(dir(context), key.replace(Regex("[^A-Za-z0-9._-]"), "_").take(180) + "_pv$n.w")
+
+    fun readStrip(context: Context, key: String): List<Bitmap>? = runCatching {
+        for (n in 4 downTo 2) {
+            val f = stripFile(context, key, n)
+            if (!f.exists() || f.length() == 0L) continue
+            val strip = android.graphics.BitmapFactory.decodeFile(f.absolutePath) ?: continue
+            f.setLastModified(System.currentTimeMillis())
+            val w = strip.width / n
+            if (w <= 0) continue
+            return List(n) { Bitmap.createBitmap(strip, it * w, 0, w, strip.height) }
+        }
+        null
+    }.getOrNull()
+
+    fun writeStrip(context: Context, key: String, frames: List<Bitmap>) {
+        runCatching {
+            val n = frames.size
+            if (n < 2) return
+            val w = frames.minOf { it.width }; val h = frames.minOf { it.height }
+            val strip = Bitmap.createBitmap(w * n, h, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(strip)
+            frames.forEachIndexed { i, b -> canvas.drawBitmap(b, null, android.graphics.Rect(i * w, 0, (i + 1) * w, h), null) }
+            val f = stripFile(context, key, n)
+            val tmp = java.io.File(f.parentFile, f.name + ".tmp")
+            java.io.FileOutputStream(tmp).use { out ->
+                @Suppress("DEPRECATION")
+                val fmt = if (Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else Bitmap.CompressFormat.WEBP
+                strip.compress(fmt, 72, out)
+            }
+            if (!tmp.renameTo(f)) tmp.delete()
+            strip.recycle()
         }
     }
 
@@ -584,6 +621,9 @@ fun MediaThumbnail(
                     } else null
                     if (retry != null) {
                         bitmap = retry
+                    } else if (withContext(Dispatchers.IO) { com.iris.gallery.data.BrokenMedia.looksBroken(image) }) {
+                        // empty / unreadable header: not a real picture, so it does not belong in the grid
+                        com.iris.gallery.data.BrokenMedia.hide(image)
                     } else {
                         val why = thumbFailures.remove(image.stableKey)
                         com.iris.gallery.data.DiagnosticsLog.unsupported(
@@ -704,20 +744,28 @@ private fun VideoPreviewLayer(image: MediaImage, targetSizePx: Int) {
     var frames by remember(key) { mutableStateOf(VideoPreviewCache.get(key)) }
     var index by remember(key) { androidx.compose.runtime.mutableIntStateOf(-1) }
     LaunchedEffect(key) {
-        kotlinx.coroutines.delay(1100)
-        while (com.iris.gallery.data.ScrollActivity.recentlyScrolling()) kotlinx.coroutines.delay(400)
+        // short settle, then work only while the grid is still; frames come from disk when this video was seen before
+        kotlinx.coroutines.delay(300)
         if (frames == null && !VideoPreviewCache.hasNone(key)) {
-            val made = withContext(videoPreviewDispatcher) {
-                if (com.iris.gallery.data.ScrollActivity.recentlyScrolling()) null
-                else VideoFrames.previewFrames(context, image, targetSizePx.coerceIn(160, 320))
+            var made: List<Bitmap>? = null
+            while (made == null) {
+                while (!com.iris.gallery.data.ScrollActivity.idleFor(300)) kotlinx.coroutines.delay(150)
+                made = withContext(videoPreviewDispatcher) {
+                    if (!com.iris.gallery.data.ScrollActivity.idleFor(150)) null
+                    else ThumbDiskCache.readStrip(context, key) ?: VideoFrames.previewFrames(context, image, targetSizePx.coerceIn(160, 320))
+                        .also { if (it.isNotEmpty()) ThumbDiskCache.writeStrip(context, key, it) }
+                }
             }
-            if (made != null) { VideoPreviewCache.put(key, made); frames = made.ifEmpty { null } }
+            VideoPreviewCache.put(key, made)
+            frames = made.ifEmpty { null }
         }
         val list = frames ?: return@LaunchedEffect
         if (!VideoPreviewCache.tryStartAnimating()) return@LaunchedEffect
         try {
+            kotlinx.coroutines.delay(150)
+            index = 0
             while (true) {
-                kotlinx.coroutines.delay(1000)
+                kotlinx.coroutines.delay(900)
                 if (com.iris.gallery.data.ScrollActivity.recentlyScrolling()) continue
                 index = if (index + 1 >= list.size) -1 else index + 1
             }
