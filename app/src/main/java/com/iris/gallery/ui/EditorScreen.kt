@@ -506,7 +506,7 @@ fun EditorScreen(image: MediaImage, onClose: () -> Unit, onSaved: (saved: Boolea
                     AnimatedContent(
                         targetState = category,
                         transitionSpec = {
-                            fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(120))
+                            fadeIn(animationSpec = axTween(180)) togetherWith fadeOut(animationSpec = axTween(120))
                         },
                         label = "EditorCategorySwitch"
                     ) { currentCategory ->

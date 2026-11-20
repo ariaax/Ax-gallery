@@ -155,7 +155,7 @@ object AxGlass {
     var real: Boolean by mutableStateOf(false)
     /** Set by the main screen while real glass is on: the shared backdrop that chrome (bar buttons, title, shortcuts) refracts. */
     var realState: com.wexpa.liquidglass.LiquidGlassState? by mutableStateOf(null)
-    val realSupported: Boolean get() = Build.VERSION.SDK_INT >= 33
+    val realSupported: Boolean get() = false // retired: heavy shader/blur chain, only the light liquid glass remains
 }
 
 /**
@@ -349,7 +349,7 @@ fun AxGlassNavBar(
     val collapsed = AxNavCollapse.collapsed
     val barH by animateDpAsState(
         if (collapsed) 44.dp else 54.dp,
-        spring(dampingRatio = 0.82f, stiffness = 420f),
+        axSpring(dampingRatio = 0.82f, stiffness = 420f),
         label = "dock height",
     )
     val darkBg = MaterialTheme.colorScheme.surface.luminance() < 0.5f
@@ -376,7 +376,7 @@ fun AxGlassNavBar(
             dir[0] = selectedIndex
             from[0] = cur[0]; from[1] = cur[1]
             move.snapTo(0f)
-            move.animateTo(1f, tween(340, easing = FastOutSlowInEasing))
+            move.animateTo(1f, axTween(340, easing = FastOutSlowInEasing))
         }
     }
     val pillPath = remember { androidx.compose.ui.graphics.Path() }
@@ -457,18 +457,18 @@ fun AxGlassNavBar(
                 val sel = i == selectedIndex
                 androidx.compose.animation.AnimatedVisibility(
                     visible = sel || !collapsed,
-                    enter = androidx.compose.animation.fadeIn(tween(160)) + androidx.compose.animation.expandHorizontally(),
-                    exit = androidx.compose.animation.fadeOut(tween(120)) + androidx.compose.animation.shrinkHorizontally(),
+                    enter = androidx.compose.animation.fadeIn(axTween(160)) + androidx.compose.animation.expandHorizontally(),
+                    exit = androidx.compose.animation.fadeOut(axTween(120)) + androidx.compose.animation.shrinkHorizontally(),
                 ) {
                     val itemSource = remember { MutableInteractionSource() }
                     val pressed by itemSource.collectIsPressedAsState()
-                    val press by animateFloatAsState(if (pressed) 0.90f else 1f, spring(dampingRatio = 0.5f, stiffness = 520f), label = "dock press")
+                    val press by animateFloatAsState(if (pressed) 0.90f else 1f, axSpring(dampingRatio = 0.5f, stiffness = 520f), label = "dock press")
                     val itemShape = AxRound(30)
                     Row(
                         modifier = Modifier
                             .fillMaxHeight()
                             .graphicsLayer { scaleX = press; scaleY = press }
-                            .animateContentSize(spring(dampingRatio = 1f, stiffness = 520f))
+                            .animateContentSize(axSpring(dampingRatio = 1f, stiffness = 520f))
                             .clip(itemShape)
                             .onGloballyPositioned {
                                 val x = it.positionInRoot().x - rowRootX
@@ -580,13 +580,13 @@ fun AxFavoriteButton(
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             launch {
                 progress.snapTo(0f)
-                progress.animateTo(1f, tween(650, easing = LinearOutSlowInEasing))
+                progress.animateTo(1f, axTween(650, easing = LinearOutSlowInEasing))
             }
             scale.snapTo(0.5f)
-            scale.animateTo(1f, spring(dampingRatio = 0.32f, stiffness = Spring.StiffnessLow))
+            scale.animateTo(1f, axSpring(dampingRatio = 0.32f, stiffness = Spring.StiffnessLow))
         } else {
             scale.snapTo(0.75f)
-            scale.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium))
+            scale.animateTo(1f, axSpring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium))
         }
     }
 
@@ -645,48 +645,7 @@ fun AxFavoriteButton(
  */
 @Composable
 fun AxEdgeHalo(top: Boolean, sweepKey: Any, modifier: Modifier = Modifier) {
-    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val base = if (dark) Color(0xFFE6F1FF) else Color(0xFFB4D2FF)
-    val peak = if (dark) 0.17f else 0.26f
-    val appear = remember { Animatable(0f) }
-    val sweep = remember { Animatable(1f) }
-    LaunchedEffect(Unit) { appear.animateTo(1f, tween(700)) }
-    LaunchedEffect(sweepKey) {
-        sweep.snapTo(0f)
-        sweep.animateTo(1f, tween(1100, easing = FastOutSlowInEasing))
-    }
-    val inset = if (top) WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    else WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val total = inset + (if (top) 92.dp else 128.dp)
-    Box(
-        modifier
-            .fillMaxWidth()
-            .height(total)
-            .drawBehind {
-                val a = appear.value
-                val c0 = base.copy(alpha = peak * a)
-                val c1 = base.copy(alpha = peak * 0.38f * a)
-                val brush = if (top) Brush.verticalGradient(
-                    colorStops = arrayOf(0f to c0, 0.45f to c1, 1f to Color.Transparent)
-                ) else Brush.verticalGradient(
-                    colorStops = arrayOf(0f to Color.Transparent, 0.55f to c1, 1f to c0)
-                )
-                drawRect(brush)
-                val sw = sweep.value
-                if (sw > 0.001f && sw < 0.999f) {
-                    val bell = sin(Math.PI * sw).toFloat()
-                    val x = size.width * (-0.2f + 1.4f * sw)
-                    val cy = if (top) 0f else size.height
-                    drawRect(
-                        Brush.radialGradient(
-                            listOf(Color.White.copy(alpha = 0.24f * bell), Color.Transparent),
-                            center = Offset(x, cy),
-                            radius = size.width * 0.38f,
-                        )
-                    )
-                }
-            }
-    )
+    // retired: animated edge glow
 }
 
 /** Small round glass tab shown when a side dock is collapsed. */
@@ -726,30 +685,7 @@ fun Modifier.axGlassBorder(shape: androidx.compose.ui.graphics.Shape): Modifier 
  */
 @Composable
 fun AxWindowBlur(radius: Int = 36) {
-    val view = androidx.compose.ui.platform.LocalView.current
-    LaunchedEffect(view, radius) {
-        if (Build.VERSION.SDK_INT < 31) return@LaunchedEffect
-        try {
-            val window = (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
-            if (window != null) {
-                window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                val lp = window.attributes
-                lp.blurBehindRadius = radius
-                window.attributes = lp
-            } else {
-                val root = view.rootView
-                val lp = root.layoutParams as? android.view.WindowManager.LayoutParams
-                if (lp != null) {
-                    lp.flags = lp.flags or android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND
-                    lp.blurBehindRadius = radius
-                    val wm = view.context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
-                    wm.updateViewLayout(root, lp)
-                }
-            }
-        } catch (e: Throwable) {
-            // blur is only decoration
-        }
-    }
+    // retired: window blur is expensive on mid-range GPUs
 }
 
 
@@ -864,47 +800,7 @@ fun axAmbientGradient(src: android.graphics.Bitmap): Pair<Color, Color>? {
  */
 @Composable
 fun Modifier.axSpinRing(): Modifier {
-    val lite = AxPerf.lite(androidx.compose.ui.platform.LocalContext.current)
-    val angle: State<Float>? = if (lite) null else rememberInfiniteTransition(label = "dock ring").animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(2800, easing = LinearEasing)),
-        label = "dock ring angle",
-    )
-    return this.drawWithCache {
-        val w = size.width
-        val h = size.height
-        val stroke = 2.dp.toPx()
-        val outer = androidx.compose.ui.graphics.Path().apply {
-            addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, w, h, androidx.compose.ui.geometry.CornerRadius(h / 2f)))
-        }
-        val inner = androidx.compose.ui.graphics.Path().apply {
-            addRoundRect(
-                androidx.compose.ui.geometry.RoundRect(
-                    stroke, stroke, w - stroke, h - stroke,
-                    androidx.compose.ui.geometry.CornerRadius((h - 2f * stroke) / 2f),
-                )
-            )
-        }
-        val ring = androidx.compose.ui.graphics.Path.combine(
-            androidx.compose.ui.graphics.PathOperation.Difference, outer, inner,
-        )
-        val center = Offset(w / 2f, h / 2f)
-        val brush = Brush.sweepGradient(
-            listOf(
-                Color(0xFF5AD1FF), Color(0xFF3B6BFF), Color(0xFFFF9A3C), Color(0xFFFFFFFF), Color(0xFF5AD1FF),
-            ),
-            center = center,
-        )
-        onDrawWithContent {
-            drawContent()
-            clipPath(ring) {
-                rotate(angle?.value ?: 0f, center) {
-                    drawCircle(brush, radius = maxOf(w, h), center = center)
-                }
-            }
-        }
-    }
+    return this
 }
 
 

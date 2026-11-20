@@ -212,11 +212,11 @@ fun AlbumAppBadge(album: MediaAlbum, modifier: Modifier = Modifier, animated: Bo
     val spin = remember(album.id) { Animatable(-70f) }
     LaunchedEffect(album.id, badge) {
         delay((album.id % 6L).toInt() * 40L)
-        scale.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = Spring.StiffnessMediumLow))
+        scale.animateTo(1f, axSpring(dampingRatio = 0.42f, stiffness = Spring.StiffnessMediumLow))
     }
     LaunchedEffect(album.id, badge) {
         delay((album.id % 6L).toInt() * 40L)
-        spin.animateTo(0f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessLow))
+        spin.animateTo(0f, axSpring(dampingRatio = 0.5f, stiffness = Spring.StiffnessLow))
     }
 
     val lite = !animated || AxPerf.lite(androidx.compose.ui.platform.LocalContext.current)

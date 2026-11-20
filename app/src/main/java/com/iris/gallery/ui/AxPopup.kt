@@ -73,9 +73,9 @@ fun AxPopupMenu(
             shown = true
             closing.snapTo(0f)
             open.snapTo(0f)
-            open.animateTo(1f, tween(150 + 16 * n, easing = TgAccelDecel))
+            open.animateTo(1f, axTween(150 + 16 * n, easing = TgAccelDecel))
         } else if (shown) {
-            closing.animateTo(1f, tween(150, easing = TgDefault))
+            closing.animateTo(1f, axTween(150, easing = TgDefault))
             shown = false
             open.snapTo(0f)
         }

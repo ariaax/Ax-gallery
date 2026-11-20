@@ -1,5 +1,7 @@
 package com.iris.gallery.ui.video
 
+import com.iris.gallery.ui.axTween
+
 import android.app.Activity
 import android.content.Context
 import android.content.res.Resources
@@ -298,13 +300,13 @@ internal fun BoxScope.SeekFeedbackOverlay(feedback: SeekFeedbackState?) {
         modifier = Modifier
             .align(if (left) AbsoluteAlignment.CenterLeft else AbsoluteAlignment.CenterRight)
             .padding(horizontal = 36.dp),
-        enter = fadeIn(tween(60)),
-        exit = fadeOut(tween(160)),
+        enter = fadeIn(axTween(60)),
+        exit = fadeOut(axTween(160)),
     ) {
         val sweep = remember { Animatable(1f) }
         LaunchedEffect(shown.token) {
             sweep.snapTo(0f)
-            sweep.animateTo(1f, tween(340, easing = LinearEasing))
+            sweep.animateTo(1f, axTween(340, easing = LinearEasing))
         }
         val shape = AxRound(30)
         Row(
@@ -365,8 +367,8 @@ internal fun LevelHud(
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = fadeIn(tween(70)),
-        exit = fadeOut(tween(150)),
+        enter = fadeIn(axTween(70)),
+        exit = fadeOut(axTween(150)),
     ) {
         val p = progress().coerceIn(0f, 1f)
         val shape = AxRound(30)

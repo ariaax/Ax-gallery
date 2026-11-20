@@ -2,6 +2,9 @@
 
 package com.iris.gallery.ui.video
 
+import com.iris.gallery.ui.axTween
+import com.iris.gallery.ui.axSpring
+
 import android.graphics.Bitmap
 import android.app.Activity
 import android.content.Context
@@ -724,7 +727,7 @@ fun VideoPage(
             visible = gestureFeedback != null,
             modifier = Modifier.align(if (feedbackOnLeft) Alignment.CenterStart else Alignment.CenterEnd)
                 .padding(horizontal = 34.dp),
-            enter = fadeIn(tween(100)), exit = fadeOut(tween(160)),
+            enter = fadeIn(axTween(100)), exit = fadeOut(axTween(160)),
         ) {
             val fb = gestureFeedback.orEmpty()
             Row(
@@ -742,12 +745,12 @@ fun VideoPage(
         AnimatedVisibility(
             visible = muteFeedbackEvent != null,
             modifier = Modifier.align(Alignment.Center),
-            enter = fadeIn(tween(140)) + scaleIn(
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+            enter = fadeIn(axTween(140)) + scaleIn(
+                animationSpec = axSpring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
                 initialScale = 0.75f
             ),
-            exit = fadeOut(tween(200, easing = FastOutSlowInEasing)) + scaleOut(
-                animationSpec = tween(180, easing = FastOutSlowInEasing),
+            exit = fadeOut(axTween(200, easing = FastOutSlowInEasing)) + scaleOut(
+                animationSpec = axTween(180, easing = FastOutSlowInEasing),
                 targetScale = 0.85f
             ),
         ) {
@@ -775,8 +778,8 @@ fun VideoPage(
         AnimatedVisibility(
             visible = playPauseFeedbackEvent != null,
             modifier = Modifier.align(Alignment.Center),
-            enter = fadeIn(tween(70)) + scaleIn(tween(120), initialScale = 0.85f),
-            exit = fadeOut(tween(140)),
+            enter = fadeIn(axTween(70)) + scaleIn(axTween(120), initialScale = 0.85f),
+            exit = fadeOut(axTween(140)),
         ) {
             val isPlay = lastPlayPauseFeedback ?: (playPauseFeedbackEvent?.first == true)
             Box(
@@ -849,9 +852,9 @@ fun VideoPage(
         AnimatedVisibility(
           visible = controlsVisible,
           modifier = Modifier.align(Alignment.BottomCenter),
-          enter = fadeIn(tween(240, easing = com.iris.gallery.AxIosEase)) +
-              slideInVertically(tween(340, easing = com.iris.gallery.AxIosEase)) { it / 3 },
-          exit = fadeOut(tween(140)) + slideOutVertically(tween(220, easing = com.iris.gallery.AxIosEase)) { it / 4 },
+          enter = fadeIn(axTween(240, easing = com.iris.gallery.AxIosEase)) +
+              slideInVertically(axTween(340, easing = com.iris.gallery.AxIosEase)) { it / 3 },
+          exit = fadeOut(axTween(140)) + slideOutVertically(axTween(220, easing = com.iris.gallery.AxIosEase)) { it / 4 },
         ) {
         BoxWithConstraints(
             modifier = Modifier
@@ -890,7 +893,7 @@ fun VideoPage(
             val liveSeek = remember { longArrayOf(0L) }
             val seekBar: @Composable (Modifier) -> Unit = { seekModifier ->
             // iOS-style scrubbing: the track swells under the finger, the thumb grows, the video follows live
-            val trackH by animateDpAsState(if (scrubbing) 12.dp else 4.dp, spring(dampingRatio = 0.7f, stiffness = 500f), label = "trackH")
+            val trackH by animateDpAsState(if (scrubbing) 12.dp else 4.dp, axSpring(dampingRatio = 0.7f, stiffness = 500f), label = "trackH")
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
             Slider(
                 modifier = seekModifier,
@@ -919,8 +922,8 @@ fun VideoPage(
                 ),
                 thumb = {
                     Box(Modifier.size(34.dp), contentAlignment = Alignment.Center) {
-                        val core by animateDpAsState(if (scrubbing) 24.dp else 13.dp, spring(dampingRatio = 0.55f, stiffness = 600f), label = "thumb")
-                        val halo by animateDpAsState(if (scrubbing) 34.dp else 22.dp, spring(dampingRatio = 0.6f, stiffness = 500f), label = "thumbHalo")
+                        val core by animateDpAsState(if (scrubbing) 24.dp else 13.dp, axSpring(dampingRatio = 0.55f, stiffness = 600f), label = "thumb")
+                        val halo by animateDpAsState(if (scrubbing) 34.dp else 22.dp, axSpring(dampingRatio = 0.6f, stiffness = 500f), label = "thumbHalo")
                         Box(Modifier.size(halo).background(Color.White.copy(alpha = if (scrubbing) 0.30f else 0.18f), AxRound(30)))
                         Box(Modifier.size(core).background(Color.White, AxRound(30)))
                     }
@@ -955,11 +958,11 @@ fun VideoPage(
                     AnimatedContent(
                         targetState = isMuted,
                         transitionSpec = {
-                            (scaleIn(animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow), initialScale = 0.6f) +
-                             fadeIn(animationSpec = tween(150))
+                            (scaleIn(animationSpec = axSpring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow), initialScale = 0.6f) +
+                             fadeIn(animationSpec = axTween(150))
                             ).togetherWith(
-                                scaleOut(animationSpec = tween(100), targetScale = 0.6f) +
-                                fadeOut(animationSpec = tween(100))
+                                scaleOut(animationSpec = axTween(100), targetScale = 0.6f) +
+                                fadeOut(animationSpec = axTween(100))
                             )
                         },
                         label = "mute_icon_anim"
@@ -978,7 +981,7 @@ fun VideoPage(
                     engine.player.repeatMode = if (nextLoop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
                     gestureFeedback = if (nextLoop) "Loop: On" else "Loop: Off"
                 }) {
-                    val loopSpin by animateFloatAsState(if (isLooping) 360f else 0f, tween(450, easing = FastOutSlowInEasing), label = "loopSpin")
+                    val loopSpin by animateFloatAsState(if (isLooping) 360f else 0f, axTween(450, easing = FastOutSlowInEasing), label = "loopSpin")
                     Icon(
                         modifier = Modifier.size(19.dp).graphicsLayer { rotationZ = loopSpin },
                         imageVector = if (isLooping) com.iris.gallery.ui.AxIcons.RepeatOne else com.iris.gallery.ui.AxIcons.Repeat,
@@ -990,11 +993,11 @@ fun VideoPage(
                     AnimatedContent(
                         targetState = playing,
                         transitionSpec = {
-                            (scaleIn(animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow), initialScale = 0.6f) +
-                             fadeIn(animationSpec = tween(150))
+                            (scaleIn(animationSpec = axSpring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMediumLow), initialScale = 0.6f) +
+                             fadeIn(animationSpec = axTween(150))
                             ).togetherWith(
-                                scaleOut(animationSpec = tween(100), targetScale = 0.6f) +
-                                fadeOut(animationSpec = tween(100))
+                                scaleOut(animationSpec = axTween(100), targetScale = 0.6f) +
+                                fadeOut(animationSpec = axTween(100))
                             )
                         },
                         label = "play_pause_icon_anim"
@@ -1054,7 +1057,7 @@ private fun AxVideoGlassButton(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(if (pressed) 0.86f else 1f, spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium), label = "press")
+    val pressScale by animateFloatAsState(if (pressed) 0.86f else 1f, axSpring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium), label = "press")
     Box(
         modifier = Modifier
             .size(size)
