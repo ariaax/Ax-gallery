@@ -70,7 +70,6 @@ private val thumbDispatcher = backgroundPool("ax-thumb", 2)
  */
 private val videoThumbDispatcher = backgroundPool("ax-thumb-video", 2)
 private val videoPrefetchDispatcher = backgroundPool("ax-prefetch-video", 1)
-private val videoPreviewDispatcher = backgroundPool("ax-preview-video", 2)
 
 /** Badge detection (HDR/depth) is low priority: a single background lane so it never competes with thumbnails. */
 private val detectDispatcher = backgroundPool("ax-detect", 1)
@@ -356,7 +355,10 @@ private fun loadThumbnailRaw(context: Context, image: MediaImage, targetSizePx: 
         }
     }
 
-    val bitmap = try {
+    // Videos: take a real, non-black frame once (the system thumbnail is often the black first frame); it is then
+    // kept in the disk cache like every other thumbnail, so this runs once per video.
+    val posterFirst = if (image.isVideo) VideoFrames.poster(context, image, targetSizePx) else null
+    val bitmap = posterFirst ?: try {
         val size = Size(targetSizePx, targetSizePx)
         // For .livp files, use the extracted cache JPEG if available.
         val effectivePath = if (image.path.endsWith(".livp", ignoreCase = true)) {
@@ -480,7 +482,7 @@ private fun loadThumbnailRaw(context: Context, image: MediaImage, targetSizePx: 
         }
     }
     // The system's video thumbnail is often a black first frame (or missing): use a real frame instead.
-    val finalBitmap = if (image.isVideo && (firstPass == null || VideoFrames.isDark(firstPass))) {
+    val finalBitmap = if (image.isVideo && posterFirst == null && (firstPass == null || VideoFrames.isDark(firstPass))) {
         VideoFrames.poster(context, image, targetSizePx) ?: firstPass
     } else firstPass
     finalBitmap?.prepareToDraw()
@@ -669,7 +671,6 @@ fun MediaThumbnail(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        if (image.isVideo && bitmap != null) VideoPreviewLayer(image, targetSizePx)
         if (isFavorite) {
             Box(
                 modifier = Modifier
@@ -727,63 +728,6 @@ fun MediaThumbnail(
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
-            }
-        }
-    }
-}
-
-/**
- * Multi-shot preview: once the grid has been still for a moment, a visible video quietly cycles through four small
- * frames taken along its length (cross-faded), then back to its poster. Frames are cut on one background-priority lane,
- * cached in a ~6 MB memory cache, never made while scrolling, and at most six tiles animate at the same time.
- */
-@Composable
-private fun VideoPreviewLayer(image: MediaImage, targetSizePx: Int) {
-    val context = LocalContext.current
-    val key = remember(image.stableKey, image.dateModified) { "${image.stableKey}:${image.dateModified}" }
-    var frames by remember(key) { mutableStateOf(VideoPreviewCache.get(key)) }
-    var index by remember(key) { androidx.compose.runtime.mutableIntStateOf(-1) }
-    LaunchedEffect(key) {
-        // short settle, then work only while the grid is still; frames come from disk when this video was seen before
-        kotlinx.coroutines.delay(300)
-        if (frames == null && !VideoPreviewCache.hasNone(key)) {
-            var made: List<Bitmap>? = null
-            while (made == null) {
-                while (!com.iris.gallery.data.ScrollActivity.idleFor(300)) kotlinx.coroutines.delay(150)
-                made = withContext(videoPreviewDispatcher) {
-                    if (!com.iris.gallery.data.ScrollActivity.idleFor(150)) null
-                    else ThumbDiskCache.readStrip(context, key) ?: VideoFrames.previewFrames(context, image, targetSizePx.coerceIn(160, 320))
-                        .also { if (it.isNotEmpty()) ThumbDiskCache.writeStrip(context, key, it) }
-                }
-            }
-            VideoPreviewCache.put(key, made)
-            frames = made.ifEmpty { null }
-        }
-        val list = frames ?: return@LaunchedEffect
-        if (!VideoPreviewCache.tryStartAnimating()) return@LaunchedEffect
-        try {
-            kotlinx.coroutines.delay(150)
-            index = 0
-            while (true) {
-                kotlinx.coroutines.delay(900)
-                if (com.iris.gallery.data.ScrollActivity.recentlyScrolling()) continue
-                index = if (index + 1 >= list.size) -1 else index + 1
-            }
-        } finally {
-            VideoPreviewCache.stopAnimating()
-        }
-    }
-    val list = frames
-    if (list != null) {
-        androidx.compose.animation.Crossfade(
-            targetState = index,
-            animationSpec = androidx.compose.animation.core.tween(380),
-            label = "videoPreview"
-        ) { n ->
-            val bmp = list.getOrNull(n)
-            if (bmp != null) {
-                val shown = remember(bmp) { bmp.asImageBitmap() }
-                Image(bitmap = shown, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             }
         }
     }

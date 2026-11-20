@@ -73,44 +73,4 @@ object VideoFrames {
             fallback
         } finally { runCatching { mmr.release() } }
     }
-
-    /** Four small frames spread over the video for the multi-shot preview; empty if fewer than two came out. */
-    fun previewFrames(context: Context, image: MediaImage, size: Int): List<Bitmap> {
-        val mmr = open(context, image) ?: return emptyList()
-        return try {
-            val d = durationMs(mmr, image)
-            if (d < 2500) return emptyList()
-            val (w, h) = fitSize(mmr, size)
-            val out = ArrayList<Bitmap>(4)
-            for (f in floatArrayOf(0.15f, 0.40f, 0.65f, 0.88f)) {
-                val b = frameAt(mmr, (d * f * 1000f).toLong(), w, h) ?: continue
-                if (!isDark(b)) out.add(b)
-            }
-            if (out.size >= 2) out else emptyList()
-        } finally { runCatching { mmr.release() } }
-    }
-}
-
-/** Small memory cache for preview frames (~6 MB) and a note of videos that had none, so nothing is decoded twice. */
-object VideoPreviewCache {
-    private val frames = object : LruCache<String, List<Bitmap>>(6 * 1024) {
-        override fun sizeOf(key: String, value: List<Bitmap>): Int = value.sumOf { it.allocationByteCount } / 1024
-    }
-    private val none = object : LruCache<String, Boolean>(1000) {}
-    private val animating = AtomicInteger()
-
-    fun get(key: String): List<Bitmap>? = frames.get(key)
-    fun hasNone(key: String): Boolean = none.get(key) == true
-    fun put(key: String, list: List<Bitmap>) { if (list.isEmpty()) none.put(key, true) else frames.put(key, list) }
-
-    /** At most a handful of tiles animate at once; the rest simply show their poster. */
-    fun tryStartAnimating(): Boolean {
-        while (true) {
-            val n = animating.get()
-            if (n >= MAX_ANIMATING) return false
-            if (animating.compareAndSet(n, n + 1)) return true
-        }
-    }
-    fun stopAnimating() { animating.decrementAndGet() }
-    private const val MAX_ANIMATING = 6
 }
