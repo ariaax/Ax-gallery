@@ -331,9 +331,10 @@ object AxNavCollapse {
 }
 
 /**
- * Full-width floating glass bar (iOS 26 style): light translucent glass with a thin bright rim, an elastic
- * "lens" that stretches while pressed/dragged and can be dragged across the tabs, and it shrinks into a
- * small pill (only the selected tab) while scrolling down.
+ * Floating bottom bar. Four equal slots in one graphite capsule; ONE light pill glides between them on a spring
+ * (slight overshoot) and stretches a little while it moves, like liquid. Tap a slot, or slide a finger across the
+ * bar and the pill follows. Slot positions are plain arithmetic (equal widths), so a tab change measures nothing and
+ * recomposes nothing: the pill is read only while drawing.
  */
 @Composable
 fun AxGlassNavBar(
@@ -346,139 +347,92 @@ fun AxGlassNavBar(
     icon: @Composable (index: Int, selected: Boolean) -> Unit,
 ) {
     val axCtx = androidx.compose.ui.platform.LocalContext.current
-    val accent = MaterialTheme.colorScheme.primary
-    // simple, always-open bar: icon with its name underneath (no shrinking while scrolling)
-    val collapsed = false
-    val barH = 64.dp
     val darkBg = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val tint = if (darkBg) Color(0xFF2A2B2E).copy(alpha = 0.97f) else Color.White.copy(alpha = 0.96f)
-    val edge = Brush.linearGradient(
-        if (darkBg) listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.14f))
-        else listOf(Color.Black.copy(alpha = 0.12f), Color.Black.copy(alpha = 0.04f), Color.Black.copy(alpha = 0.10f))
-    )
+    val barColor = if (darkBg) Color(0xFF232427).copy(alpha = 0.97f) else Color.White.copy(alpha = 0.97f)
+    val pillColor = if (darkBg) Color.White.copy(alpha = 0.15f) else Color.Black.copy(alpha = 0.08f)
+    val rimColor = if (darkBg) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.08f)
+    val ink = if (darkBg) Color.White else Color(0xFF111114)
     val shape = AxRound(32)
+    val slotW = 78.dp
+    val barH = 64.dp
+    val inset = 4.dp
 
-    // One highlight pill that GLIDES between tabs. It is driven by a single 0..1 progress and the tabs' live bounds, and
-    // everything is read only while drawing, so a tab change costs no recomposition (that was the stutter).
-    val lefts = remember(count) { FloatArray(count) }
-    val rights = remember(count) { FloatArray(count) }
-    var rowRootX by remember { mutableStateOf(0f) }
-    val boundsTick = remember { androidx.compose.runtime.mutableIntStateOf(0) }
-    val move = remember { Animatable(1f) }
-    val from = remember { FloatArray(2) }   // where the pill was when the tab changed
-    val cur = remember { FloatArray(2) }    // where the pill was drawn last
-    val dir = remember { intArrayOf(selectedIndex, 1) } // previous index, direction
+    val pos = remember { Animatable(selectedIndex.toFloat()) }
     LaunchedEffect(selectedIndex) {
-        if (dir[0] != selectedIndex) {
-            dir[1] = if (selectedIndex >= dir[0]) 1 else -1
-            dir[0] = selectedIndex
-            from[0] = cur[0]; from[1] = cur[1]
-            move.snapTo(0f)
-            move.animateTo(1f, axTween(340, easing = FastOutSlowInEasing))
-        }
+        pos.animateTo(
+            selectedIndex.toFloat(),
+            androidx.compose.animation.core.spring(dampingRatio = 0.72f, stiffness = 300f),
+        )
     }
-    val pillPath = remember { androidx.compose.ui.graphics.Path() }
-    val innerFill = remember(accent, darkBg) {
-        if (darkBg) Color.White.copy(alpha = 0.16f).compositeOver(Color(0xFF2A2B2E))
-        else Color.Black.copy(alpha = 0.08f).compositeOver(Color.White)
-    }
+    val liveSelected by androidx.compose.runtime.rememberUpdatedState(selectedIndex)
+    val liveSelect by androidx.compose.runtime.rememberUpdatedState(onSelect)
 
-    Box(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Row(
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Box(
             modifier = Modifier
-                .height(barH)
                 .onGloballyPositioned {
-                    rowRootX = it.positionInRoot().x
                     state.barOrigin = it.positionInRoot()
                     state.barSize = Size(it.size.width.toFloat(), it.size.height.toFloat())
                     state.cornerRadiusPx = it.size.height / 2f
                 }
+                .height(barH)
+                .width(slotW * count + inset * 2)
                 .clip(shape)
-                .then(
-                    if (realGlass != null) Modifier
-                        .liquidGlass(realGlass, shape, GlassStyle.DarkChrome)
-                        // heavy frost over the glass: washes out the thumbnails behind the tabs so the buttons stand out
-                        .background(
-                            Brush.verticalGradient(
-                                if (darkBg) listOf(Color(0xFF0B0B0D).copy(alpha = 0.62f), Color(0xFF0B0B0D).copy(alpha = 0.72f))
-                                else listOf(Color.White.copy(alpha = 0.66f), Color.White.copy(alpha = 0.76f))
-                            )
-                        )
-                    else Modifier.background(tint)
-                )
+                .background(barColor)
+                .border(0.8.dp, rimColor, shape)
                 .drawBehind {
-                    // gliding selection pill with its turning ring
-                    boundsTick.intValue // redraw when a tab's bounds change (read in draw only)
-                    val liveL = lefts.getOrElse(selectedIndex) { 0f }
-                    val liveR = rights.getOrElse(selectedIndex) { 0f }
-                    val t = move.value
-                    var l = liveL
-                    var r = liveR
-                    if (t < 1f && cur[1] - cur[0] > 1f) {
-                        // the edge that leads the move arrives first, the trailing one follows: the pill stretches like liquid
-                        val lead = 1f - (1f - t) * (1f - t) * (1f - t)
-                        val lag = t * t * (3f - 2f * t)
-                        val tl = if (dir[1] > 0) lag else lead
-                        val tr = if (dir[1] > 0) lead else lag
-                        l = from[0] + (liveL - from[0]) * tl
-                        r = from[1] + (liveR - from[1]) * tr
-                    }
-                    cur[0] = l; cur[1] = r
-                    if (r - l > 8f) {
-                        val pad = 4.dp.toPx()
-                        val top = pad
-                        val hh = size.height - pad * 2f
-                        drawRoundRect(
-                            innerFill,
-                            topLeft = Offset(l, top),
-                            size = Size(r - l, hh),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(hh / 2f),
-                        )
-                    }
+                    val w = slotW.toPx()
+                    val ins = inset.toPx()
+                    // the faster it travels, the longer the pill gets (max +28 %): a liquid stretch, drawn only
+                    val stretch = (kotlin.math.abs(pos.velocity) / 7f).coerceIn(0f, 1f)
+                    val pw = w * (1f + 0.28f * stretch)
+                    val cx = ins + (pos.value + 0.5f) * w
+                    val ph = size.height - ins * 2f
+                    drawRoundRect(
+                        color = pillColor,
+                        topLeft = Offset(cx - pw / 2f, ins),
+                        size = Size(pw, ph),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(ph / 2f),
+                    )
                 }
-                .border(0.8.dp, edge, shape)
-                .padding(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(0.dp),
+                .pointerInput(count) {
+                    detectHorizontalDragGestures { change, _ ->
+                        val idx = ((change.position.x - inset.toPx()) / slotW.toPx()).toInt().coerceIn(0, count - 1)
+                        if (idx != liveSelected) {
+                            AxHaptics.tick(axCtx)
+                            liveSelect(idx)
+                        }
+                    }
+                },
         ) {
-            for (i in 0 until count) {
-                val sel = i == selectedIndex
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = sel || !collapsed,
-                    enter = androidx.compose.animation.fadeIn(axTween(160)) + androidx.compose.animation.expandHorizontally(),
-                    exit = androidx.compose.animation.fadeOut(axTween(120)) + androidx.compose.animation.shrinkHorizontally(),
-                ) {
-                    val itemSource = remember { MutableInteractionSource() }
-                    val pressed by itemSource.collectIsPressedAsState()
-                    val press by animateFloatAsState(if (pressed) 0.90f else 1f, axSpring(dampingRatio = 0.5f, stiffness = 520f), label = "dock press")
-                    val itemShape = AxRound(30)
-                    Row(
+            Row(Modifier.padding(horizontal = inset).fillMaxHeight()) {
+                for (i in 0 until count) {
+                    val sel = i == selectedIndex
+                    val a by animateFloatAsState(
+                        if (sel) 1f else 0.66f,
+                        androidx.compose.animation.core.tween(220),
+                        label = "dock ink",
+                    )
+                    val sc by animateFloatAsState(
+                        if (sel) 1f else 0.94f,
+                        androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 400f),
+                        label = "dock scale",
+                    )
+                    Box(
                         modifier = Modifier
+                            .width(slotW)
                             .fillMaxHeight()
-                            .graphicsLayer { scaleX = press; scaleY = press }
-                            .animateContentSize(axSpring(dampingRatio = 1f, stiffness = 520f))
-                            .clip(itemShape)
-                            .onGloballyPositioned {
-                                val x = it.positionInRoot().x - rowRootX
-                                if (lefts[i] != x || rights[i] != x + it.size.width) {
-                                    lefts[i] = x; rights[i] = x + it.size.width
-                                    if (i == selectedIndex) boundsTick.intValue++
+                            .clip(shape)
+                            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                                if (i != liveSelected) {
+                                    AxHaptics.tick(axCtx)
+                                    liveSelect(i)
                                 }
                             }
-                            .clickable(interactionSource = itemSource, indication = null) {
-                                AxHaptics.tick(axCtx)
-                                if (AxNavCollapse.collapsed) AxNavCollapse.collapsed = false else onSelect(i)
-                            }
-                            .widthIn(min = 76.dp)
-                            .padding(horizontal = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
+                            .graphicsLayer { scaleX = sc; scaleY = sc },
+                        contentAlignment = Alignment.Center,
                     ) {
-                        val iconColor = (if (darkBg) Color.White else Color(0xFF111114)).copy(alpha = if (sel) 1f else 0.70f)
-                        CompositionLocalProvider(LocalContentColor provides iconColor) {
+                        CompositionLocalProvider(LocalContentColor provides ink.copy(alpha = a)) {
                             icon(i, sel)
                         }
                     }
