@@ -32,6 +32,7 @@ class MediaRepository(private val context: Context) {
     private val libraryPreferences = LibraryPreferences(context)
 
     companion object {
+        private const val INITIAL_SCAN_KEY = "full_scan_v1"
         private const val VERIFIED_PATH_TTL_MS = 60 * 1_000L // 1 minute
         private const val TOMBSTONE_TTL_MS = 24 * 60 * 60 * 1_000L // 24 hours
     }
@@ -43,6 +44,23 @@ class MediaRepository(private val context: Context) {
     // Stat-ing every cached row costs seconds on a big library (it kept the spinner up for 10-20 s after install),
     // so cached rows are only re-checked once, right after something was restored or deleted.
     @Volatile private var verifyCachedRows = false
+
+    private val scanPrefs = context.getSharedPreferences("ax_scan", Context.MODE_PRIVATE)
+    /** The one-time full scan of every folder (see GalleryViewModel); bump the number to run it again after an update. */
+    fun needsInitialScan(): Boolean = !scanPrefs.getBoolean(INITIAL_SCAN_KEY, false)
+    fun markInitialScanDone() { scanPrefs.edit().putBoolean(INITIAL_SCAN_KEY, true).apply() }
+
+    /** Cold start: rows that did not change since the last run are taken from the saved list instead of being stat-ed again. */
+    fun seedCache(list: List<MediaImage>) {
+        if (inMemoryCache.isNotEmpty()) return
+        for (m in list) if (m.id > 0L) inMemoryCache.putIfAbsent(m.stableKey, m)
+    }
+
+    /** True only when the file is really gone: a path the app cannot stat (other app's folder) is double-checked through MediaStore. */
+    private fun reallyMissing(filePath: String, uri: Uri): Boolean {
+        if (File(filePath).exists()) return false
+        return !runCatching { context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { true } ?: false }.getOrDefault(false)
+    }
 
     fun loadSnapshot(): List<MediaImage> = synchronized(snapshotLock) { runCatching {
         DataInputStream(snapshot.openRead().buffered()).use { input ->
@@ -178,8 +196,8 @@ class MediaRepository(private val context: Context) {
 
         val mediaExtensions = setOf(
             "jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif", "avif", "dng", "svg",
-            "cr2", "nef", "arw", "rw2", "orf", "pef", "raf",
-            "mp4", "mkv", "mov", "webm", "3gp", "avi", "flv", "ts", "m4v", "wmv"
+            "cr2", "nef", "arw", "rw2", "orf", "pef", "raf", "jfif", "jpe", "tif", "tiff",
+            "mp4", "mkv", "mov", "webm", "3gp", "3g2", "avi", "flv", "ts", "m4v", "wmv", "mpg", "mpeg", "mts", "m2ts"
         )
 
         val knownMap = HashMap<String, Pair<Long, Long>>()
@@ -350,6 +368,7 @@ class MediaRepository(private val context: Context) {
             },
         )
 
+        var rowsSeen = 0; var skipHidden = 0; var skipEmpty = 0; var skipGone = 0
         val result = buildList {
             val mediaSelection = buildString {
                 append("(${MediaStore.Files.FileColumns.MEDIA_TYPE}=? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE}=?)")
@@ -403,6 +422,7 @@ class MediaRepository(private val context: Context) {
                     var scannedRows = 0
                     while (cursor.moveToNext()) {
                         if (scannedRows++ % 128 == 0) kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        rowsSeen++
                         val mediaId = cursor.getLong(id)
                         val isVid = cursor.getInt(mediaType) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
                         val displayName = cursor.getString(name).orEmpty()
@@ -442,9 +462,11 @@ class MediaRepository(private val context: Context) {
                         val itemOrientation = cursor.getInt(orientation)
                         // hidden/system files (".trashed-…", ".pending-…", ".thumbnails", app-private Android/data) are not the
                         // user's pictures: other galleries do not list them either
-                        if (!trashed && (displayName.startsWith(".") || filePath.contains("/.thumbnails/") || filePath.contains("/Android/data/"))) continue
+                        if (!trashed && (displayName.startsWith(".") || filePath.contains("/.thumbnails/") || filePath.contains("/Android/data/"))) { skipHidden++; continue }
                         // an empty file (0 bytes on disk) is not a photo or video: leave it out, as other galleries do
-                        if (!trashed && itemSize <= 0L && filePath.isNotBlank() && File(filePath).length() <= 0L) continue
+                        // (length() is 0 for a path the app cannot stat, so the size is double-checked through MediaStore)
+                        if (!trashed && itemSize <= 0L && filePath.isNotBlank() && File(filePath).length() <= 0L &&
+                            (runCatching { context.contentResolver.openAssetFileDescriptor(mediaUri, "r")?.use { it.length } }.getOrNull() ?: 0L) <= 0L) { skipEmpty++; continue }
                         val itemTitle = libraryPreferences.getCustomTitle(mediaId) ?: cursor.getString(title).orEmpty()
 
                         // Ghost rows (file already gone, MediaStore row not cleaned yet) must be dropped BEFORE the
@@ -452,8 +474,9 @@ class MediaRepository(private val context: Context) {
                         if (verifyCachedRows && !trashed && filePath.startsWith("/storage/emulated/")) {
                             val seenAt = verifiedPathsCache[filePath]
                             if (seenAt == null || now - seenAt > 300_000L) {
-                                if (!File(filePath).exists()) {
+                                if (reallyMissing(filePath, mediaUri)) {
                                     inMemoryCache.remove(identityKey)
+                                    skipGone++
                                     continue
                                 }
                                 verifiedPathsCache[filePath] = now
@@ -509,7 +532,8 @@ class MediaRepository(private val context: Context) {
 
                         // Non-destructive ghost filter: hide rows whose file is gone from primary storage
                         // (never deletes anything from MediaStore).
-                        if (!trashed && filePath.startsWith("/storage/emulated/") && !File(filePath).exists()) {
+                        if (!trashed && filePath.startsWith("/storage/emulated/") && reallyMissing(filePath, mediaUri)) {
+                            skipGone++
                             continue
                         }
 
@@ -572,6 +596,12 @@ class MediaRepository(private val context: Context) {
             TimelineOrder
         )
         if (!trashed) {
+            val hiddenBroken = result.size - result.distinctBy { it.stableKey }.size
+            val skipped = skipHidden + skipEmpty + skipGone
+            if (skipped > 0) DiagnosticsLog.report(
+                "LOAD_SKIPPED", "files left out of the gallery",
+                "MediaStore rows $rowsSeen, shown ${sorted.size}; hidden/system $skipHidden, empty $skipEmpty, missing on disk $skipGone, duplicates $hiddenBroken",
+            )
             verifyCachedRows = false
             val validKeys = sorted.mapTo(HashSet(sorted.size)) { it.stableKey }
             inMemoryCache.keys.retainAll(validKeys)

@@ -4,9 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.os.Build
-import android.util.LruCache
 import com.iris.gallery.data.MediaImage
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Video frames for the grid: a poster that is never a black fade-in frame, plus a few small frames for the

@@ -185,11 +185,19 @@ private object ThumbDiskCache {
     private val writes = java.util.concurrent.atomic.AtomicInteger()
 
     private fun dir(context: Context): java.io.File =
-        dir ?: java.io.File(context.cacheDir, "ax_thumbs").also { it.mkdirs(); dir = it }
+        // noBackupFilesDir, not cacheDir: phone "cleaners" and the system empty cacheDir, which made every thumbnail
+        // (above all video posters) be rebuilt after each clean-up. Trimmed below to MAX_BYTES by itself.
+        dir ?: java.io.File(context.noBackupFilesDir, "ax_thumbs").also {
+            it.mkdirs(); dir = it
+            Thread {
+                runCatching { java.io.File(context.cacheDir, "ax_thumbs").deleteRecursively() }
+                runCatching { java.io.File(context.cacheDir, "ax_preview").deleteRecursively() }
+            }.apply { isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
+        }
 
     private fun file(context: Context, image: MediaImage, size: Int): java.io.File {
         val safeKey = image.stableKey.replace(Regex("[^A-Za-z0-9._-]"), "_").take(180)
-        return java.io.File(dir(context), "${safeKey}_${size}_${image.dateModified}_${image.sizeBytes}${if (image.isVideo) "_p2" else ""}.w")
+        return java.io.File(dir(context), "${safeKey}_${size}_${image.dateModified}_${image.sizeBytes}${if (image.isVideo) "_p3" else ""}.w")
     }
 
     fun read(context: Context, image: MediaImage, size: Int): Bitmap? = runCatching {
@@ -209,43 +217,6 @@ private object ThumbDiskCache {
             }
             if (!tmp.renameTo(f)) tmp.delete()
             if (writes.incrementAndGet() % 300 == 0) trim(context)
-        }
-    }
-
-    /** Preview strip: the frames of one video side by side in one small WebP; the count is part of the name. */
-    private fun stripFile(context: Context, key: String, n: Int): java.io.File =
-        java.io.File(dir(context), key.replace(Regex("[^A-Za-z0-9._-]"), "_").take(180) + "_pv$n.w")
-
-    fun readStrip(context: Context, key: String): List<Bitmap>? = runCatching {
-        for (n in 4 downTo 2) {
-            val f = stripFile(context, key, n)
-            if (!f.exists() || f.length() == 0L) continue
-            val strip = android.graphics.BitmapFactory.decodeFile(f.absolutePath) ?: continue
-            f.setLastModified(System.currentTimeMillis())
-            val w = strip.width / n
-            if (w <= 0) continue
-            return List(n) { Bitmap.createBitmap(strip, it * w, 0, w, strip.height) }
-        }
-        null
-    }.getOrNull()
-
-    fun writeStrip(context: Context, key: String, frames: List<Bitmap>) {
-        runCatching {
-            val n = frames.size
-            if (n < 2) return
-            val w = frames.minOf { it.width }; val h = frames.minOf { it.height }
-            val strip = Bitmap.createBitmap(w * n, h, Bitmap.Config.ARGB_8888)
-            val canvas = android.graphics.Canvas(strip)
-            frames.forEachIndexed { i, b -> canvas.drawBitmap(b, null, android.graphics.Rect(i * w, 0, (i + 1) * w, h), null) }
-            val f = stripFile(context, key, n)
-            val tmp = java.io.File(f.parentFile, f.name + ".tmp")
-            java.io.FileOutputStream(tmp).use { out ->
-                @Suppress("DEPRECATION")
-                val fmt = if (Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else Bitmap.CompressFormat.WEBP
-                strip.compress(fmt, 72, out)
-            }
-            if (!tmp.renameTo(f)) tmp.delete()
-            strip.recycle()
         }
     }
 
