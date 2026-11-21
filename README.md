@@ -2,6 +2,10 @@
 
 <p align="center">A private, fast and good-looking Android gallery with a liquid-glass interface, by <b>Aria ax</b>.</p>
 
+## Status
+
+Finished personal project (v1.0.0). Not actively maintained. Download the APK from the [Releases](https://github.com/ariaax/Ax-gallery/releases) page.
+
 ## About
 
 Ax Gallery is a personal local media viewer. It has zero network permissions, opens fast and keeps your photos on your phone.

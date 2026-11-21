@@ -3619,7 +3619,8 @@ private fun GalleryScaffold(
             Modifier
                 .size(48.dp)
                 .clip(androidx.compose.foundation.shape.CircleShape)
-                .background(Color(0xFF2A2B2E).copy(alpha = 0.97f))
+                .background(if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color(0xFF2A2B2E).copy(alpha = 0.97f) else Color.White.copy(alpha = 0.97f))
+                .border(0.8.dp, if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.10f), androidx.compose.foundation.shape.CircleShape)
                 .clickable {
                     tabScope.launch { photoGridState.scrollToItem(0) }
                 },
@@ -3628,7 +3629,7 @@ private fun GalleryScaffold(
             Icon(
                 AxIcons.ArrowUp,
                 contentDescription = "Back to top",
-                tint = Color.White,
+                tint = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White else Color(0xFF111114),
                 modifier = Modifier.size(28.dp),
             )
         }
